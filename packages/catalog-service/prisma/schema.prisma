@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CATALOG_DATABASE_URL")
+}
+
+model ItemModel {
+  id          String   @id @default(uuid())
+  name        String
+  priceAmount Int      @map("price_amount")
+  priceCurrency String @map("price_currency") @default("BRL")
+  createdAt   DateTime @map("created_at")
+
+  @@map("items")
+}
+
+// Data replication: local read model for users (source: Identity service via user.created events).
+model ReplicatedUserModel {
+  id                   String    @id
+  email                String
+  name                 String
+  createdAt            DateTime  @map("created_at")
+  lastEventAt          DateTime  @map("last_event_at")
+  lastEventOccurredAt  DateTime? @map("last_event_occurred_at")
+
+  @@map("replicated_users")
+}
