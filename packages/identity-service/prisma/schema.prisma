@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("IDENTITY_DATABASE_URL")
+}
+
+model UserModel {
+  id             String               @id @default(uuid())
+  email          String               @unique
+  name           String
+  role           String               @default("user")
+  createdAt      DateTime             @map("created_at")
+  authCredential AuthCredentialModel?
+  oauthAccounts  OAuthAccountModel[]
+
+  @@map("users")
+}
+
+model AuthCredentialModel {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  passwordHash String   @map("password_hash")
+  user         UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_credentials")
+}
+
+model OAuthAccountModel {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  provider   String   // "google" | "github"
+  providerId String   @map("provider_id")
+  createdAt  DateTime @map("created_at")
+  user       UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("oauth_accounts")
+}
+
+// Outbox table for reliable event publishing (Outbox Pattern). Rows are published by the outbox relay.
+model OutboxModel {
+  id         String   @id @default(uuid())
+  eventName  String   @map("event_name")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @map("created_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([publishedAt])
+  @@map("outbox")
+}
