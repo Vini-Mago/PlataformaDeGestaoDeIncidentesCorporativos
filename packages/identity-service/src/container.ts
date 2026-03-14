@@ -22,6 +22,7 @@ import { RegisterUseCase } from "./application/use-cases/register.use-case";
 import { LoginUseCase } from "./application/use-cases/login.use-case";
 import { GetCurrentUserUseCase } from "./application/use-cases/get-current-user.use-case";
 import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use-case";
+import { UpdateUserUseCase } from "./application/use-cases/update-user.use-case";
 import { UserController } from "./adapters/driving/http/user.controller";
 import { AuthController } from "./adapters/driving/http/auth.controller";
 import { createAuthMiddleware } from "@pgic/shared";
@@ -75,6 +76,7 @@ interface IdentityCradle {
   loginUseCase: LoginUseCase;
   getCurrentUserUseCase: GetCurrentUserUseCase;
   oauthCallbackUseCase: OAuthCallbackUseCase;
+  updateUserUseCase: UpdateUserUseCase;
   userController: UserController;
   authController: AuthController;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -214,9 +216,17 @@ export function createContainer(config: ContainerConfig) {
         )
     ).singleton(),
 
+    updateUserUseCase: asFunction(
+      (cradle: IdentityCradle) => new UpdateUserUseCase(cradle.userRepository)
+    ).singleton(),
+
     userController: asFunction(
       (cradle: IdentityCradle) =>
-        new UserController(cradle.createUserUseCase, cradle.getUserByIdUseCase)
+        new UserController(
+          cradle.createUserUseCase,
+          cradle.getUserByIdUseCase,
+          cradle.updateUserUseCase
+        )
     ).singleton(),
 
     authController: asFunction(

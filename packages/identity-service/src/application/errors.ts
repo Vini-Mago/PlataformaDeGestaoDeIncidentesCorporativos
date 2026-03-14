@@ -21,6 +21,14 @@ export class InvalidCredentialsError extends AppError {
   }
 }
 
+export class InvalidNameError extends AppError {
+  override name = "InvalidNameError";
+  constructor(message = "Name cannot be empty") {
+    super(message);
+    Object.setPrototypeOf(this, InvalidNameError.prototype);
+  }
+}
+
 export class InvalidEmailError extends AppError {
   override name = "InvalidEmailError";
   constructor(message = "Invalid email") {
@@ -34,5 +42,21 @@ export class PasswordValidationError extends AppError {
   constructor(message: string) {
     super(message);
     Object.setPrototypeOf(this, PasswordValidationError.prototype);
+  }
+}
+
+export class UserNotFoundError extends AppError {
+  override name = "UserNotFoundError";
+  constructor(id: string) {
+    super(`User not found: ${id}`);
+    Object.setPrototypeOf(this, UserNotFoundError.prototype);
+  }
+}
+
+export class InvalidUserIdError extends AppError {
+  override name = "InvalidUserIdError";
+  constructor(message = "Invalid user id format") {
+    super(message);
+    Object.setPrototypeOf(this, InvalidUserIdError.prototype);
   }
 }

@@ -25,10 +25,6 @@ export class CatalogItemController {
   getById = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const item = await this.getCatalogItem.execute(id);
-    if (item == null) {
-      res.status(404).json({ message: "Not found" });
-      return;
-    }
     res.json(item);
   });
 }

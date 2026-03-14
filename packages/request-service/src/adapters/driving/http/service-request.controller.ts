@@ -4,11 +4,11 @@ import type { CreateServiceRequestDto } from "../../../application/dtos/create-s
 import type { AddRequestCommentDto } from "../../../application/dtos/add-request-comment.dto";
 import type { CreateServiceRequestUseCase } from "../../../application/use-cases/create-service-request.use-case";
 import type { ListServiceRequestsUseCase } from "../../../application/use-cases/list-service-requests.use-case";
-import type { GetServiceRequestUseCase } from "../../../application/use-cases/get-service-request.use-case";
+import type { GetServiceRequestWithCommentsUseCase } from "../../../application/use-cases/get-service-request-with-comments.use-case";
 import type { SubmitServiceRequestUseCase } from "../../../application/use-cases/submit-service-request.use-case";
 import type { AddRequestCommentUseCase } from "../../../application/use-cases/add-request-comment.use-case";
-import type { IServiceRequestRepository } from "../../../application/ports/service-request-repository.port";
 import type { ServiceRequestStatus } from "../../../domain/entities/service-request.entity";
+import { InvalidStatusFilterError } from "../../../application/errors";
 import { asyncHandler } from "@pgic/shared";
 
 const REQUEST_STATUSES: ServiceRequestStatus[] = [
@@ -22,40 +22,32 @@ const REQUEST_STATUSES: ServiceRequestStatus[] = [
   "Cancelled",
 ];
 
-function isRequestStatus(value: unknown): value is ServiceRequestStatus {
-  return typeof value === "string" && REQUEST_STATUSES.includes(value as ServiceRequestStatus);
+function parseStatusFilter(value: unknown): ServiceRequestStatus | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string" || !REQUEST_STATUSES.includes(value as ServiceRequestStatus)) {
+    throw new InvalidStatusFilterError(String(value));
+  }
+  return value as ServiceRequestStatus;
 }
 
 export class ServiceRequestController {
   constructor(
     private readonly createServiceRequest: CreateServiceRequestUseCase,
     private readonly listServiceRequests: ListServiceRequestsUseCase,
-    private readonly getServiceRequest: GetServiceRequestUseCase,
+    private readonly getServiceRequestWithComments: GetServiceRequestWithCommentsUseCase,
     private readonly submitServiceRequest: SubmitServiceRequestUseCase,
-    private readonly addRequestComment: AddRequestCommentUseCase,
-    private readonly requestRepository: IServiceRequestRepository
+    private readonly addRequestComment: AddRequestCommentUseCase
   ) {}
 
   create = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.userId;
-    if (userId === undefined || userId === "") {
-      res.status(401).json({ error: "Unauthenticated", message: "Missing authenticated user" });
-      return;
-    }
-    const request = await this.createServiceRequest.execute(req.body as CreateServiceRequestDto, userId);
+    const request = await this.createServiceRequest.execute(req.body as CreateServiceRequestDto, req.userId);
     res.status(201).json(request);
   });
 
   list = asyncHandler(async (req: Request, res: Response) => {
     const requesterId = req.query.requesterId as string | undefined;
-    const statusParam = req.query.status;
+    const status = parseStatusFilter(req.query.status);
     const catalogItemId = req.query.catalogItemId as string | undefined;
-    if (statusParam !== undefined && statusParam !== "" && !isRequestStatus(statusParam)) {
-      res.status(400).json({ error: "Bad Request", message: "Invalid status filter" });
-      return;
-    }
-    const status =
-      statusParam === undefined || statusParam === "" ? undefined : (statusParam as ServiceRequestStatus);
     const list = await this.listServiceRequests.execute({
       requesterId,
       status,
@@ -66,9 +58,8 @@ export class ServiceRequestController {
 
   getById = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const request = await this.getServiceRequest.execute(id);
-    const comments = await this.requestRepository.getComments(id);
-    res.json({ ...request, comments });
+    const request = await this.getServiceRequestWithComments.execute(id);
+    res.json(request);
   });
 
   submit = asyncHandler(async (req: Request, res: Response) => {
@@ -78,13 +69,8 @@ export class ServiceRequestController {
   });
 
   addComment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const authorId = req.userId;
-    if (authorId === undefined || authorId === "") {
-      res.status(401).json({ error: "Unauthenticated", message: "Missing authenticated user" });
-      return;
-    }
     const { id } = req.params;
-    const comment = await this.addRequestComment.execute(id, authorId, req.body as AddRequestCommentDto);
+    const comment = await this.addRequestComment.execute(id, req.userId, req.body as AddRequestCommentDto);
     res.status(201).json(comment);
   });
 }

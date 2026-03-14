@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { asyncHandler, requireRole } from "@pgic/shared";
+import { asyncHandler, requireRole, requireOwnerOrAdmin } from "@pgic/shared";
 import { UserController } from "./user.controller";
-import { validateCreateUser } from "./user.validation";
+import { validateCreateUser, validateUpdateUser } from "./user.validation";
 
 export function createUserRoutes(
   controller: UserController,
@@ -10,5 +10,12 @@ export function createUserRoutes(
   const router = Router();
   router.post("/users", validateCreateUser, authMiddleware, requireRole("admin"), asyncHandler(controller.create.bind(controller)));
   router.get("/users/:id", authMiddleware, asyncHandler(controller.getById.bind(controller)));
+  router.patch(
+    "/users/:id",
+    validateUpdateUser,
+    authMiddleware,
+    requireOwnerOrAdmin("id"),
+    asyncHandler(controller.update.bind(controller))
+  );
   return router;
 }

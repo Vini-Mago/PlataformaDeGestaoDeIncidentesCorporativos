@@ -20,10 +20,10 @@ export function createRoutes(
   router.get("/catalog-items/:id", catalogController.getById as RequestHandler);
   router.post("/catalog-items", authMiddleware, validateCreateCatalogItem, catalogController.create as RequestHandler);
 
-  // Service requests: create and addComment require auth.
+  // Service requests: all mutations require auth; list and getById require auth (RF-2.1).
   router.post("/service-requests", authMiddleware, validateCreateServiceRequest, requestController.create as RequestHandler);
-  router.get("/service-requests", requestController.list as RequestHandler);
-  router.get("/service-requests/:id", requestController.getById as RequestHandler);
+  router.get("/service-requests", authMiddleware, requestController.list as RequestHandler);
+  router.get("/service-requests/:id", authMiddleware, requestController.getById as RequestHandler);
   router.post("/service-requests/:id/submit", authMiddleware, requestController.submit as RequestHandler);
   router.post("/service-requests/:id/comments", authMiddleware, validateAddRequestComment, requestController.addComment as RequestHandler);
 

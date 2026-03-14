@@ -9,13 +9,14 @@ import { ListCatalogItemsUseCase } from "./application/use-cases/list-catalog-it
 import { GetCatalogItemUseCase } from "./application/use-cases/get-catalog-item.use-case";
 import { CreateServiceRequestUseCase } from "./application/use-cases/create-service-request.use-case";
 import { ListServiceRequestsUseCase } from "./application/use-cases/list-service-requests.use-case";
-import { GetServiceRequestUseCase } from "./application/use-cases/get-service-request.use-case";
+import { GetServiceRequestWithCommentsUseCase } from "./application/use-cases/get-service-request-with-comments.use-case";
 import { SubmitServiceRequestUseCase } from "./application/use-cases/submit-service-request.use-case";
 import { AddRequestCommentUseCase } from "./application/use-cases/add-request-comment.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { CatalogItemController } from "./adapters/driving/http/catalog-item.controller";
 import { ServiceRequestController } from "./adapters/driving/http/service-request.controller";
 import { RabbitMqUserCreatedConsumer } from "./adapters/driving/messaging/rabbitmq-user-created.consumer";
+import { RabbitMqUserUpdatedConsumer } from "./adapters/driving/messaging/rabbitmq-user-updated.consumer";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 
@@ -37,11 +38,12 @@ interface RequestCradle {
   getCatalogItemUseCase: GetCatalogItemUseCase;
   createServiceRequestUseCase: CreateServiceRequestUseCase;
   listServiceRequestsUseCase: ListServiceRequestsUseCase;
-  getServiceRequestUseCase: GetServiceRequestUseCase;
+  getServiceRequestWithCommentsUseCase: GetServiceRequestWithCommentsUseCase;
   submitServiceRequestUseCase: SubmitServiceRequestUseCase;
   addRequestCommentUseCase: AddRequestCommentUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
+  userUpdatedConsumer: RabbitMqUserUpdatedConsumer | null;
   catalogItemController: CatalogItemController;
   serviceRequestController: ServiceRequestController;
   tokenVerifier: JwtTokenVerifier;
@@ -101,9 +103,9 @@ export function createContainer(config: RequestContainerConfig) {
         new ListServiceRequestsUseCase(cradle.requestRepository)
     ).singleton(),
 
-    getServiceRequestUseCase: asFunction(
+    getServiceRequestWithCommentsUseCase: asFunction(
       (cradle: RequestCradle) =>
-        new GetServiceRequestUseCase(cradle.requestRepository)
+        new GetServiceRequestWithCommentsUseCase(cradle.requestRepository)
     ).singleton(),
 
     submitServiceRequestUseCase: asFunction(
@@ -127,6 +129,12 @@ export function createContainer(config: RequestContainerConfig) {
       return new RabbitMqUserCreatedConsumer(url, cradle.handleUserCreatedUseCase);
     }).singleton(),
 
+    userUpdatedConsumer: asFunction((cradle: RequestCradle) => {
+      const url = cradle.config.rabbitmqUrl;
+      if (!url) return null;
+      return new RabbitMqUserUpdatedConsumer(url, cradle.handleUserCreatedUseCase);
+    }).singleton(),
+
     catalogItemController: asFunction(
       (cradle: RequestCradle) =>
         new CatalogItemController(
@@ -141,10 +149,9 @@ export function createContainer(config: RequestContainerConfig) {
         new ServiceRequestController(
           cradle.createServiceRequestUseCase,
           cradle.listServiceRequestsUseCase,
-          cradle.getServiceRequestUseCase,
+          cradle.getServiceRequestWithCommentsUseCase,
           cradle.submitServiceRequestUseCase,
-          cradle.addRequestCommentUseCase,
-          cradle.requestRepository
+          cradle.addRequestCommentUseCase
         )
     ).singleton(),
 
@@ -180,11 +187,13 @@ export function createContainer(config: RequestContainerConfig) {
     get userCreatedConsumer() {
       return c.userCreatedConsumer;
     },
+    get userUpdatedConsumer() {
+      return c.userUpdatedConsumer;
+    },
     async disconnect(): Promise<void> {
       try {
-        if (c.userCreatedConsumer) {
-          await c.userCreatedConsumer.stop();
-        }
+        if (c.userCreatedConsumer) await c.userCreatedConsumer.stop();
+        if (c.userUpdatedConsumer) await c.userUpdatedConsumer.stop();
       } catch (err) {
         logger.error({ err }, "userCreatedConsumer.stop() failed on disconnect");
       } finally {

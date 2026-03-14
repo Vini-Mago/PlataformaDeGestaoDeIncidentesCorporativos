@@ -1,6 +1,12 @@
 import amqp from "amqplib";
 import type { IEventPublisher } from "../../../application/ports/event-publisher.port";
-import { EXCHANGE_USER_EVENTS, ROUTING_KEY_USER_CREATED, USER_CREATED_EVENT } from "@pgic/shared";
+import {
+  EXCHANGE_USER_EVENTS,
+  ROUTING_KEY_USER_CREATED,
+  ROUTING_KEY_USER_UPDATED,
+  USER_CREATED_EVENT,
+  USER_UPDATED_EVENT,
+} from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 
@@ -29,9 +35,14 @@ export class RabbitMqEventPublisherAdapter implements IEventPublisher {
 
   async publish(eventName: string, payload: object): Promise<void> {
     if (!this.channel) {
-      throw new Error("RabbitMqEventPublisherAdapter não conectado; chame connect() antes de publicar.");
+      throw new Error("RabbitMqEventPublisherAdapter not connected; call connect() before publishing.");
     }
-    const routingKey = eventName === USER_CREATED_EVENT ? ROUTING_KEY_USER_CREATED : eventName.replace(".", "_");
+    const routingKey =
+      eventName === USER_CREATED_EVENT
+        ? ROUTING_KEY_USER_CREATED
+        : eventName === USER_UPDATED_EVENT
+          ? ROUTING_KEY_USER_UPDATED
+          : eventName.replace(/\./g, "_");
     const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
     this.channel.publish(this.exchange, routingKey, message, { persistent: true });
   }

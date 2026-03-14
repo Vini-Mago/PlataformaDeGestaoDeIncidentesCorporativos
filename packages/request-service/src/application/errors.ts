@@ -17,3 +17,9 @@ export class InvalidStatusTransitionError extends AppError {
     super(`Invalid status transition from ${from} to ${to}`);
   }
 }
+
+export class InvalidStatusFilterError extends AppError {
+  constructor(value: string) {
+    super(`Invalid status filter: ${value}`);
+  }
+}

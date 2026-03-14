@@ -1,11 +1,9 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 
-loadEnv({ path: path.resolve(process.cwd(), ".env") });
-// When running under pnpm run dev from repo root, load root .env for RABBITMQ_URL etc.
-if (process.env.NODE_ENV !== "production") {
-  loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
-}
+// Load root .env first (RABBITMQ_URL, etc.); service .env overrides with override: true.
+loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
+loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
 
 import type { Server } from "http";
 import { createContainer } from "./container";
@@ -51,16 +49,28 @@ async function bootstrap() {
     logger.info(`Request service listening on http://localhost:${port}`);
   });
 
-  if (rabbitmqUrl && container.userCreatedConsumer) {
-    container.userCreatedConsumer.start().catch((err) => {
-      logger.error({ err }, "Failed to start user.created consumer; replication disabled until restart");
-    });
-  } else if (rabbitmqUrl && !container.userCreatedConsumer) {
-    logger.warn(
-      "RABBITMQ_URL set but userCreatedConsumer is not configured; user.created replication disabled"
-    );
-  } else if (!rabbitmqUrl) {
-    logger.info("RABBITMQ_URL not set; user replication (user.created consumer) disabled");
+  if (rabbitmqUrl) {
+    if (container.userCreatedConsumer) {
+      container.userCreatedConsumer.start().catch((err) => {
+        logger.error({ err }, "Failed to start user.created consumer; replication disabled until restart");
+      });
+    }
+    if (container.userUpdatedConsumer) {
+      container.userUpdatedConsumer.start().catch((err) => {
+        logger.error({ err }, "Failed to start user.updated consumer; replication may be stale until restart");
+      });
+    }
+    const missing: string[] = [];
+    if (!container.userCreatedConsumer) missing.push("userCreatedConsumer");
+    if (!container.userUpdatedConsumer) missing.push("userUpdatedConsumer");
+    if (missing.length > 0) {
+      logger.warn(
+        { missing },
+        "RABBITMQ_URL set but one or more consumers not configured; replication may be incomplete until restart"
+      );
+    }
+  } else {
+    logger.info("RABBITMQ_URL not set; user replication (user.created/user.updated consumers) disabled");
   }
 
   const shutdownTimeoutMs = 10_000;

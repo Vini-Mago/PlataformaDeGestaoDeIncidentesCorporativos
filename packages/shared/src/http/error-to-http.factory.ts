@@ -1,7 +1,8 @@
 import type { HttpErrorMapping } from "./error-mapping";
 
-/** Construtor de subclasse de Error (message opcional; aceita erros de aplicação). */
-type ErrorCtor = new (message?: string, ...rest: unknown[]) => Error;
+/** Constructor of any Error subclass (accepts application errors with custom constructor signatures). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional: error classes have varying constructor signatures
+type ErrorCtor = new (...args: any[]) => Error;
 
 const DEFAULT: HttpErrorMapping = { statusCode: 500, message: "Internal server error" };
 

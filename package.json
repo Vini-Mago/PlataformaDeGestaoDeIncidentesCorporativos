@@ -8,6 +8,7 @@
     "build": "pnpm -r run build",
     "lint": "eslint .",
     "test": "pnpm -r run test",
+    "test:integration": "pnpm --filter identity-service run test:integration",
     "dev:identity": "pnpm --filter identity-service run dev",
     "dev:request": "pnpm --filter request-service run dev",
     "dev:api-docs": "pnpm --filter api-docs run dev",
