@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GetUserByIdUseCase } from "./get-user-by-id.use-case";
 import { User } from "../../domain/entities/user.entity";
+import { UserNotFoundError } from "../errors";
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { ICacheService } from "@pgic/shared";
 
@@ -44,13 +45,12 @@ describe("GetUserByIdUseCase", () => {
     expect(cache.set).toHaveBeenCalledWith("user:user-123", expect.any(Object), 300);
   });
 
-  it("deve retornar null quando usuário não existe", async () => {
+  it("deve lançar UserNotFoundError quando usuário não existe", async () => {
     vi.mocked(userRepository.findById).mockResolvedValue(null);
 
     const useCase = new GetUserByIdUseCase(userRepository, cache);
-    const result = await useCase.execute("inexistente");
 
-    expect(result).toBeNull();
+    await expect(useCase.execute("inexistente")).rejects.toThrow(UserNotFoundError);
     expect(cache.get).toHaveBeenCalledWith("user:inexistente", expect.anything());
     expect(cache.set).not.toHaveBeenCalled();
   });

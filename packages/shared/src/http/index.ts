@@ -14,6 +14,7 @@ export {
 export {
   createAuthMiddleware,
   requireRole,
+  requireOwnerOrAdmin,
   type JwtPayload,
   type AuthenticatedRequest,
 } from "./auth.middleware";

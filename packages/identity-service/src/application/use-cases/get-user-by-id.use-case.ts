@@ -1,5 +1,6 @@
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { ICacheService } from "@pgic/shared";
+import { UserNotFoundError } from "../errors";
 import { userResponseDtoSchema, type UserResponseDto } from "../dtos/user-response.dto";
 
 export class GetUserByIdUseCase {
@@ -8,7 +9,7 @@ export class GetUserByIdUseCase {
     private readonly cache: ICacheService
   ) {}
 
-  async execute(id: string): Promise<UserResponseDto | null> {
+  async execute(id: string): Promise<UserResponseDto> {
     const cacheKey = `user:${id}`;
     const cached = await this.cache.get(cacheKey, userResponseDtoSchema);
     if (cached) {
@@ -17,7 +18,7 @@ export class GetUserByIdUseCase {
 
     const user = await this.userRepository.findById(id);
     if (!user) {
-      return null;
+      throw new UserNotFoundError(id);
     }
 
     const dto: UserResponseDto = {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
 import {
   UserAlreadyExistsError,
+  UserNotFoundError,
   InvalidCredentialsError,
   InvalidEmailError,
   PasswordValidationError,
@@ -13,6 +14,13 @@ describe("mapApplicationErrorToHttp (identity)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(409);
     expect(result.message).toBe("User with this email already exists");
+  });
+
+  it("mapeia UserNotFoundError para 404 e mensagem do erro", () => {
+    const err = new UserNotFoundError("user-123");
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(404);
+    expect(result.message).toBe("User not found: user-123");
   });
 
   it("mapeia InvalidCredentialsError para 401 e mensagem do erro", () => {

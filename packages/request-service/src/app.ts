@@ -12,7 +12,7 @@ import type { HttpErrorMapping } from "@pgic/shared";
 
 export interface RequestAppContainer {
   routes: ReturnType<typeof import("./adapters/driving/http/routes.js").createRoutes>;
-  mapApplicationErrorToHttp: (error: unknown) => { statusCode: number; message: string } | null;
+  mapApplicationErrorToHttp: (error: unknown) => { statusCode: number; message: string };
 }
 
 export interface CreateAppOptions {
@@ -48,7 +48,7 @@ export function createApp(
   app.get("/health", createHealthHandler("request-service"));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
-    container.mapApplicationErrorToHttp(err) ?? { statusCode: 500, message: "Internal server error" };
+    container.mapApplicationErrorToHttp(err);
   app.use(createErrorHandlerMiddleware(errorMapper));
 
   return app;

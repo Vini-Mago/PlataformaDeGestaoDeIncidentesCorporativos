@@ -78,3 +78,18 @@ export function requireRole(role: string) {
     next();
   };
 }
+
+/**
+ * Middleware: exige que o usuário autenticado seja o dono do recurso (params[paramName] === userId) ou admin.
+ * Deve ser usado após createAuthMiddleware.
+ */
+export function requireOwnerOrAdmin(paramName: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const resourceId = req.params[paramName];
+    if (req.userId === resourceId || req.userRole === "admin") {
+      next();
+      return;
+    }
+    sendError(res, 403, "Forbidden");
+  };
+}
