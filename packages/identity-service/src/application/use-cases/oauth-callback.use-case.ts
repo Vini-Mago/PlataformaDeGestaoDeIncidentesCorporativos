@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
-import { USER_CREATED_EVENT } from "@lframework/shared";
+import { USER_CREATED_EVENT } from "@pgic/shared";
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { IOAuthAccountRepository } from "../ports/oauth-account-repository.port";
 import type { IUserOAuthRegistrationPersistence } from "../ports/user-oauth-registration-persistence.port";

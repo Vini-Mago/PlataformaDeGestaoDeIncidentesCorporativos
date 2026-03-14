@@ -1,4 +1,4 @@
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 
 /**
  * No-op cache for integration tests so Redis is not required for register/login.

@@ -3,7 +3,7 @@
  * Extend AppError from shared so instanceof and serialization work consistently.
  */
 
-import { AppError } from "@lframework/shared";
+import { AppError } from "@pgic/shared";
 
 export class UserAlreadyExistsError extends AppError {
   override name = "UserAlreadyExistsError";

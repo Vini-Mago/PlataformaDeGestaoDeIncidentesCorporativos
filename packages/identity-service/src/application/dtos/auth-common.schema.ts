@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameSchema as sharedNameSchema, MAX_NAME_LENGTH as sharedMaxNameLength } from "@lframework/shared";
+import { nameSchema as sharedNameSchema, MAX_NAME_LENGTH as sharedMaxNameLength } from "@pgic/shared";
 
 const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

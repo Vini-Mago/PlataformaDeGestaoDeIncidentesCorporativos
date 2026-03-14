@@ -8,7 +8,7 @@ export const MAX_NAME_LENGTH = 200;
 
 /**
  * Nome de pessoa/item: trim primeiro, min(1), max(200). Sem emoji, sem tags.
- * Reutilizado em identity (user name) e catalog (item name).
+ * Reutilizado em identity (user name) e request-service (item name).
  */
 export const nameSchema = z
   .string()

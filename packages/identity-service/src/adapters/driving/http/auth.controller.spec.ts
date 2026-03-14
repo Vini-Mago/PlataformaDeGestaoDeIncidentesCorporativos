@@ -7,7 +7,7 @@ import type { LoginUseCase } from "../../../application/use-cases/login.use-case
 import type { GetCurrentUserUseCase } from "../../../application/use-cases/get-current-user.use-case";
 import type { OAuthCallbackUseCase } from "../../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../../application/ports/oauth-provider.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
@@ -15,8 +15,8 @@ import {
   PasswordValidationError,
 } from "../../../application/errors";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
-import { sendError } from "@lframework/shared";
-import { createMockRequest, createMockResponse, createMockAuthenticatedRequest } from "@lframework/shared/test";
+import { sendError } from "@pgic/shared";
+import { createMockRequest, createMockResponse, createMockAuthenticatedRequest } from "@pgic/shared/test";
 
 describe("AuthController", () => {
   let registerUseCase: RegisterUseCase;

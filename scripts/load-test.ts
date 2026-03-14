@@ -28,7 +28,7 @@ const ADMIN_EMAIL = process.env.LOAD_TEST_ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.LOAD_TEST_ADMIN_PASSWORD;
 
 const identity = (path: string) => `${GATEWAY_BASE_URL}/identity/${path.replace(/^\//, "")}`;
-const catalog = (path: string) => `${GATEWAY_BASE_URL}/catalog/${path.replace(/^\//, "")}`;
+const request = (path: string) => `${GATEWAY_BASE_URL}/request/${path.replace(/^\//, "")}`;
 
 interface Stats {
   cycle: number;
@@ -44,7 +44,7 @@ const stats: Stats = {
   latencies: [],
 };
 
-/** Main user created once and reused (login, me, catalog create). */
+/** Main user created once and reused (login, me, request create). */
 interface MainUser {
   email: string;
   password: string;
@@ -232,7 +232,7 @@ async function getUser(token: string, userId: string): Promise<boolean> {
 
 /** GET /api/items via gateway. */
 async function listItems(): Promise<boolean> {
-  const { status } = await fetchJson(catalog("/api/items"), { method: "GET" });
+  const { status } = await fetchJson(request("/api/items"), { method: "GET" });
   const ok = status === 200;
   record(ok);
   if (!ok) log("list items failed", { status });
@@ -246,7 +246,7 @@ async function createItem(
   priceAmount: number,
   priceCurrency: string
 ): Promise<string | null> {
-  const { status, body } = await fetchJson(catalog("/api/items"), {
+  const { status, body } = await fetchJson(request("/api/items"), {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ name, priceAmount, priceCurrency }),
@@ -271,7 +271,7 @@ async function healthCheck(): Promise<boolean> {
   const [gatewayRes, idRes, catRes] = await Promise.all([
     fetchWithTimeout(`${GATEWAY_BASE_URL}/health`),
     fetchWithTimeout(identity("/health")),
-    fetchWithTimeout(catalog("/health")),
+    fetchWithTimeout(request("/health")),
   ]);
   const ok = gatewayRes.ok && idRes.ok && catRes.ok;
   record(ok);
@@ -279,7 +279,7 @@ async function healthCheck(): Promise<boolean> {
     log("health check failed", {
       gateway: gatewayRes.status,
       identity: idRes.status,
-      catalog: catRes.status,
+      request: catRes.status,
     });
   return ok;
 }

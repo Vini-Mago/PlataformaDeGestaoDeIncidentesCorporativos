@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
-import { Prisma } from "@prisma/client";
-import { PrismaClient } from "../../../../generated/prisma-client";
+import { Prisma, PrismaClient } from "../../../../generated/prisma-client";
 import { User } from "../../../domain/entities/user.entity";
 import type { IUserRepository } from "../../../application/ports/user-repository.port";
 import type { OutboxEvent } from "../../../application/ports/outbox-writer.port";

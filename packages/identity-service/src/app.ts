@@ -7,8 +7,8 @@ import {
   requestLoggingMiddleware,
   createErrorHandlerMiddleware,
   createHealthHandler,
-} from "@lframework/shared";
-import type { HttpErrorMapping } from "@lframework/shared";
+} from "@pgic/shared";
+import type { HttpErrorMapping } from "@pgic/shared";
 
 export interface AppContainer {
   userRoutes: Router;

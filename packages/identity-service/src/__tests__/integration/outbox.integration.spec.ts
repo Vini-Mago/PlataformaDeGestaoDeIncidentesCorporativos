@@ -14,14 +14,14 @@ import { createApp } from "../../app";
 import { createNoOpEventPublisher } from "./test-event-publisher";
 import { createNoOpCache } from "./test-cache";
 import { OutboxRelayAdapter } from "../../adapters/driven/messaging/outbox-relay.adapter";
-import { USER_CREATED_EVENT } from "@lframework/shared";
+import { USER_CREATED_EVENT } from "@pgic/shared";
 
 const databaseUrl =
   process.env.IDENTITY_DATABASE_URL ??
-  "postgresql://lframework:lframework@localhost:5432/lframework_identity";
+  "postgresql://pgic:pgic@localhost:5432/identity_service";
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 const rabbitmqUrl =
-  process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672";
+  process.env.RABBITMQ_URL ?? "amqp://pgic:pgic@localhost:5672";
 
 describe("Outbox integration", () => {
   const config = {

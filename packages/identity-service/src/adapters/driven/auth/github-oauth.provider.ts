@@ -1,5 +1,5 @@
 import type { IOAuthProvider, OAuthUserInfo } from "../../../application/ports/oauth-provider.port";
-import { logger } from "@lframework/shared";
+import { logger } from "@pgic/shared";
 import { z } from "zod";
 import { fetchWithTimeoutAndRetry } from "./fetch-with-timeout";
 

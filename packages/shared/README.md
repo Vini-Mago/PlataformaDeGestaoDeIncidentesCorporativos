@@ -1,6 +1,6 @@
-# @lframework/shared
+# @pgic/shared
 
-Pacote compartilhado do monorepo LFramework: infraestrutura HTTP, logging, erros, cache, eventos e tipos comuns.
+Pacote compartilhado do monorepo PGIC (Plataforma de Gestão de Incidentes Corporativos): infraestrutura HTTP, logging, erros, cache, eventos e tipos comuns.
 
 ## Exports principais
 
@@ -16,7 +16,7 @@ Pacote compartilhado do monorepo LFramework: infraestrutura HTTP, logging, erros
 ### createAuthMiddleware
 
 ```ts
-import { createAuthMiddleware } from "@lframework/shared";
+import { createAuthMiddleware } from "@pgic/shared";
 import jwt from "jsonwebtoken";
 
 const auth = createAuthMiddleware((token) => {
@@ -38,7 +38,7 @@ Path recomendado: **GET /health**. Contrato do body: `{ status: string, service:
 ### request-id + error-handler
 
 ```ts
-import { requestIdMiddleware, errorHandlerMiddleware } from "@lframework/shared";
+import { requestIdMiddleware, errorHandlerMiddleware } from "@pgic/shared";
 
 app.use(requestIdMiddleware);
 // ... rotas ...

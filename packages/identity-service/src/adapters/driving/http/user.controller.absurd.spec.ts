@@ -5,8 +5,8 @@ import type { GetUserByIdUseCase } from "../../../application/use-cases/get-user
 import type { Response } from "express";
 import type { NextFunction } from "express";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
-import { sendError } from "@lframework/shared";
-import { createMockAuthenticatedRequest } from "@lframework/shared/test";
+import { sendError } from "@pgic/shared";
+import { createMockAuthenticatedRequest } from "@pgic/shared/test";
 
 describe("UserController — cenários absurdos", () => {
   let createUserUseCase: CreateUserUseCase;

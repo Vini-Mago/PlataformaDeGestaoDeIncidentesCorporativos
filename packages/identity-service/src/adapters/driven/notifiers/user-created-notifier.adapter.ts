@@ -1,5 +1,5 @@
 import type { IUserCreatedNotifier, UserCreatedNotifyInput } from "../../../application/ports/user-created-notifier.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 
 /**
  * Adapter: updates local cache after user creation.

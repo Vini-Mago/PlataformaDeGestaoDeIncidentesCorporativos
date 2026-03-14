@@ -1,24 +1,24 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: lframework-postgres
+    container_name: pgic-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lframework}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lframework}
-      POSTGRES_DB: ${POSTGRES_DB:-lframework}
+      POSTGRES_USER: ${POSTGRES_USER:-pgic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgic}
+      POSTGRES_DB: ${POSTGRES_DB:-identity_service}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lframework}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pgic}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: lframework-redis
+    container_name: pgic-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -31,10 +31,10 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: lframework-rabbitmq
+    container_name: pgic-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-lframework}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-lframework}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pgic}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-pgic}
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
@@ -48,7 +48,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: lframework-nginx
+    container_name: pgic-nginx
     ports:
       - "${GATEWAY_PORT:-8080}:80"
     volumes:

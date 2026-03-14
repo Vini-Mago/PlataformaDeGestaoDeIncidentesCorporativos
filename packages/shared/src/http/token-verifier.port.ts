@@ -10,7 +10,7 @@ export interface TokenVerifierPayload {
 
 /**
  * Porta: verificação de token JWT (apenas verify).
- * Permite que serviços consumidores (ex.: catalog) verifiquem tokens sem depender de implementação.
+ * Permite que serviços consumidores (ex.: request-service) verifiquem tokens sem depender de implementação.
  */
 export interface ITokenVerifier {
   verify(token: string): TokenVerifierPayload | null;

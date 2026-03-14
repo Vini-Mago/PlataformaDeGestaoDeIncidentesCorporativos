@@ -1,20 +1,21 @@
 {
-  "name": "lframework",
+  "name": "pgic",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Exemplo DDD + Microserviços + Hexagonal (TypeScript, PostgreSQL, Redis, RabbitMQ)",
+  "description": "Plataforma de Gestão de Incidentes Corporativos — DDD, Hexagonal, Microserviços (TypeScript, PostgreSQL, Redis, RabbitMQ)",
   "scripts": {
     "build": "pnpm -r run build",
     "lint": "eslint .",
     "test": "pnpm -r run test",
     "dev:identity": "pnpm --filter identity-service run dev",
-    "dev:catalog": "pnpm --filter catalog-service run dev",
+    "dev:request": "pnpm --filter request-service run dev",
     "dev:api-docs": "pnpm --filter api-docs run dev",
-    "dev": "pnpm run dev:identity & pnpm run dev:catalog & pnpm run dev:api-docs",
+    "dev": "pnpm run dev:identity & pnpm run dev:request & pnpm run dev:api-docs",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "load-test": "tsx scripts/load-test.ts"
+    "load-test": "tsx scripts/load-test.ts",
+    "db:ensure": "tsx scripts/ensure-database.ts"
   },
   "engines": {
     "node": ">=18"
@@ -22,8 +23,10 @@
   "packageManager": "pnpm@9.0.0",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/pg": "^8.11.10",
     "eslint": "^10.0.3",
     "glob": "^13.0.6",
+    "pg": "^8.13.1",
     "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.1"
   }

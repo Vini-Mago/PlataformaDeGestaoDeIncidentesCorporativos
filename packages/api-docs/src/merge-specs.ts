@@ -1,6 +1,6 @@
 /**
  * Mescla duas specs OpenAPI 3 em uma única, prefixando schemas para evitar colisões.
- * Mantém dois servers (Identity e Catalog) para o "Try it out" do Swagger.
+ * Mantém dois servers (Identity e Request) para o "Try it out" do Swagger.
  */
 
 export interface OpenApiSpec {
@@ -59,35 +59,35 @@ function prefixSpec(spec: OpenApiSpec, prefix: string): OpenApiSpec {
   };
 }
 
-export function mergeOpenApiSpecs(identitySpec: OpenApiSpec, catalogSpec: OpenApiSpec): OpenApiSpec {
+export function mergeOpenApiSpecs(identitySpec: OpenApiSpec, requestSpec: OpenApiSpec): OpenApiSpec {
   const identity = prefixSpec(identitySpec, "Identity_");
-  const catalog = prefixSpec(catalogSpec, "Catalog_");
+  const request = prefixSpec(requestSpec, "Request_");
 
   const identityServers = identity.servers ?? [];
-  const catalogServers = catalog.servers ?? [];
+  const requestServers = request.servers ?? [];
   const mergedServers = [
     ...identityServers.map((s) => ({ ...s, description: s.description ?? "Identity Service" })),
-    ...catalogServers.map((s) => ({ ...s, description: s.description ?? "Catalog Service" })),
+    ...requestServers.map((s) => ({ ...s, description: s.description ?? "Request Service" })),
   ];
 
   return {
     openapi: "3.0.3",
     info: {
-      title: "LFramework API",
+      title: "PGIC API",
       version: "1.0.0",
-      description: "Documentação unificada: Identity Service (auth, usuários) e Catalog Service (itens). Use o menu «Servers» para alternar o backend nas requisições.",
+      description: "Unified docs: Identity Service (auth, users) and Request Service (service catalog and service requests). Use «Servers» to switch backend.",
     },
     servers: mergedServers,
     components: {
-      securitySchemes: identity.components?.securitySchemes ?? catalog.components?.securitySchemes ?? {},
+      securitySchemes: identity.components?.securitySchemes ?? request.components?.securitySchemes ?? {},
       schemas: {
         ...identity.components?.schemas,
-        ...catalog.components?.schemas,
+        ...request.components?.schemas,
       },
     },
     paths: {
       ...identity.paths,
-      ...catalog.paths,
+      ...request.paths,
     },
   };
 }

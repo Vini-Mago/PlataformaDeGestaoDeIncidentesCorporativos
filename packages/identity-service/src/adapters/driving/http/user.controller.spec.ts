@@ -9,8 +9,8 @@ import {
   InvalidEmailError,
 } from "../../../application/errors";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
-import { sendError } from "@lframework/shared";
-import { createMockAuthenticatedRequest } from "@lframework/shared/test";
+import { sendError } from "@pgic/shared";
+import { createMockAuthenticatedRequest } from "@pgic/shared/test";
 
 describe("UserController", () => {
   let createUserUseCase: CreateUserUseCase;

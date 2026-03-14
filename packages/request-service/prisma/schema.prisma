@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("REQUEST_DATABASE_URL")
+}
+
+// RF-6.1: Service catalog — items users can request (e.g. access to system, user creation).
+model ServiceCatalogItemModel {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String?  @db.Text
+  category            String?
+  responsibleTeamId   String?  @map("responsible_team_id")
+  defaultSlaHours     Int?     @map("default_sla_hours")
+  formSchema           Json?   @map("form_schema")
+  approvalFlow        String  @default("none") @map("approval_flow") // none | single | sequential | parallel
+  approverRoleIds     String[] @map("approver_role_ids") // roles that can approve (e.g. ["manager"])
+  isActive            Boolean @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  serviceRequests     ServiceRequestModel[]
+
+  @@map("service_catalog_items")
+}
+
+// RF-6.2: Service request — instance created from a catalog item, with workflow (Draft → Submitted → InApproval → Approved/Rejected → InProgress → Completed).
+model ServiceRequestModel {
+  id                String   @id @default(uuid())
+  catalogItemId     String   @map("catalog_item_id")
+  requesterId       String   @map("requester_id")
+  status            String   // Draft | Submitted | InApproval | Approved | Rejected | InProgress | Completed | Cancelled
+  formData          Json?    @map("form_data")
+  assignedTeamId    String?  @map("assigned_team_id")
+  assignedToId      String?  @map("assigned_to_id")
+  submittedAt       DateTime? @map("submitted_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  catalogItem       ServiceCatalogItemModel @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+  comments          ServiceRequestCommentModel[]
+
+  @@index([catalogItemId])
+  @@index([requesterId])
+  @@index([status])
+  @@map("service_requests")
+}
+
+model ServiceRequestCommentModel {
+  id          String   @id @default(uuid())
+  requestId   String   @map("request_id")
+  authorId    String   @map("author_id")
+  body        String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  request     ServiceRequestModel @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("service_request_comments")
+}
+
+// Replicated from identity-service via RabbitMQ user.created (Outbox Pattern).
+// Used for display (e.g. requester name) without calling identity; no FK to avoid cross-DB coupling.
+model ReplicatedUserModel {
+  id                    String   @id
+  email                 String
+  name                  String
+  lastEventOccurredAt   DateTime @map("last_event_occurred_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("replicated_users")
+}

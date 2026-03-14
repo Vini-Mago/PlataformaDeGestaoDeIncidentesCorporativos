@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import type { ITokenService, TokenPayload } from "../../../application/ports/token-service.port";
-import { logger } from "@lframework/shared";
+import { logger } from "@pgic/shared";
 
 /** Schema para validar o payload do JWT após decode (exp/iat vindos do jsonwebtoken). */
 const jwtPayloadSchema = z.object({

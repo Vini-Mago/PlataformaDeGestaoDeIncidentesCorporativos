@@ -1,4 +1,4 @@
-import { createErrorToHttpMapper } from "@lframework/shared";
+import { createErrorToHttpMapper } from "@pgic/shared";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
