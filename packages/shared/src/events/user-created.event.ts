@@ -1,6 +1,6 @@
 /**
  * Evento de domínio compartilhado: usuário criado.
- * Publicado pelo Identity Service; consumido por outros serviços (ex.: Catalog).
+ * Publicado pelo Identity Service; consumido por outros serviços (ex.: Request Service).
  *
  * Consumidores não devem confiar no payload: validar userId, email (formato, max 254, sem < >),
  * name (trim, min/max 200, apenas letras/números/espaços/hífen/apóstrofo) e

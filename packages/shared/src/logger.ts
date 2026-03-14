@@ -27,7 +27,7 @@ const transport = getDevTransport();
  * Logger estruturado (Pino).
  * - Produção: sempre JSON no stdout.
  * - Desenvolvimento: pretty (pino-pretty) se o pacote estiver instalado;
- *   caso contrário, JSON no stdout. Quem usar apenas @lframework/shared sem
+ *   caso contrário, JSON no stdout. Quem usar apenas @pgic/shared sem
  *   pino-pretty em dev não precisa instalá-lo.
  *
  * Nota de segurança: não logar req, headers ou body sem sanitização (evitar

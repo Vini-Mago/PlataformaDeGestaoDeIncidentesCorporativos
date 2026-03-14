@@ -1,4 +1,4 @@
-import { createValidateBody } from "@lframework/shared";
+import { createValidateBody } from "@pgic/shared";
 import { registerSchema } from "../../../application/dtos/register.dto";
 import { loginSchema } from "../../../application/dtos/login.dto";
 

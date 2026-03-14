@@ -3,8 +3,8 @@ import { z } from "zod";
 import { CreateUserUseCase } from "../../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../../application/use-cases/get-user-by-id.use-case";
 import type { CreateUserDto } from "../../../application/dtos/create-user.dto";
-import type { AuthenticatedRequest } from "@lframework/shared";
-import { sendError } from "@lframework/shared";
+import type { AuthenticatedRequest } from "@pgic/shared";
+import { sendError } from "@pgic/shared";
 
 const uuidParamSchema = z.string().uuid();
 

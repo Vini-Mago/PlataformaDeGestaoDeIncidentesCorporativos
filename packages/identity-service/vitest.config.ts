@@ -8,7 +8,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@lframework/shared": path.resolve(__dirname, "../shared/src"),
+      "@pgic/shared": path.resolve(__dirname, "../shared/src"),
     },
   },
 });

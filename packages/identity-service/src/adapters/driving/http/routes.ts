@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { asyncHandler, requireRole } from "@lframework/shared";
+import { asyncHandler, requireRole } from "@pgic/shared";
 import { UserController } from "./user.controller";
 import { validateCreateUser } from "./user.validation";
 

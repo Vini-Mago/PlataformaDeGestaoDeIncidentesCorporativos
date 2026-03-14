@@ -1,6 +1,6 @@
-# LFramework
+# PGIC — Plataforma de Gestão de Incidentes Corporativos
 
-Framework de referência em TypeScript para projetos com **DDD**, **Arquitetura Hexagonal** e **Microserviços**. Pensado para escalar: monorepo, convenções fixas e núcleo compartilhado (`@lframework/shared`) com formato de erro, validação e schemas comuns.
+Plataforma corporativa em TypeScript com **DDD**, **Arquitetura Hexagonal** e **Microserviços**. Monorepo com núcleo compartilhado (`@pgic/shared`): formato de erro, validação, schemas e infraestrutura HTTP comum.
 
 ## Stack
 
@@ -15,11 +15,11 @@ Framework de referência em TypeScript para projetos com **DDD**, **Arquitetura 
 ## Estrutura do repositório
 
 ```
-LFramework/
+PGIC/
 ├── packages/
 │   ├── shared/             # Núcleo do framework: eventos, DTOs, HTTP helpers, schemas
 │   ├── identity-service/   # Microserviço de identidade (auth, usuários)
-│   └── catalog-service/    # Microserviço de catálogo (itens)
+│   └── request-service/    # Catálogo de serviços e requisições de serviço (RF-6)
 ├── nginx/
 │   └── nginx.conf          # API Gateway (proxy reverso)
 ├── docker-compose.yml      # Postgres, Redis, RabbitMQ, Nginx
@@ -49,24 +49,25 @@ pnpm install
 pnpm docker:up
 ```
 
-Migrações (uma vez):
+Migrações (após `pnpm docker:up`; cria o DB se não existir e aplica as migrations):
 
 ```bash
-pnpm --filter identity-service exec prisma migrate dev --name init --schema=./prisma/schema.prisma
-pnpm --filter catalog-service exec prisma migrate dev --name init --schema=./prisma/schema.prisma
+pnpm --filter identity-service run prisma:migrate:deploy
+pnpm --filter request-service run prisma:migrate:deploy
 ```
 
-Para migrações futuras, ver [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Novas migrations: `pnpm --filter <service> exec prisma migrate dev --name <nome>`.
 
-Serviços (em terminais separados ou ambos de uma vez):
+Serviços (em terminais separados ou `pnpm dev` para subir todos):
 
 ```bash
 pnpm dev:identity   # http://localhost:3001
-pnpm dev:catalog    # http://localhost:3002
-# ou: pnpm dev       # sobe os dois
+pnpm dev:request    # http://localhost:3002
+pnpm dev:api-docs   # http://localhost:3003 (Swagger unificado)
+# ou: pnpm dev       # identity + request + api-docs
 ```
 
-Com o gateway: **http://localhost:8080** (prefixos `/identity/` e `/catalog/`). Detalhes em [docs/API.md](docs/API.md) e [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Gateway: **http://localhost:8080** (prefixos `/identity/`, `/request/`, `/api-docs/`). Detalhes em [docs/API.md](docs/API.md).
 
 ## Testes
 
@@ -78,4 +79,4 @@ Roda Vitest em todos os pacotes (use cases, DTOs, controllers).
 
 ## Padrões
 
-Ports & Adapters (Hexagonal), Repository, Inversão de dependência, DDD (entidade, value object, domain event), Use case, DTO, Publish-Subscribe (RabbitMQ). O shared expõe contrato de erro (`ErrorResponseDto`), helpers HTTP (`sendError`, `sendValidationError`) e schemas comuns (ex.: `nameSchema`) para manter consistência entre serviços à medida que o projeto escala.
+Ports & Adapters (Hexagonal), Repository, Inversão de dependência, DDD (entidade, value object, domain event), Use case, DTO, Publish-Subscribe (RabbitMQ). O `@pgic/shared` expõe contrato de erro (`ErrorResponseDto`), helpers HTTP (`sendError`, `sendValidationError`) e schemas comuns (ex.: `nameSchema`) para manter consistência entre serviços.

@@ -10,11 +10,12 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "node -e \"const path = require('path'); const dotenv = require('dotenv'); const { execSync } = require('child_process'); dotenv.config({ path: path.resolve(process.cwd(), '../../.env') }); process.env.DATABASE_URL = process.env.IDENTITY_DATABASE_URL; execSync('npx tsx ../../scripts/ensure-database.ts', { stdio: 'inherit', env: process.env }); execSync('npx prisma migrate deploy', { stdio: 'inherit', env: process.env });\"",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "7.3.4",
-    "@lframework/shared": "workspace:*",
+    "@pgic/shared": "workspace:*",
     "@prisma/client": "^5.22.0",
     "amqplib": "^0.10.3",
     "argon2": "^0.41.1",

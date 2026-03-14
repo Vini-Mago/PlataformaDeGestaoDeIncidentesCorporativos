@@ -1,7 +1,7 @@
 import { createContainer as createAwilixContainer, asValue, asClass, asFunction } from "awilix";
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
-import { RedisCacheAdapter, type ICacheService } from "@lframework/shared";
+import { RedisCacheAdapter, type ICacheService } from "@pgic/shared";
 import { PrismaUserRepository } from "./adapters/driven/persistence/prisma-user.repository";
 import { PrismaAuthCredentialRepository } from "./adapters/driven/persistence/prisma-auth-credential.repository";
 import { PrismaUserRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-registration.repository";
@@ -24,7 +24,7 @@ import { GetCurrentUserUseCase } from "./application/use-cases/get-current-user.
 import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use-case";
 import { UserController } from "./adapters/driving/http/user.controller";
 import { AuthController } from "./adapters/driving/http/auth.controller";
-import { createAuthMiddleware } from "@lframework/shared";
+import { createAuthMiddleware } from "@pgic/shared";
 import { createUserRoutes } from "./adapters/driving/http/routes";
 import { createAuthRoutes } from "./adapters/driving/http/auth.routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";

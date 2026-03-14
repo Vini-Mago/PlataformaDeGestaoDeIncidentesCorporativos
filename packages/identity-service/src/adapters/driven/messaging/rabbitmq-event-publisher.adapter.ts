@@ -1,12 +1,13 @@
 import amqp from "amqplib";
 import type { IEventPublisher } from "../../../application/ports/event-publisher.port";
-import { EXCHANGE_USER_EVENTS } from "@lframework/shared";
+import { EXCHANGE_USER_EVENTS, ROUTING_KEY_USER_CREATED, USER_CREATED_EVENT } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 
 /**
  * Adapter: publicador de eventos via RabbitMQ.
  * Encapsula conexão, canal e ciclo de vida (connect/disconnect); implementa IEventPublisher.
+ * Uses shared routing key for user.created so consumers can bind consistently.
  */
 export class RabbitMqEventPublisherAdapter implements IEventPublisher {
   private connection: AmqpConnection | null = null;
@@ -30,7 +31,7 @@ export class RabbitMqEventPublisherAdapter implements IEventPublisher {
     if (!this.channel) {
       throw new Error("RabbitMqEventPublisherAdapter não conectado; chame connect() antes de publicar.");
     }
-    const routingKey = eventName.replace(".", "_");
+    const routingKey = eventName === USER_CREATED_EVENT ? ROUTING_KEY_USER_CREATED : eventName.replace(".", "_");
     const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
     this.channel.publish(this.exchange, routingKey, message, { persistent: true });
   }

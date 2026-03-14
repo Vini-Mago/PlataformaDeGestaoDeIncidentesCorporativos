@@ -27,7 +27,7 @@ Para migrações e integração com PostgreSQL/Redis, copie `.env.example` para 
 
 ```bash
 cp .env.example .env
-# Crie o banco (ex.: createdb lframework_identity) e suba Postgres/Redis (ex.: Docker)
+# Suba a infra (docker-compose up -d); um Postgres com DBs por serviço (identity_service, request_service, …) em snake_case.
 pnpm prisma:migrate
 pnpm test:integration   # testes de API; se o banco não estiver disponível, os testes são ignorados
 ```

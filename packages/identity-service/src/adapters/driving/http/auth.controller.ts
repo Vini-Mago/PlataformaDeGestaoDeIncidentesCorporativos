@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import type { AuthenticatedRequest } from "@lframework/shared";
+import type { AuthenticatedRequest } from "@pgic/shared";
 import type { RegisterUseCase } from "../../../application/use-cases/register.use-case";
 import type { LoginUseCase } from "../../../application/use-cases/login.use-case";
 import type { GetCurrentUserUseCase } from "../../../application/use-cases/get-current-user.use-case";
 import type { OAuthCallbackUseCase } from "../../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../../application/ports/oauth-provider.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 import type { RegisterDto } from "../../../application/dtos/register.dto";
 import type { LoginDto } from "../../../application/dtos/login.dto";
 import type { AuthResponseDto } from "../../../application/dtos/auth-response.dto";
@@ -16,7 +16,7 @@ import {
 } from "../../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
-import { sendError, sendValidationError } from "@lframework/shared";
+import { sendError, sendValidationError } from "@pgic/shared";
 
 export class AuthController {
   constructor(

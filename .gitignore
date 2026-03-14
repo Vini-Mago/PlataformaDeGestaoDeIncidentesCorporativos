@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+.cursor
 generated
 *.log
 .DS_Store

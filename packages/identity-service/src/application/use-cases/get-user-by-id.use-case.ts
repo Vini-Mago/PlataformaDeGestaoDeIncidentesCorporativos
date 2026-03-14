@@ -1,5 +1,5 @@
 import type { IUserRepository } from "../ports/user-repository.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 import { userResponseDtoSchema, type UserResponseDto } from "../dtos/user-response.dto";
 
 export class GetUserByIdUseCase {

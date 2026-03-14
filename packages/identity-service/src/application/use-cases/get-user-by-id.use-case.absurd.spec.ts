@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GetUserByIdUseCase } from "./get-user-by-id.use-case";
 import type { IUserRepository } from "../ports/user-repository.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "@pgic/shared";
 
 describe("GetUserByIdUseCase — cenários absurdos", () => {
   let userRepository: IUserRepository;

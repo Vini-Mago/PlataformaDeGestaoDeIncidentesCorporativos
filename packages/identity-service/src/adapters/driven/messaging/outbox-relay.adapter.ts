@@ -1,4 +1,4 @@
-import { logger } from "@lframework/shared";
+import { logger } from "@pgic/shared";
 import type { PrismaClient } from "../../../../generated/prisma-client";
 import type { IEventPublisher } from "../../../application/ports/event-publisher.port";
 

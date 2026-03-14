@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
-import { asyncHandler } from "@lframework/shared";
+import { asyncHandler } from "@pgic/shared";
 import { AuthController } from "./auth.controller";
 import { validateRegister, validateLogin } from "./auth.validation";
 

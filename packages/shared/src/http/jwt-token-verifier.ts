@@ -15,7 +15,7 @@ const MIN_SECRET_LENGTH = 32;
 
 /**
  * Implementação de ITokenVerifier usando JWT HS256.
- * Use em microserviços que apenas validam token (ex.: catalog); o identity-service
+ * Use em microserviços que apenas validam token (ex.: request-service); o identity-service
  * continua usando JwtTokenService (sign + verify) para emitir e validar.
  */
 export class JwtTokenVerifier implements ITokenVerifier {

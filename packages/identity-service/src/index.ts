@@ -1,6 +1,12 @@
+import path from "path";
+import { config as loadEnv } from "dotenv";
+
+// Load monorepo root .env so RABBITMQ_URL etc. are set when running via pnpm run dev from root (cwd = packages/identity-service)
+loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
+
 import { createContainer } from "./container";
 import { createApp } from "./app";
-import { logger } from "@lframework/shared";
+import { logger } from "@pgic/shared";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -25,13 +31,13 @@ if (isProduction && !process.env.RABBITMQ_URL) {
 // Em produção as URLs vêm sempre de variáveis de ambiente (sem default com credenciais).
 const databaseUrl = isProduction
   ? process.env.IDENTITY_DATABASE_URL!
-  : (process.env.IDENTITY_DATABASE_URL ?? "postgresql://lframework:lframework@localhost:5432/lframework_identity");
+  : (process.env.IDENTITY_DATABASE_URL ?? "postgresql://pgic:pgic@localhost:5432/identity_service");
 const redisUrl = isProduction
   ? process.env.REDIS_URL!
   : (process.env.REDIS_URL ?? "redis://localhost:6379");
 const rabbitmqUrl = isProduction
   ? process.env.RABBITMQ_URL!
-  : (process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672");
+  : (process.env.RABBITMQ_URL ?? "amqp://pgic:pgic@localhost:5672");
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 const jwtExpiresInSeconds = parseInt(process.env.JWT_EXPIRES_IN_SECONDS ?? "604800", 10); // 7 days
 if (!Number.isInteger(jwtExpiresInSeconds) || jwtExpiresInSeconds < 1) {
