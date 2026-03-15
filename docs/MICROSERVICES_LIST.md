@@ -12,7 +12,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | 1   | **identity-service**       | Existe    | Usuários, autenticação, autorização (RBAC), sessões              |
 | 2   | **request-service**        | Existe    | Catálogo de serviços e requisições de serviço                    |
 | 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                            |
-| 4   | **problem-change-service** | Planejado | Problemas recorrentes e mudanças (Change Management)             |
+| 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)             |
 | 5   | **sla-service**            | Planejado | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
 | 6   | **escalation-service**     | Planejado | Orquestração de escalonamentos e disparo de ações                |
 | 7   | **notification-service**   | Planejado | Envio de e-mail, Slack, Teams, webhooks                          |
@@ -140,7 +140,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 4. problem-change-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Problemas recorrentes (causa raiz, plano de ação) e mudanças planejadas (Change Management): janela, risco, rollback, aprovação.
 
@@ -164,12 +164,12 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ### Integrações
 
-- **Consome:** dados de incidentes (referência ou evento) para vínculos
-- **Publica:** eventos de problema/mudança para audit-service, notification-service, reporting-service
+- **Consome:** `user.created` (RabbitMQ, fila `problem_change.user_created`) para replicação em `replicated_users`; dados de incidentes (referência ou evento) para vínculos (futuro).
+- **Publica:** `problem.created`, `change.created` via **Outbox Pattern** (exchanges `problem.events`, `change.events`) para audit-service, notification-service, reporting-service.
 
 ### Prefixo no gateway
 
-- `/problems/`, `/changes/` (ou `/problem-change/` unificado)
+- `/problem-change/`
 
 ---
 

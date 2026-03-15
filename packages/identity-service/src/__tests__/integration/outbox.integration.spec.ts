@@ -5,7 +5,7 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 const packageRoot = path.resolve(__dirname, "../../..");
-loadEnv({ path: path.join(packageRoot, ".env") });
+loadEnv({ path: path.join(packageRoot, "../../.env") });
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";

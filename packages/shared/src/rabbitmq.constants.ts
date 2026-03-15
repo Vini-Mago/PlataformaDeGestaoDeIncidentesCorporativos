@@ -24,3 +24,16 @@ export const INCIDENT_ASSIGNED_EVENT = "incident.assigned";
 /** Queues for incident events (consumed by escalation, notification, audit, reporting). */
 export const QUEUE_INCIDENT_CREATED_NOTIFICATION = "notification.incident_created";
 export const QUEUE_USER_CREATED_INCIDENT = "incident.user_created";
+
+/** Problem-change service: user replication. */
+export const QUEUE_USER_CREATED_PROBLEM_CHANGE = "problem_change.user_created";
+
+/** Problem events (exchange + routing keys). Published by problem-change-service (Outbox Pattern). */
+export const EXCHANGE_PROBLEM_EVENTS = "problem.events";
+export const ROUTING_KEY_PROBLEM_CREATED = "problem_created";
+export const PROBLEM_CREATED_EVENT = "problem.created";
+
+/** Change events (exchange + routing keys). Published by problem-change-service (Outbox Pattern). */
+export const EXCHANGE_CHANGE_EVENTS = "change.events";
+export const ROUTING_KEY_CHANGE_CREATED = "change_created";
+export const CHANGE_CREATED_EVENT = "change.created";

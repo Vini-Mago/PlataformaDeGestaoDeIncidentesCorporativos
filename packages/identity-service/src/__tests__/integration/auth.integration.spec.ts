@@ -7,9 +7,9 @@
  */
 import path from "path";
 import { config as loadEnv } from "dotenv";
-// Load .env from package root (reliable regardless of Vitest worker cwd)
+// Load .env from monorepo root (same as other services)
 const packageRoot = path.resolve(__dirname, "../../..");
-loadEnv({ path: path.join(packageRoot, ".env") });
+loadEnv({ path: path.join(packageRoot, "../../.env") });
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";

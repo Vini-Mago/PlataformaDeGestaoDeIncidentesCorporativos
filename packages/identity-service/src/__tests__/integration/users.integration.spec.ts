@@ -6,7 +6,7 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 const packageRoot = path.resolve(__dirname, "../../..");
-loadEnv({ path: path.join(packageRoot, ".env") });
+loadEnv({ path: path.join(packageRoot, "../../.env") });
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
@@ -244,7 +244,7 @@ describe("Users API integration", () => {
         .get("/api/users/550e8400-e29b-41d4-a716-446655440000")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(404);
-      expect(res.body).toHaveProperty("error", "User not found");
+      expect(res.body).toHaveProperty("error", "User not found: 550e8400-e29b-41d4-a716-446655440000");
     });
 
     it("returns 200 with user when requesting own id", async ({ skip }) => {
