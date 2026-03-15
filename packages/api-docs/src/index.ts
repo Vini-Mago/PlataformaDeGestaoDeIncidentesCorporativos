@@ -17,6 +17,7 @@ const identitySpecUrl = process.env.IDENTITY_SPEC_URL ?? "http://localhost:3001/
 const requestSpecUrl = process.env.REQUEST_SPEC_URL ?? "http://localhost:3002/api-docs.json";
 const incidentSpecUrl = process.env.INCIDENT_SPEC_URL ?? "http://localhost:3004/api-docs.json";
 const problemChangeSpecUrl = process.env.PROBLEM_CHANGE_SPEC_URL ?? "http://localhost:3005/api-docs.json";
+const slaSpecUrl = process.env.SLA_SPEC_URL ?? "http://localhost:3006/api-docs.json";
 
 async function fetchSpec(url: string): Promise<OpenApiSpec> {
   const res = await fetch(url);
@@ -31,6 +32,7 @@ async function getMergedSpec(): Promise<object> {
   ]);
   let incidentSpec: OpenApiSpec | undefined;
   let problemChangeSpec: OpenApiSpec | undefined;
+  let slaSpec: OpenApiSpec | undefined;
   try {
     incidentSpec = await fetchSpec(incidentSpecUrl);
   } catch {
@@ -41,7 +43,12 @@ async function getMergedSpec(): Promise<object> {
   } catch {
     // problem-change service not running
   }
-  return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec, problemChangeSpec);
+  try {
+    slaSpec = await fetchSpec(slaSpecUrl);
+  } catch {
+    // sla service not running
+  }
+  return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec, problemChangeSpec, slaSpec);
 }
 
 const app = express();

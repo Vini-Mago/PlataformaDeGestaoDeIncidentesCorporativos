@@ -37,3 +37,10 @@ export const PROBLEM_CREATED_EVENT = "problem.created";
 export const EXCHANGE_CHANGE_EVENTS = "change.events";
 export const ROUTING_KEY_CHANGE_CREATED = "change_created";
 export const CHANGE_CREATED_EVENT = "change.created";
+
+/** SLA events (exchange + routing keys). Published by sla-service (Outbox Pattern). */
+export const EXCHANGE_SLA_EVENTS = "sla.events";
+export const ROUTING_KEY_SLA_RISK = "sla_risk";
+export const ROUTING_KEY_SLA_BREACH = "sla_breach";
+export const SLA_RISK_EVENT = "sla.risk";
+export const SLA_BREACH_EVENT = "sla.breach";

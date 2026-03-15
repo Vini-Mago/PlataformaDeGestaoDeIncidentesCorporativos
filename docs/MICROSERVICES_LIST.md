@@ -13,7 +13,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | 2   | **request-service**        | Existe    | Catálogo de serviços e requisições de serviço                    |
 | 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                            |
 | 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)             |
-| 5   | **sla-service**            | Planejado | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
+| 5   | **sla-service**            | Existe    | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
 | 6   | **escalation-service**     | Planejado | Orquestração de escalonamentos e disparo de ações                |
 | 7   | **notification-service**   | Planejado | Envio de e-mail, Slack, Teams, webhooks                          |
 | 8   | **audit-service**          | Planejado | Trilhas de auditoria (ações de usuário e técnicas)               |
