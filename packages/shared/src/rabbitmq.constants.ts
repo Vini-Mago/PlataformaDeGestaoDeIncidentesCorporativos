@@ -44,3 +44,9 @@ export const ROUTING_KEY_SLA_RISK = "sla_risk";
 export const ROUTING_KEY_SLA_BREACH = "sla_breach";
 export const SLA_RISK_EVENT = "sla.risk";
 export const SLA_BREACH_EVENT = "sla.breach";
+
+/** Queues for escalation-service (consumes incident and SLA events). */
+export const QUEUE_INCIDENT_CREATED_ESCALATION = "escalation.incident_created";
+export const QUEUE_INCIDENT_STATUS_CHANGED_ESCALATION = "escalation.incident_status_changed";
+export const QUEUE_SLA_RISK_ESCALATION = "escalation.sla_risk";
+export const QUEUE_SLA_BREACH_ESCALATION = "escalation.sla_breach";

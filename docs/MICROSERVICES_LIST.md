@@ -14,7 +14,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                            |
 | 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)             |
 | 5   | **sla-service**            | Existe    | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
-| 6   | **escalation-service**     | Planejado | Orquestração de escalonamentos e disparo de ações                |
+| 6   | **escalation-service**     | Existe    | Orquestração de escalonamentos e disparo de ações                |
 | 7   | **notification-service**   | Planejado | Envio de e-mail, Slack, Teams, webhooks                          |
 | 8   | **audit-service**          | Planejado | Trilhas de auditoria (ações de usuário e técnicas)               |
 | 9   | **reporting-service**      | Planejado | KPIs, dashboards, relatórios, exportação                         |
@@ -211,7 +211,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 6. escalation-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Orquestração de escalonamentos: avaliação de regras (tempo sem atendimento, proximidade de SLA, criticidade) e disparo de ações (notificação, reatribuição, alteração de prioridade).
 

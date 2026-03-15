@@ -89,7 +89,8 @@ export function mergeOpenApiSpecs(
   requestSpec: OpenApiSpec,
   incidentSpec?: OpenApiSpec,
   problemChangeSpec?: OpenApiSpec,
-  slaSpec?: OpenApiSpec
+  slaSpec?: OpenApiSpec,
+  escalationSpec?: OpenApiSpec
 ): OpenApiSpec {
   const entries: SpecEntry[] = [
     { spec: identitySpec, prefix: "Identity_", description: "Identity Service" },
@@ -103,6 +104,9 @@ export function mergeOpenApiSpecs(
   }
   if (slaSpec) {
     entries.push({ spec: slaSpec, prefix: "Sla_", description: "SLA Service" });
+  }
+  if (escalationSpec) {
+    entries.push({ spec: escalationSpec, prefix: "Escalation_", description: "Escalation Service" });
   }
 
   const first = prefixSpec(entries[0].spec, entries[0].prefix);
@@ -122,7 +126,7 @@ export function mergeOpenApiSpecs(
     info: {
       title: "PGIC API",
       version: "1.0.0",
-      description: "Unified docs: Identity (auth), Request (catalog, service requests), Incident (incident lifecycle), Problem-change (problems, changes), SLA (policies, calendars). Use «Servers» to switch backend.",
+      description: "Unified docs: Identity (auth), Request (catalog, service requests), Incident (incident lifecycle), Problem-change (problems, changes), SLA (policies, calendars), Escalation (rules, history). Use «Servers» to switch backend.",
     },
     servers: merged.servers,
     components: {
