@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("SLA_DATABASE_URL")
+}
+
+// RF-8.1: SLA policies — conditions (ticket type, criticality, service, client) + response/resolution time + calendar
+model SlaPolicyModel {
+  id                String   @id @default(uuid())
+  name              String
+  ticketType        String   @map("ticket_type")   // incident | request
+  criticality       String?  @map("criticality")  // Low | Medium | High | Critical (null = any)
+  serviceId         String?  @map("service_id")   // null = any
+  clientId          String?  @map("client_id")    // null = any
+  responseMinutes   Int      @map("response_minutes")
+  resolutionMinutes Int      @map("resolution_minutes")
+  calendarId        String   @map("calendar_id")
+  priority          Int      @default(0)          // higher = more specific, used for conflict resolution
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  calendar CalendarModel @relation(fields: [calendarId], references: [id], onDelete: Restrict)
+
+  @@index([ticketType, criticality, isActive])
+  @@index([calendarId])
+  @@map("sla_policies")
+}
+
+// RF-8.2: Calendars — working days, business hours, timezone
+model CalendarModel {
+  id                String   @id @default(uuid())
+  name              String
+  timezone          String   @default("UTC")
+  workingDays       Int[]    @map("working_days")  // 0=Sun, 1=Mon, ... 6=Sat
+  workStartMinutes  Int      @map("work_start_minutes")  // e.g. 480 = 08:00
+  workEndMinutes    Int      @map("work_end_minutes")     // e.g. 1080 = 18:00
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  slaPolicies SlaPolicyModel[]
+  holidays    HolidayModel[]
+
+  @@map("calendars")
+}
+
+// Holidays (non-working days)
+model HolidayModel {
+  id         String   @id @default(uuid())
+  calendarId String   @map("calendar_id")
+  date       DateTime @db.Date
+  name       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  calendar CalendarModel @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarId, date])
+  @@index([calendarId])
+  @@map("holidays")
+}
+
+// Outbox for reliable event publishing (sla.risk, sla.breach)
+model OutboxModel {
+  id            String    @id @default(uuid())
+  eventName     String    @map("event_name")
+  payload       Json      @db.JsonB
+  createdAt     DateTime  @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+  claimedAt     DateTime? @map("claimed_at")
+  failedAt      DateTime? @map("failed_at")
+  terminalError String?   @map("terminal_error") @db.Text
+
+  @@index([publishedAt])
+  @@index([claimedAt])
+  @@index([failedAt])
+  @@map("outbox")
+}
