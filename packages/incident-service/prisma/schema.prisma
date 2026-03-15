@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("INCIDENT_DATABASE_URL")
+}
+
+// RF-5.x: Incident lifecycle — Open → In Analysis → In Progress → Pending Customer → Resolved → Closed
+model IncidentModel {
+  id                String   @id @default(uuid())
+  title             String
+  description       String   @db.Text
+  status            String   // Open | InAnalysis | InProgress | PendingCustomer | Resolved | Closed
+  criticality       String   @map("criticality") // Low | Medium | High | Critical
+  serviceAffected   String?  @map("service_affected")
+  requesterId       String   @map("requester_id")
+  assignedTeamId    String?  @map("assigned_team_id")
+  assignedToId      String?  @map("assigned_to_id")
+  problemId         String?  @map("problem_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  closedAt          DateTime? @map("closed_at")
+
+  statusHistory     IncidentStatusHistoryModel[]
+  comments          IncidentCommentModel[]
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([assignedTeamId])
+  @@index([createdAt])
+  @@map("incidents")
+}
+
+model IncidentStatusHistoryModel {
+  id          String   @id @default(uuid())
+  incidentId  String   @map("incident_id")
+  fromStatus  String   @map("from_status")
+  toStatus    String   @map("to_status")
+  changedById String?  @map("changed_by_id")
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  incident    IncidentModel @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("incident_status_history")
+}
+
+model IncidentCommentModel {
+  id        String   @id @default(uuid())
+  incidentId String  @map("incident_id")
+  authorId  String   @map("author_id")
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  incident  IncidentModel @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("incident_comments")
+}
+
+// Outbox for reliable event publishing (Outbox Pattern)
+model OutboxModel {
+  id          String    @id @default(uuid())
+  eventName   String    @map("event_name")
+  payload     Json      @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([publishedAt])
+  @@map("outbox")
+}
+
+// Replicated from identity-service via RabbitMQ user.created (for display names)
+model ReplicatedUserModel {
+  id                  String   @id
+  email               String
+  name                String
+  lastEventOccurredAt DateTime @map("last_event_occurred_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("replicated_users")
+}

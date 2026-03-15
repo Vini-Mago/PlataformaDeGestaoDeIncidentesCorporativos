@@ -11,7 +11,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | --- | -------------------------- | --------- | ---------------------------------------------------------------- |
 | 1   | **identity-service**       | Existe    | Usuários, autenticação, autorização (RBAC), sessões              |
 | 2   | **request-service**        | Existe    | Catálogo de serviços e requisições de serviço                    |
-| 3   | **incident-service**       | Planejado | Incidentes (CRUD, workflow, vínculos)                            |
+| 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                            |
 | 4   | **problem-change-service** | Planejado | Problemas recorrentes e mudanças (Change Management)             |
 | 5   | **sla-service**            | Planejado | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
 | 6   | **escalation-service**     | Planejado | Orquestração de escalonamentos e disparo de ações                |
@@ -103,7 +103,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 3. incident-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Ciclo de vida de incidentes: abertura (manual e automática), criticidade, impacto, serviço afetado, equipe, workflow de estados e vínculos com problemas e mudanças.
 
@@ -129,13 +129,12 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ### Integrações
 
-- **Consome:** regras de SLA (sla-service); usuários/equipes (identity ou réplica)
-- **Publica:** eventos de incidente para escalation-service, notification-service, audit-service, reporting-service
-- **Consome (opcional):** eventos do integration-service (incidentes criados por monitoramento)
+- **Consome:** `user.created` (RabbitMQ, fila `incident.user_created`) para replicação em `replicated_users`; regras de SLA (sla-service, futuro); eventos do integration-service (opcional).
+- **Publica:** `incident.created`, `incident.status_changed`, `incident.assigned` via **Outbox Pattern** (exchange `incident.events`) para escalation-service, notification-service, audit-service, reporting-service.
 
 ### Prefixo no gateway
 
-- `/incidents/` (sugerido)
+- `/incidents/`
 
 ---
 

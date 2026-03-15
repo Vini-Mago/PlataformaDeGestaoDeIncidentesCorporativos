@@ -59,35 +59,68 @@ function prefixSpec(spec: OpenApiSpec, prefix: string): OpenApiSpec {
   };
 }
 
-export function mergeOpenApiSpecs(identitySpec: OpenApiSpec, requestSpec: OpenApiSpec): OpenApiSpec {
-  const identity = prefixSpec(identitySpec, "Identity_");
-  const request = prefixSpec(requestSpec, "Request_");
+export interface SpecEntry {
+  spec: OpenApiSpec;
+  prefix: string;
+  description?: string;
+}
 
-  const identityServers = identity.servers ?? [];
-  const requestServers = request.servers ?? [];
-  const mergedServers = [
-    ...identityServers.map((s) => ({ ...s, description: s.description ?? "Identity Service" })),
-    ...requestServers.map((s) => ({ ...s, description: s.description ?? "Request Service" })),
+type ServerEntry = { url: string; description?: string };
+
+function mergeTwoSpecs(
+  base: { servers: ServerEntry[]; schemas: Record<string, unknown>; paths: Record<string, unknown>; securitySchemes: Record<string, unknown> },
+  entry: SpecEntry
+): typeof base {
+  const prefixed = prefixSpec(entry.spec, entry.prefix);
+  const servers = prefixed.servers ?? [];
+  return {
+    servers: [
+      ...base.servers,
+      ...servers.map((s): ServerEntry => ({ url: s.url, description: s.description ?? entry.description ?? entry.prefix })),
+    ],
+    schemas: { ...base.schemas, ...(prefixed.components?.schemas ?? {}) },
+    paths: { ...base.paths, ...(prefixed.paths ?? {}) },
+    securitySchemes: { ...base.securitySchemes, ...(prefixed.components?.securitySchemes ?? {}) },
+  };
+}
+
+export function mergeOpenApiSpecs(
+  identitySpec: OpenApiSpec,
+  requestSpec: OpenApiSpec,
+  incidentSpec?: OpenApiSpec
+): OpenApiSpec {
+  const entries: SpecEntry[] = [
+    { spec: identitySpec, prefix: "Identity_", description: "Identity Service" },
+    { spec: requestSpec, prefix: "Request_", description: "Request Service" },
   ];
+  if (incidentSpec) {
+    entries.push({ spec: incidentSpec, prefix: "Incident_", description: "Incident Service" });
+  }
+
+  const first = prefixSpec(entries[0].spec, entries[0].prefix);
+  let merged: { servers: ServerEntry[]; schemas: Record<string, unknown>; paths: Record<string, unknown>; securitySchemes: Record<string, unknown> } = {
+    servers: (first.servers ?? []).map((s): ServerEntry => ({ url: s.url, description: s.description ?? entries[0].description })),
+    schemas: (first.components?.schemas ?? {}) as Record<string, unknown>,
+    paths: (first.paths ?? {}) as Record<string, unknown>,
+    securitySchemes: (first.components?.securitySchemes ?? {}) as Record<string, unknown>,
+  };
+
+  for (let i = 1; i < entries.length; i++) {
+    merged = mergeTwoSpecs(merged, entries[i]);
+  }
 
   return {
     openapi: "3.0.3",
     info: {
       title: "PGIC API",
       version: "1.0.0",
-      description: "Unified docs: Identity Service (auth, users) and Request Service (service catalog and service requests). Use «Servers» to switch backend.",
+      description: "Unified docs: Identity (auth), Request (catalog, service requests), Incident (incident lifecycle). Use «Servers» to switch backend.",
     },
-    servers: mergedServers,
+    servers: merged.servers,
     components: {
-      securitySchemes: identity.components?.securitySchemes ?? request.components?.securitySchemes ?? {},
-      schemas: {
-        ...identity.components?.schemas,
-        ...request.components?.schemas,
-      },
+      securitySchemes: merged.securitySchemes,
+      schemas: merged.schemas,
     },
-    paths: {
-      ...identity.paths,
-      ...request.paths,
-    },
+    paths: merged.paths,
   };
 }

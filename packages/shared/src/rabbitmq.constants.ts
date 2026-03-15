@@ -11,3 +11,16 @@ export const QUEUE_USER_CREATED_REQUEST = "request.user_created";
 export const QUEUE_USER_UPDATED_REQUEST = "request.user_updated";
 /** Dead-letter queue for failed user events. */
 export const QUEUE_USER_CREATED_REQUEST_FAILED = "request.user_created.failed";
+
+/** Incident events (exchange + routing keys). Published by incident-service (Outbox Pattern). */
+export const EXCHANGE_INCIDENT_EVENTS = "incident.events";
+export const ROUTING_KEY_INCIDENT_CREATED = "incident_created";
+export const ROUTING_KEY_INCIDENT_STATUS_CHANGED = "incident_status_changed";
+export const ROUTING_KEY_INCIDENT_ASSIGNED = "incident_assigned";
+export const INCIDENT_CREATED_EVENT = "incident.created";
+export const INCIDENT_STATUS_CHANGED_EVENT = "incident.status_changed";
+export const INCIDENT_ASSIGNED_EVENT = "incident.assigned";
+
+/** Queues for incident events (consumed by escalation, notification, audit, reporting). */
+export const QUEUE_INCIDENT_CREATED_NOTIFICATION = "notification.incident_created";
+export const QUEUE_USER_CREATED_INCIDENT = "incident.user_created";
