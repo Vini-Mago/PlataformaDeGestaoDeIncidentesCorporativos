@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("NOTIFICATION_DATABASE_URL")
+}
+
+// Notifications: type (email, in_app, push), recipient, subject, body; used for alerts and delivery tracking
+model NotificationModel {
+  id        String   @id @default(uuid())
+  type      String   @map("type")       // email | in_app | push
+  recipient String   @map("recipient")
+  subject   String   @map("subject")   @db.Text
+  body      String?  @map("body")     @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([recipient])
+  @@index([createdAt])
+  @@map("notifications")
+}
