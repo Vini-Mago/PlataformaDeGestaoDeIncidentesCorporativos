@@ -8,17 +8,23 @@ datasource db {
   url      = env("NOTIFICATION_DATABASE_URL")
 }
 
-// Notifications: type (email, in_app, push), recipient, subject, body; used for alerts and delivery tracking
+// Notifications: type (email, in_app, push), recipient, subject, body; delivery tracking (status, sentAt, etc.)
 model NotificationModel {
-  id        String   @id @default(uuid())
-  type      String   @map("type")       // email | in_app | push
-  recipient String   @map("recipient")
-  subject   String   @map("subject")   @db.Text
-  body      String?  @map("body")     @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  type         String    @map("type")       // email | in_app | push
+  recipient    String    @map("recipient")
+  subject      String    @map("subject")   @db.Text
+  body         String?   @map("body")     @db.Text
+  status       String    @default("pending") @map("status")  // pending | sent | delivered | failed
+  sentAt       DateTime? @map("sent_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  failedAt     DateTime? @map("failed_at")
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   @@index([type])
   @@index([recipient])
   @@index([createdAt])
+  @@index([status])
   @@map("notifications")
 }

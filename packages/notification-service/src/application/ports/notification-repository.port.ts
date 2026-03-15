@@ -10,6 +10,8 @@ export interface CreateNotificationInput {
 export interface NotificationListFilters {
   type?: "email" | "in_app" | "push";
   recipient?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface INotificationRepository {

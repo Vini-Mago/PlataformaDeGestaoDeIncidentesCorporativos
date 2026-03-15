@@ -21,14 +21,21 @@ export class EscalationController {
 
   listEscalationRulesHandler = asyncHandler(async (req: Request, res: Response) => {
     const ticketType = parseTicketTypeFilterOrThrow(req.query.ticketType);
-    const isActive =
-      req.query.isActive === undefined
-        ? undefined
-        : req.query.isActive === "true"
-          ? true
-          : req.query.isActive === "false"
-            ? false
-            : undefined;
+    const isActiveRaw = req.query.isActive;
+    let isActive: boolean | undefined;
+    if (isActiveRaw === undefined) {
+      isActive = undefined;
+    } else if (isActiveRaw === "true") {
+      isActive = true;
+    } else if (isActiveRaw === "false") {
+      isActive = false;
+    } else {
+      res.status(400).json({
+        error: "Invalid filter",
+        message: `isActive must be "true" or "false", got: ${String(isActiveRaw)}`,
+      });
+      return;
+    }
     const list = await this.listEscalationRules.execute({ ticketType, isActive });
     res.json(list);
   });

@@ -5,7 +5,7 @@ Escalation orchestration: configurable rules (conditions + actions) and history 
 ## Setup
 
 - PostgreSQL database `escalation_service`. Run from repo root: `pnpm --filter escalation-service run prisma:migrate:deploy`.
-- JWT_SECRET: use same as identity-service for auth.
+- JWT_SECRET: shared with identity-service for auth. Set the same value (e.g. `export JWT_SECRET=your-secret` or in `.env`) so tokens signed by identity-service validate here. Example: copy the value from identity-service `.env` into this service's `.env` (or environment) before starting.
 
 ## Scripts
 

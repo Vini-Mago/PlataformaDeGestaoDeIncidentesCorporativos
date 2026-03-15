@@ -8,7 +8,7 @@ export class CreateEscalationRuleUseCase {
     return this.escalationRuleRepository.create({
       name: dto.name,
       description: dto.description ?? null,
-      ticketType: dto.ticketType,
+      ticketType: dto.ticketType as "incident" | "request",
       conditionType: dto.conditionType,
       conditionValue: dto.conditionValue,
       actions: dto.actions,

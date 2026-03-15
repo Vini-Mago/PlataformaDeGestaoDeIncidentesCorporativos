@@ -28,12 +28,21 @@ export class PrismaNotificationRepository implements INotificationRepository {
   }
 
   async list(filters: NotificationListFilters = {}): Promise<Notification[]> {
+    const defaultLimit = 100;
+    const maxLimit = 500;
+    const limit = Math.min(
+      filters.limit ?? defaultLimit,
+      maxLimit
+    );
+    const offset = filters.offset ?? 0;
     const rows = await this.prisma.notificationModel.findMany({
       where: {
         ...(filters.type && { type: filters.type }),
         ...(filters.recipient && { recipient: filters.recipient }),
       },
       orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
     });
     return rows.map((r) => this.toNotification(r));
   }
@@ -45,12 +54,23 @@ export class PrismaNotificationRepository implements INotificationRepository {
     throw new Error(`Invalid notification type in database: "${value}"`);
   }
 
+  private parseStatus(value: string): Notification["status"] {
+    const valid: Notification["status"][] = ["pending", "sent", "delivered", "failed"];
+    if (valid.includes(value as Notification["status"])) return value as Notification["status"];
+    return "pending";
+  }
+
   private toNotification(row: {
     id: string;
     type: string;
     recipient: string;
     subject: string;
     body: string | null;
+    status: string;
+    sentAt: Date | null;
+    deliveredAt: Date | null;
+    failedAt: Date | null;
+    errorMessage: string | null;
     createdAt: Date;
   }): Notification {
     return {
@@ -59,6 +79,11 @@ export class PrismaNotificationRepository implements INotificationRepository {
       recipient: row.recipient,
       subject: row.subject,
       body: row.body,
+      status: this.parseStatus(row.status),
+      sentAt: row.sentAt,
+      deliveredAt: row.deliveredAt,
+      failedAt: row.failedAt,
+      errorMessage: row.errorMessage,
       createdAt: row.createdAt,
     };
   }

@@ -7,18 +7,18 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 ## Resumo
 
 
-| #   | Serviço                    | Status    | Responsabilidade principal                                       |
-| --- | -------------------------- | --------- | ---------------------------------------------------------------- |
-| 1   | **identity-service**       | Existe    | Usuários, autenticação, autorização (RBAC), sessões              |
-| 2   | **request-service**        | Existe    | Catálogo de serviços e requisições de serviço                    |
-| 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                            |
-| 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)             |
-| 5   | **sla-service**            | Existe    | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
-| 6   | **escalation-service**     | Existe    | Orquestração de escalonamentos e disparo de ações                |
+| #   | Serviço                    | Status    | Responsabilidade principal                                                       |
+| --- | -------------------------- | --------- | -------------------------------------------------------------------------------- |
+| 1   | **identity-service**       | Existe    | Usuários, autenticação, autorização (RBAC), sessões                              |
+| 2   | **request-service**        | Existe    | Catálogo de serviços e requisições de serviço                                    |
+| 3   | **incident-service**       | Existe    | Incidentes (CRUD, workflow, vínculos)                                            |
+| 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)                             |
+| 5   | **sla-service**            | Existe    | Regras de SLA, calendário, contagem de prazos, risco/estouro                     |
+| 6   | **escalation-service**     | Existe    | Orquestração de escalonamentos e disparo de ações                                |
 | 7   | **notification-service**   | Existe    | Envio de notificações (e-mail, in-app, push); futuramente Slack, Teams, webhooks |
-| 8   | **audit-service**          | Planejado | Trilhas de auditoria (ações de usuário e técnicas)               |
-| 9   | **reporting-service**      | Planejado | KPIs, dashboards, relatórios, exportação                         |
-| 10  | **integration-service**    | Planejado | Webhooks de entrada, integrações externas, publicação de eventos |
+| 8   | **audit-service**          | Existe    | Trilhas de auditoria (ações de usuário e técnicas)                               |
+| 9   | **reporting-service**      | Planejado | KPIs, dashboards, relatórios, exportação                                         |
+| 10  | **integration-service**    | Planejado | Webhooks de entrada, integrações externas, publicação de eventos                 |
 
 
 ---
@@ -281,7 +281,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 8. audit-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Centralização de trilhas de auditoria: ações dos usuários (quem, quando, o quê, valor anterior/novo) e eventos técnicos (integrações, falhas). Suporte a histórico de alterações e versionamento.
 
@@ -311,7 +311,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ### Prefixo no gateway
 
-- `/audit/`
+- `/audit/` (e.g. `http://localhost:8080/audit/health`)
 
 ---
 

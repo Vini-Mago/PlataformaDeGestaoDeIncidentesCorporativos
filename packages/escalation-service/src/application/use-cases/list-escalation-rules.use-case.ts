@@ -11,7 +11,7 @@ export function parseTicketTypeFilter(value: unknown): "incident" | "request" | 
 
 export function parseTicketTypeFilterOrThrow(value: unknown): "incident" | "request" | undefined {
   if (value === undefined || value === null) return undefined;
-  const s = String(value);
+  const s = String(value).toLowerCase();
   if (VALID_TICKET_TYPES.includes(s as "incident" | "request")) return s as "incident" | "request";
   throw new InvalidTicketTypeError(s);
 }
