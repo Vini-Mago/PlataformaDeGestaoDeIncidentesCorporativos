@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AUDIT_DATABASE_URL")
+}
+
+// RF-3.1/3.2: Audit trail — who, when, what (entity + action), optional previous/new value
+model AuditEntryModel {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  action       String   @map("action")
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?    @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_entries")
+}

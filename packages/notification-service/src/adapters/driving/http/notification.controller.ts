@@ -25,7 +25,16 @@ export class NotificationController {
       typeof req.query.recipient === "string" && req.query.recipient.length > 0
         ? req.query.recipient
         : undefined;
-    const list = await this.listNotifications.execute({ type, recipient });
+    const defaultLimit = 100;
+    const maxLimit = 500;
+    const limitRaw = req.query.limit;
+    const limit =
+      limitRaw === undefined
+        ? defaultLimit
+        : Math.min(maxLimit, Math.max(1, parseInt(String(limitRaw), 10) || defaultLimit));
+    const offsetRaw = req.query.offset;
+    const offset = offsetRaw === undefined ? 0 : Math.max(0, parseInt(String(offsetRaw), 10) || 0);
+    const list = await this.listNotifications.execute({ type, recipient, limit, offset });
     res.json(list);
   });
 

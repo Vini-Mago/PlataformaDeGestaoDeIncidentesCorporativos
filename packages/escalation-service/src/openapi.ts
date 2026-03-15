@@ -39,12 +39,18 @@ registry.registerPath({
   },
 });
 
+const EscalationRulesQuerySchema = z.object({
+  ticketType: z.enum(["incident", "request"]).optional(),
+  isActive: z.enum(["true", "false"]).optional(),
+}).openapi("EscalationRulesQuery");
+
 registry.registerPath({
   method: "get",
   path: "/api/escalation-rules",
   summary: "List escalation rules",
   tags: ["Escalation Rules"],
   security: [{ bearerAuth: [] }],
+  request: { query: EscalationRulesQuerySchema },
   responses: {
     200: { description: "List of escalation rules", content: { "application/json": { schema: z.array(EscalationRuleSchema) } } },
     400: { description: "Invalid filter", content: { "application/json": { schema: ErrorSchema } } },

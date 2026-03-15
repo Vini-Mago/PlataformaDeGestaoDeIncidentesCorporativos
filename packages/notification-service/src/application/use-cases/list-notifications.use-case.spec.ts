@@ -21,7 +21,10 @@ describe("ListNotificationsUseCase", () => {
   it("lists notifications with no filters", async () => {
     const useCase = new ListNotificationsUseCase(notificationRepository);
     await useCase.execute({});
-    expect(notificationRepository.list).toHaveBeenCalledWith({});
+    expect(notificationRepository.list).toHaveBeenCalledWith({
+      limit: 100,
+      offset: 0,
+    });
   });
 
   it("lists notifications with type and recipient filters", async () => {
@@ -30,6 +33,26 @@ describe("ListNotificationsUseCase", () => {
     expect(notificationRepository.list).toHaveBeenCalledWith({
       type: "email",
       recipient: "user@test.com",
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  it("normalizes invalid limit and offset to safe defaults", async () => {
+    const useCase = new ListNotificationsUseCase(notificationRepository);
+    await useCase.execute({ limit: -1, offset: -10 });
+    expect(notificationRepository.list).toHaveBeenCalledWith({
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  it("caps limit at MAX_LIMIT and passes valid offset", async () => {
+    const useCase = new ListNotificationsUseCase(notificationRepository);
+    await useCase.execute({ limit: 1000, offset: 50 });
+    expect(notificationRepository.list).toHaveBeenCalledWith({
+      limit: 500,
+      offset: 50,
     });
   });
 });

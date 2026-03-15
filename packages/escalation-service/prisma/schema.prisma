@@ -31,7 +31,7 @@ model EscalationRuleModel {
 // History of executed escalation actions (RF-8.3)
 model EscalationHistoryModel {
   id              String   @id @default(uuid())
-  ruleId          String   @map("rule_id")
+  ruleId          String?  @map("rule_id")
   ticketId        String   @map("ticket_id")
   ticketType      String   @map("ticket_type")   // incident | request
   triggeredAt     DateTime @map("triggered_at")
@@ -39,7 +39,7 @@ model EscalationHistoryModel {
   payload         Json?    @db.JsonB
   createdAt       DateTime @default(now()) @map("created_at")
 
-  rule EscalationRuleModel @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  rule EscalationRuleModel? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
 
   @@index([ruleId])
   @@index([ticketId, ticketType])

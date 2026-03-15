@@ -57,9 +57,13 @@ export class PrismaEscalationRuleRepository implements IEscalationRuleRepository
   }
 
   private parseActions(values: string[]): EscalationRule["actions"] {
-    return values.filter((a): a is EscalationRule["actions"][number] =>
-      VALID_ACTIONS.includes(a as EscalationRule["actions"][number])
+    const invalid = values.filter(
+      (v) => !VALID_ACTIONS.includes(v as EscalationRule["actions"][number])
     );
+    if (invalid.length > 0) {
+      throw new Error(`Invalid escalation action(s) in database: ${invalid.join(", ")}`);
+    }
+    return values as EscalationRule["actions"];
   }
 
   private toEscalationRule(row: {

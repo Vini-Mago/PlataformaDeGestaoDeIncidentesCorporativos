@@ -10,7 +10,7 @@ CREATE TABLE "escalation_rules" (
     "priority" INTEGER NOT NULL DEFAULT 0,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     CONSTRAINT "escalation_rules_pkey" PRIMARY KEY ("id")
 );
