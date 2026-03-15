@@ -16,6 +16,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const identitySpecUrl = process.env.IDENTITY_SPEC_URL ?? "http://localhost:3001/api-docs.json";
 const requestSpecUrl = process.env.REQUEST_SPEC_URL ?? "http://localhost:3002/api-docs.json";
 const incidentSpecUrl = process.env.INCIDENT_SPEC_URL ?? "http://localhost:3004/api-docs.json";
+const problemChangeSpecUrl = process.env.PROBLEM_CHANGE_SPEC_URL ?? "http://localhost:3005/api-docs.json";
 
 async function fetchSpec(url: string): Promise<OpenApiSpec> {
   const res = await fetch(url);
@@ -28,12 +29,19 @@ async function getMergedSpec(): Promise<object> {
     fetchSpec(identitySpecUrl),
     fetchSpec(requestSpecUrl),
   ]);
+  let incidentSpec: OpenApiSpec | undefined;
+  let problemChangeSpec: OpenApiSpec | undefined;
   try {
-    const incidentSpec = await fetchSpec(incidentSpecUrl);
-    return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec);
+    incidentSpec = await fetchSpec(incidentSpecUrl);
   } catch {
-    return mergeOpenApiSpecs(identitySpec, requestSpec);
+    // incident service not running
   }
+  try {
+    problemChangeSpec = await fetchSpec(problemChangeSpecUrl);
+  } catch {
+    // problem-change service not running
+  }
+  return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec, problemChangeSpec);
 }
 
 const app = express();

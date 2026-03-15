@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PROBLEM_CHANGE_DATABASE_URL")
+}
+
+// RF-7.1, RF-7.2: Problems — Open | InAnalysis | Resolved | Closed
+model ProblemModel {
+  id          String    @id @default(uuid())
+  title       String
+  description String    @db.Text
+  status      String    @default("Open") // Open | InAnalysis | Resolved | Closed
+  rootCause   String?   @map("root_cause") @db.Text
+  actionPlan  String?   @map("action_plan") @db.Text
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  closedAt    DateTime? @map("closed_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("problems")
+}
+
+// RF-7.3: Changes — Draft | Submitted | InApproval | Approved | Rejected | Scheduled | InProgress | Completed | Rollback
+model ChangeModel {
+  id            String    @id @default(uuid())
+  title         String
+  description   String    @db.Text
+  justification String    @db.Text
+  changeType    String    @map("change_type") // Standard | Normal | Emergency
+  risk          String    @map("risk") // Low | Medium | High
+  status        String    @default("Draft") // Draft | Submitted | InApproval | Approved | Rejected | Scheduled | InProgress | Completed | Rollback
+  windowStart   DateTime? @map("window_start")
+  windowEnd     DateTime? @map("window_end")
+  rollbackPlan  String?   @map("rollback_plan") @db.Text
+  createdById   String    @map("created_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  completedAt   DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([risk])
+  @@map("changes")
+}
+
+// Outbox for reliable event publishing (Outbox Pattern)
+model OutboxModel {
+  id          String    @id @default(uuid())
+  eventName   String    @map("event_name")
+  payload     Json      @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at")
+  publishedAt DateTime? @map("published_at")
+  discardedAt DateTime? @map("discarded_at")
+  claimedAt   DateTime? @map("claimed_at")
+
+  @@index([publishedAt])
+  @@index([discardedAt])
+  @@index([claimedAt])
+  @@map("outbox")
+}
+
+// Replicated from identity-service via RabbitMQ user.created (for display names)
+model ReplicatedUserModel {
+  id                  String   @id
+  email               String
+  name                String
+  lastEventOccurredAt DateTime @map("last_event_occurred_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("replicated_users")
+}

@@ -8,26 +8,16 @@ export class PrismaReplicatedUserStore implements IReplicatedUserStore {
   constructor(private readonly prisma: PrismaClient) {}
 
   async upsert(data: ReplicatedUserData): Promise<void> {
-    const existing = await this.prisma.replicatedUserModel.findUnique({
-      where: { id: data.id },
-    });
-    if (existing && data.lastEventOccurredAt <= existing.lastEventOccurredAt) {
-      return; // Stale event, skip update to avoid regressing state
-    }
-    await this.prisma.replicatedUserModel.upsert({
-      where: { id: data.id },
-      create: {
-        id: data.id,
-        email: data.email,
-        name: data.name,
-        lastEventOccurredAt: data.lastEventOccurredAt,
-      },
-      update: {
-        email: data.email,
-        name: data.name,
-        lastEventOccurredAt: data.lastEventOccurredAt,
-      },
-    });
+    await this.prisma.$executeRaw`
+      INSERT INTO replicated_users (id, email, name, last_event_occurred_at, updated_at)
+      VALUES (${data.id}, ${data.email}, ${data.name}, ${data.lastEventOccurredAt}, ${data.lastEventOccurredAt})
+      ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        name = EXCLUDED.name,
+        last_event_occurred_at = EXCLUDED.last_event_occurred_at,
+        updated_at = EXCLUDED.updated_at
+      WHERE (replicated_users.last_event_occurred_at IS NULL OR replicated_users.last_event_occurred_at < EXCLUDED.last_event_occurred_at)
+    `;
   }
 
   async findById(id: string): Promise<ReplicatedUserData | null> {
