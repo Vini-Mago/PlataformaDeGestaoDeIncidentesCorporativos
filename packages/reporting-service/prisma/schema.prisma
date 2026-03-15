@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("REPORTING_DATABASE_URL")
+}
+
+// RF-4.x: Report definitions — saved report configs for KPIs, dashboards, export
+model ReportDefinitionModel {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  reportType  String   @map("report_type")   // incidents_summary | kpi_dashboard | sla_compliance | custom
+  filters     Json     @db.JsonB             // period, service, team, criticality, etc.
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([reportType])
+  @@map("report_definitions")
+}

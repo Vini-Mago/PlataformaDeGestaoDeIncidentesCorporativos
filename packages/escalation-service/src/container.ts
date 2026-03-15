@@ -96,7 +96,7 @@ export function createContainer(config: EscalationContainerConfig) {
       try {
         await c.prisma.$disconnect();
       } catch (err) {
-        // no-op
+        console.error("Error disconnecting Prisma client", err);
       }
     },
   };

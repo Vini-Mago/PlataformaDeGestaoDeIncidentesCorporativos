@@ -45,6 +45,10 @@ async function bootstrap() {
   const server: Server = app.listen(port, () => {
     logger.info(`Audit service listening on http://localhost:${port}`);
   });
+  server.on("error", (err) => {
+    logger.error({ err }, "HTTP server error");
+    process.exit(1);
+  });
 
   const shutdownTimeoutMs = 10_000;
   process.on("SIGTERM", () => {

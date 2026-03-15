@@ -92,7 +92,8 @@ export function mergeOpenApiSpecs(
   slaSpec?: OpenApiSpec,
   escalationSpec?: OpenApiSpec,
   notificationSpec?: OpenApiSpec,
-  auditSpec?: OpenApiSpec
+  auditSpec?: OpenApiSpec,
+  reportingSpec?: OpenApiSpec
 ): OpenApiSpec {
   const entries: SpecEntry[] = [
     { spec: identitySpec, prefix: "Identity_", description: "Identity Service" },
@@ -116,6 +117,9 @@ export function mergeOpenApiSpecs(
   if (auditSpec) {
     entries.push({ spec: auditSpec, prefix: "Audit_", description: "Audit Service" });
   }
+  if (reportingSpec) {
+    entries.push({ spec: reportingSpec, prefix: "Reporting_", description: "Reporting Service" });
+  }
 
   const first = prefixSpec(entries[0].spec, entries[0].prefix);
   let merged: { servers: ServerEntry[]; schemas: Record<string, unknown>; paths: Record<string, unknown>; securitySchemes: Record<string, unknown> } = {
@@ -134,7 +138,7 @@ export function mergeOpenApiSpecs(
     info: {
       title: "PGIC API",
       version: "1.0.0",
-      description: "Unified docs: Identity (auth), Request (catalog, service requests), Incident (incident lifecycle), Problem-change (problems, changes), SLA (policies, calendars), Escalation (rules, history), Notification (notifications), Audit (audit trail). Use «Servers» to switch backend.",
+      description: "Unified docs: Identity (auth), Request (catalog, service requests), Incident (incident lifecycle), Problem-change (problems, changes), SLA (policies, calendars), Escalation (rules, history), Notification (notifications), Audit (audit trail), Reporting (KPIs, reports). Use «Servers» to switch backend.",
     },
     servers: merged.servers,
     components: {

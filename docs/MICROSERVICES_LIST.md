@@ -17,7 +17,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | 6   | **escalation-service**     | Existe    | Orquestração de escalonamentos e disparo de ações                                |
 | 7   | **notification-service**   | Existe    | Envio de notificações (e-mail, in-app, push); futuramente Slack, Teams, webhooks |
 | 8   | **audit-service**          | Existe    | Trilhas de auditoria (ações de usuário e técnicas)                               |
-| 9   | **reporting-service**      | Planejado | KPIs, dashboards, relatórios, exportação                                         |
+| 9   | **reporting-service**      | Existe    | KPIs, dashboards, relatórios, exportação                                         |
 | 10  | **integration-service**    | Planejado | Webhooks de entrada, integrações externas, publicação de eventos                 |
 
 
@@ -248,7 +248,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 **Status:** Existe.
 
-**Responsabilidade:** Envio de notificações por canais configuráveis: e-mail, in-app, push (futuramente Slack, Teams, webhook genérico). Processamento assíncrono com retry e DLQ (futuro).
+**Responsabilidade:** Envio de notificações por canais configuráveis: e-mail, in-app, push (futuramente Slack, Teams, webhook genérico). Processamento assíncrono com retry e DLQ após N falhas; logs de envio para diagnóstico.
 
 ### Requisitos atendidos
 
@@ -317,7 +317,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 9. reporting-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Consolidação de dados para KPIs, dashboards e relatórios; exportação em PDF/CSV/Excel; atualização em tempo quase real; jobs em background para relatórios pesados.
 
@@ -403,7 +403,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## Visão geral de dependências e mensageria
 
-- **identity-service** e **request-service** já existem; os demais são planejados.
+- Os serviços **identity-service**, **request-service**, **incident-service**, **problem-change-service**, **sla-service**, **escalation-service**, **notification-service**, **audit-service** e **reporting-service** existem; **integration-service** está planejado.
 - **Comunicação síncrona:** APIs REST entre serviços (ex.: incident-service consulta sla-service para prazos; front-end consome todos via gateway).
 - **Comunicação assíncrona:** RabbitMQ — eventos de domínio (user.created, incident.created, sla.risk, etc.), filas de notificação, jobs de relatório, integração entrada/saída; retry e DLQ conforme RF-10.2.
 - **Event publishing standard:** The **Outbox Pattern** (as used by identity-service) is recommended as the default for all services that publish domain events (incident-service, problem-change-service, sla-service, etc.): write the event in the same transaction as domain data, then relay to RabbitMQ. **Direct RabbitMQ publishing** is acceptable for non-critical telemetry or best-effort notifications. Outbox offers strong consistency and durability at higher implementation complexity; direct publishing is simpler but risks message loss on DB/transaction failures. Centralize helpers and operational expectations in `@pgic/shared` and follow RF-10.2 (retry/DLQ) for consumers.

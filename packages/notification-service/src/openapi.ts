@@ -34,12 +34,20 @@ registry.registerPath({
   },
 });
 
+const NotificationsQuerySchema = z.object({
+  type: z.enum(["email", "in_app", "push"]).optional(),
+  recipient: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+}).openapi("NotificationsQuery");
+
 registry.registerPath({
   method: "get",
   path: "/api/notifications",
   summary: "List notifications",
   tags: ["Notifications"],
   security: [{ bearerAuth: [] }],
+  request: { query: NotificationsQuerySchema },
   responses: {
     200: { description: "List of notifications", content: { "application/json": { schema: z.array(NotificationSchema) } } },
     400: { description: "Invalid filter", content: { "application/json": { schema: ErrorSchema } } },
