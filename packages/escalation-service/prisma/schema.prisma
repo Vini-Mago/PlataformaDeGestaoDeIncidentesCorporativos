@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ESCALATION_DATABASE_URL")
+}
+
+// RF-8.3: Escalation rules — conditions (time, SLA %, criticality) + actions (notify, reassign, change priority)
+model EscalationRuleModel {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?  @db.Text
+  ticketType      String   @map("ticket_type")   // incident | request
+  conditionType   String   @map("condition_type") // no_first_response_minutes | sla_risk_percent | criticality
+  conditionValue  String   @map("condition_value") @db.Text  // number as string or criticality value
+  actions         String[] @default([])           // notify_manager, reassign_level2, change_priority, alert
+  priority        Int      @default(0)           // higher = evaluated first
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  history EscalationHistoryModel[]
+
+  @@index([ticketType, isActive])
+  @@map("escalation_rules")
+}
+
+// History of executed escalation actions (RF-8.3)
+model EscalationHistoryModel {
+  id              String   @id @default(uuid())
+  ruleId          String   @map("rule_id")
+  ticketId        String   @map("ticket_id")
+  ticketType      String   @map("ticket_type")   // incident | request
+  triggeredAt     DateTime @map("triggered_at")
+  actionExecuted  String   @map("action_executed")
+  payload         Json?    @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  rule EscalationRuleModel @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([ticketId, ticketType])
+  @@index([triggeredAt])
+  @@map("escalation_history")
+}
