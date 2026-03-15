@@ -19,6 +19,7 @@ const incidentSpecUrl = process.env.INCIDENT_SPEC_URL ?? "http://localhost:3004/
 const problemChangeSpecUrl = process.env.PROBLEM_CHANGE_SPEC_URL ?? "http://localhost:3005/api-docs.json";
 const slaSpecUrl = process.env.SLA_SPEC_URL ?? "http://localhost:3006/api-docs.json";
 const escalationSpecUrl = process.env.ESCALATION_SPEC_URL ?? "http://localhost:3007/api-docs.json";
+const notificationSpecUrl = process.env.NOTIFICATION_SPEC_URL ?? "http://localhost:3008/api-docs.json";
 
 async function fetchSpec(url: string): Promise<OpenApiSpec> {
   const res = await fetch(url);
@@ -55,7 +56,13 @@ async function getMergedSpec(): Promise<object> {
   } catch {
     // escalation service not running
   }
-  return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec, problemChangeSpec, slaSpec, escalationSpec);
+  let notificationSpec: OpenApiSpec | undefined;
+  try {
+    notificationSpec = await fetchSpec(notificationSpecUrl);
+  } catch {
+    // notification service not running
+  }
+  return mergeOpenApiSpecs(identitySpec, requestSpec, incidentSpec, problemChangeSpec, slaSpec, escalationSpec, notificationSpec);
 }
 
 const app = express();

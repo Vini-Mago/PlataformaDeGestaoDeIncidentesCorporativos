@@ -15,7 +15,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 | 4   | **problem-change-service** | Existe    | Problemas recorrentes e mudanças (Change Management)             |
 | 5   | **sla-service**            | Existe    | Regras de SLA, calendário, contagem de prazos, risco/estouro     |
 | 6   | **escalation-service**     | Existe    | Orquestração de escalonamentos e disparo de ações                |
-| 7   | **notification-service**   | Planejado | Envio de e-mail, Slack, Teams, webhooks                          |
+| 7   | **notification-service**   | Existe    | Envio de notificações (e-mail, in-app, push); futuramente Slack, Teams, webhooks |
 | 8   | **audit-service**          | Planejado | Trilhas de auditoria (ações de usuário e técnicas)               |
 | 9   | **reporting-service**      | Planejado | KPIs, dashboards, relatórios, exportação                         |
 | 10  | **integration-service**    | Planejado | Webhooks de entrada, integrações externas, publicação de eventos |
@@ -246,9 +246,9 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 7. notification-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
-**Responsabilidade:** Envio de notificações por canais configuráveis: e-mail, Slack, Teams, webhook genérico. Processamento assíncrono com retry e DLQ.
+**Responsabilidade:** Envio de notificações por canais configuráveis: e-mail, in-app, push (futuramente Slack, Teams, webhook genérico). Processamento assíncrono com retry e DLQ (futuro).
 
 ### Requisitos atendidos
 
