@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "@pgic/shared";
-import type { CreateNotificationDto } from "../../../application/dtos/create-notification.dto";
 import type { CreateNotificationUseCase } from "../../../application/use-cases/create-notification.use-case";
 import type { ListNotificationsUseCase } from "../../../application/use-cases/list-notifications.use-case";
 import type { GetNotificationUseCase } from "../../../application/use-cases/get-notification.use-case";
 import { parseTypeFilterOrThrow } from "../../../application/use-cases/list-notifications.use-case";
 import { asyncHandler } from "@pgic/shared";
+import { createNotificationSchema } from "../../../application/dtos/create-notification.dto";
 
 export class NotificationController {
   constructor(
@@ -15,7 +15,15 @@ export class NotificationController {
   ) {}
 
   createNotificationHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const notification = await this.createNotification.execute(req.body as CreateNotificationDto);
+    const parsed = createNotificationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "Validation error",
+        message: parsed.error.errors.map((e) => e.message).join("; "),
+      });
+      return;
+    }
+    const notification = await this.createNotification.execute(parsed.data, req.userId);
     res.status(201).json(notification);
   });
 

@@ -14,7 +14,9 @@ export class AuditController {
   ) {}
 
   createAuditEntryHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const entry = await this.createAuditEntry.execute(req.body as CreateAuditEntryDto);
+    const dto = req.body as CreateAuditEntryDto;
+    const payload = { ...dto, userId: req.userId };
+    const entry = await this.createAuditEntry.execute(payload);
     res.status(201).json(entry);
   });
 

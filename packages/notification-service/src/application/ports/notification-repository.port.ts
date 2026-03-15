@@ -1,14 +1,16 @@
-import type { Notification } from "../../domain/entities/notification.entity";
+import type { Notification, NotificationType } from "../../domain/entities/notification.entity";
+
+export type { NotificationType };
 
 export interface CreateNotificationInput {
-  type: string;
+  type: NotificationType;
   recipient: string;
   subject: string;
   body?: string | null;
 }
 
 export interface NotificationListFilters {
-  type?: "email" | "in_app" | "push";
+  type?: NotificationType;
   recipient?: string;
   limit?: number;
   offset?: number;

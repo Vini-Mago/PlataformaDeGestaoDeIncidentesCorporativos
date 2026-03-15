@@ -57,7 +57,7 @@ export class PrismaNotificationRepository implements INotificationRepository {
   private parseStatus(value: string): Notification["status"] {
     const valid: Notification["status"][] = ["pending", "sent", "delivered", "failed"];
     if (valid.includes(value as Notification["status"])) return value as Notification["status"];
-    return "pending";
+    throw new Error(`Invalid notification status in database: "${value}"`);
   }
 
   private toNotification(row: {

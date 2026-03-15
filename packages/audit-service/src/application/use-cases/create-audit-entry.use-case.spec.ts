@@ -53,8 +53,9 @@ describe("CreateAuditEntryUseCase", () => {
       metadata: { field: "status", previous: "open", next: "closed" },
     };
 
-    await useCase.execute(dto);
+    const result = await useCase.execute(dto);
 
+    expect(result).toEqual(mockEntry);
     expect(auditEntryRepository.create).toHaveBeenCalledWith({
       userId: dto.userId,
       action: dto.action,
