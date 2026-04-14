@@ -21,6 +21,14 @@ export class InvalidCredentialsError extends AppError {
   }
 }
 
+export class UserInactiveError extends AppError {
+  override name = "UserInactiveError";
+  constructor(message = "User is inactive") {
+    super(message);
+    Object.setPrototypeOf(this, UserInactiveError.prototype);
+  }
+}
+
 export class InvalidNameError extends AppError {
   override name = "InvalidNameError";
   constructor(message = "Name cannot be empty") {
@@ -58,5 +66,37 @@ export class InvalidUserIdError extends AppError {
   constructor(message = "Invalid user id format") {
     super(message);
     Object.setPrototypeOf(this, InvalidUserIdError.prototype);
+  }
+}
+
+export class InvalidRefreshTokenError extends AppError {
+  override name = "InvalidRefreshTokenError";
+  constructor(message = "Invalid refresh token") {
+    super(message);
+    Object.setPrototypeOf(this, InvalidRefreshTokenError.prototype);
+  }
+}
+
+export class ExpiredRefreshTokenError extends AppError {
+  override name = "ExpiredRefreshTokenError";
+  constructor(message = "Refresh token expired") {
+    super(message);
+    Object.setPrototypeOf(this, ExpiredRefreshTokenError.prototype);
+  }
+}
+
+export class InvalidPasswordResetTokenError extends AppError {
+  override name = "InvalidPasswordResetTokenError";
+  constructor(message = "Invalid password reset token") {
+    super(message);
+    Object.setPrototypeOf(this, InvalidPasswordResetTokenError.prototype);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  override name = "ForbiddenError";
+  constructor(message = "Forbidden") {
+    super(message);
+    Object.setPrototypeOf(this, ForbiddenError.prototype);
   }
 }

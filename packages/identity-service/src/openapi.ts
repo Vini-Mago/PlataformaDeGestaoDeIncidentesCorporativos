@@ -19,6 +19,8 @@ const AuthResponseSchema = z
   .object({
     user: UserResponseSchema,
     accessToken: z.string(),
+    refreshToken: z.string(),
+    sessionId: z.string(),
     expiresIn: z.string(),
   })
   .openapi("AuthResponse");

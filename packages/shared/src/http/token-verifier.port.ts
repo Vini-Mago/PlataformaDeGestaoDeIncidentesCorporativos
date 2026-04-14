@@ -6,6 +6,7 @@ export interface TokenVerifierPayload {
   sub: string;
   email?: string;
   role?: string;
+  sid?: string;
 }
 
 /**

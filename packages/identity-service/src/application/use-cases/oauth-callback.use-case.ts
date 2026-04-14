@@ -8,9 +8,18 @@ import type { IUserOAuthRegistrationPersistence } from "../ports/user-oauth-regi
 import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
-import type { OAuthCallbackResponseDto } from "../dtos/oauth-callback-response.dto";
-
-export type OAuthCallbackResultDto = Omit<OAuthCallbackResponseDto, "expiresIn">;
+export interface OAuthCallbackResultDto {
+  user: {
+    id: string;
+    email: string;
+    login: string;
+    name: string;
+    role: string;
+    createdAt: string;
+    isNewUser: boolean;
+  };
+  accessToken: string;
+}
 
 export class OAuthCallbackUseCase {
   constructor(
@@ -48,7 +57,9 @@ export class OAuthCallbackUseCase {
         user: {
           id: user.id,
           email: user.email.value,
+          login: user.profile.login,
           name: user.name,
+          role: user.role,
           createdAt: user.createdAt.toISOString(),
           isNewUser: false,
         },
@@ -63,7 +74,9 @@ export class OAuthCallbackUseCase {
     if (!user) {
       isNewUser = true;
       const id = randomUUID();
-      user = User.create(id, email, userInfo.name);
+      user = User.create(id, email, userInfo.name, "user", {
+        login: email.value.split("@")[0],
+      });
       await this.userOAuthRegistrationPersistence.saveUserAndOAuthAccount(
         user,
         provider.provider,
@@ -99,7 +112,9 @@ export class OAuthCallbackUseCase {
       user: {
         id: user.id,
         email: user.email.value,
+        login: user.profile.login,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt.toISOString(),
         isNewUser,
       },

@@ -24,6 +24,8 @@ export function requestLoggingMiddleware(
         path: req.path,
         statusCode: res.statusCode,
         durationMs,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
       },
       "request"
     );

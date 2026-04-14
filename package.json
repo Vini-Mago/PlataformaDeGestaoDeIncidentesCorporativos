@@ -20,8 +20,8 @@
     "dev:reporting-service": "pnpm --filter reporting-service run dev",
     "dev:api-docs": "pnpm --filter api-docs run dev",
     "dev": "pnpm run dev:identity & pnpm run dev:request & pnpm run dev:incident & pnpm run dev:problem-change & pnpm run dev:sla & pnpm run dev:escalation & pnpm run dev:notification-service & pnpm run dev:audit-service & pnpm run dev:reporting-service & pnpm run dev:api-docs",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "load-test": "tsx scripts/load-test.ts",
     "db:ensure": "tsx scripts/ensure-database.ts"
   },

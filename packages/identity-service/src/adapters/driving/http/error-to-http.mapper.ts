@@ -7,6 +7,11 @@ import {
   InvalidEmailError,
   InvalidNameError,
   PasswordValidationError,
+  UserInactiveError,
+  InvalidRefreshTokenError,
+  ExpiredRefreshTokenError,
+  InvalidPasswordResetTokenError,
+  ForbiddenError,
 } from "../../../application/errors";
 
 /**
@@ -18,7 +23,12 @@ export const mapApplicationErrorToHttp = createErrorToHttpMapper([
   [UserNotFoundError, 404],
   [InvalidUserIdError, 400],
   [InvalidCredentialsError, 401],
+  [UserInactiveError, 403],
   [InvalidEmailError, 400],
   [InvalidNameError, 400],
   [PasswordValidationError, 400],
+  [InvalidRefreshTokenError, 401],
+  [ExpiredRefreshTokenError, 401],
+  [InvalidPasswordResetTokenError, 400],
+  [ForbiddenError, 403],
 ]);

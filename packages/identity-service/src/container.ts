@@ -7,6 +7,10 @@ import { PrismaAuthCredentialRepository } from "./adapters/driven/persistence/pr
 import { PrismaUserRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-registration.repository";
 import { PrismaUserOAuthRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-oauth-registration.repository";
 import { PrismaOAuthAccountRepository } from "./adapters/driven/persistence/prisma-oauth-account.repository";
+import { PrismaAuthSessionRepository } from "./adapters/driven/persistence/prisma-auth-session.repository";
+import { PrismaPasswordResetTokenRepository } from "./adapters/driven/persistence/prisma-password-reset-token.repository";
+import { PrismaAccessLogRepository } from "./adapters/driven/persistence/prisma-access-log.repository";
+import { PrismaAuthorizationRepository } from "./adapters/driven/persistence/prisma-authorization.repository";
 import { RabbitMqEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-event-publisher.adapter";
 import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import type { IEventPublisher } from "./application/ports/event-publisher.port";
@@ -25,10 +29,13 @@ import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use
 import { UpdateUserUseCase } from "./application/use-cases/update-user.use-case";
 import { UserController } from "./adapters/driving/http/user.controller";
 import { AuthController } from "./adapters/driving/http/auth.controller";
+import { RbacController } from "./adapters/driving/http/rbac.controller";
 import { createAuthMiddleware } from "@pgic/shared";
 import { createUserRoutes } from "./adapters/driving/http/routes";
 import { createAuthRoutes } from "./adapters/driving/http/auth.routes";
+import { createRbacRoutes } from "./adapters/driving/http/rbac.routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
+import { createRequirePermission } from "./adapters/driving/http/authorization.middleware";
 
 /** Optional event publisher for tests (no-op connect/disconnect). When set, RabbitMQ is not used. */
 export type TestEventPublisher = IEventPublisher & {
@@ -42,6 +49,7 @@ export interface ContainerConfig {
   rabbitmqUrl: string;
   jwtSecret: string;
   jwtExpiresInSeconds: number;
+  refreshTokenExpiresInSeconds?: number;
   baseUrl: string;
   googleOAuth?: { clientId: string; clientSecret: string };
   githubOAuth?: { clientId: string; clientSecret: string };
@@ -62,6 +70,10 @@ interface IdentityCradle {
   registrationPersistence: PrismaUserRegistrationPersistence;
   userOAuthRegistrationPersistence: PrismaUserOAuthRegistrationPersistence;
   oauthAccountRepository: PrismaOAuthAccountRepository;
+  authSessionRepository: PrismaAuthSessionRepository;
+  passwordResetTokenRepository: PrismaPasswordResetTokenRepository;
+  accessLogRepository: PrismaAccessLogRepository;
+  authorizationRepository: PrismaAuthorizationRepository;
   eventPublisher: IEventPublisher & { connect?: () => Promise<void>; disconnect?: () => Promise<void> };
   tokenService: JwtTokenService;
   passwordHasher: Argon2PasswordHasher;
@@ -79,9 +91,12 @@ interface IdentityCradle {
   updateUserUseCase: UpdateUserUseCase;
   userController: UserController;
   authController: AuthController;
+  rbacController: RbacController;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
+  requirePermission: ReturnType<typeof createRequirePermission>;
   userRoutes: ReturnType<typeof createUserRoutes>;
   authRoutes: ReturnType<typeof createAuthRoutes>;
+  rbacRoutes: ReturnType<typeof createRbacRoutes>;
   outboxRelay: OutboxRelayAdapter;
 }
 
@@ -128,6 +143,18 @@ export function createContainer(config: ContainerConfig) {
     oauthAccountRepository: asFunction(
       (cradle: IdentityCradle) =>
         new PrismaOAuthAccountRepository(cradle.prisma)
+    ).singleton(),
+    authSessionRepository: asFunction(
+      (cradle: IdentityCradle) => new PrismaAuthSessionRepository(cradle.prisma)
+    ).singleton(),
+    passwordResetTokenRepository: asFunction(
+      (cradle: IdentityCradle) => new PrismaPasswordResetTokenRepository(cradle.prisma)
+    ).singleton(),
+    accessLogRepository: asFunction(
+      (cradle: IdentityCradle) => new PrismaAccessLogRepository(cradle.prisma)
+    ).singleton(),
+    authorizationRepository: asFunction(
+      (cradle: IdentityCradle) => new PrismaAuthorizationRepository(cradle.prisma)
     ).singleton(),
 
     eventPublisher: asFunction(
@@ -240,8 +267,22 @@ export function createContainer(config: ContainerConfig) {
           cradle.githubProvider,
           cradle.baseUrl,
           cradle.cache,
-          cradle.jwtExpiresInSeconds
+          cradle.jwtExpiresInSeconds,
+          cradle.config.refreshTokenExpiresInSeconds ?? 60 * 60 * 24 * 30,
+          cradle.tokenService,
+          cradle.userRepository,
+          cradle.authCredentialRepository,
+          cradle.authSessionRepository,
+          cradle.passwordResetTokenRepository,
+          cradle.passwordHasher,
+          cradle.accessLogRepository,
+          process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true"
         )
+    ).singleton(),
+
+    rbacController: asFunction(
+      (cradle: IdentityCradle) =>
+        new RbacController(cradle.authorizationRepository, cradle.accessLogRepository)
     ).singleton(),
 
     authMiddleware: asFunction(
@@ -249,14 +290,21 @@ export function createContainer(config: ContainerConfig) {
         createAuthMiddleware((token) => tokenService.verify(token))
     ).singleton(),
 
+    requirePermission: asFunction(
+      ({ authorizationRepository }: { authorizationRepository: PrismaAuthorizationRepository }) =>
+        createRequirePermission(authorizationRepository)
+    ).singleton(),
+
     userRoutes: asFunction(
       ({
         userController,
         authMiddleware,
+        requirePermission,
       }: {
         userController: UserController;
         authMiddleware: ReturnType<typeof createAuthMiddleware>;
-      }) => createUserRoutes(userController, authMiddleware)
+        requirePermission: ReturnType<typeof createRequirePermission>;
+      }) => createUserRoutes(userController, authMiddleware, requirePermission)
     ).singleton(),
 
     authRoutes: asFunction(
@@ -267,6 +315,18 @@ export function createContainer(config: ContainerConfig) {
         authController: AuthController;
         authMiddleware: ReturnType<typeof createAuthMiddleware>;
       }) => createAuthRoutes(authController, authMiddleware)
+    ).singleton(),
+
+    rbacRoutes: asFunction(
+      ({
+        rbacController,
+        authMiddleware,
+        requirePermission,
+      }: {
+        rbacController: RbacController;
+        authMiddleware: ReturnType<typeof createAuthMiddleware>;
+        requirePermission: ReturnType<typeof createRequirePermission>;
+      }) => createRbacRoutes(rbacController, authMiddleware, requirePermission)
     ).singleton(),
   });
 
@@ -285,6 +345,9 @@ export function createContainer(config: ContainerConfig) {
     get authRoutes() {
       return c.authRoutes;
     },
+    get rbacRoutes() {
+      return c.rbacRoutes;
+    },
     mapApplicationErrorToHttp,
     async connectRabbitMQ(): Promise<void> {
       const ep = c.eventPublisher as { connect?: () => Promise<void> };
@@ -292,6 +355,9 @@ export function createContainer(config: ContainerConfig) {
     },
     startOutboxRelay(intervalMs: number = 2_000): void {
       c.outboxRelay.start(intervalMs);
+    },
+    async ensureAuthorizationSeed(): Promise<void> {
+      await c.authorizationRepository.ensureDefaults();
     },
     async disconnect(): Promise<void> {
       c.outboxRelay.stop();

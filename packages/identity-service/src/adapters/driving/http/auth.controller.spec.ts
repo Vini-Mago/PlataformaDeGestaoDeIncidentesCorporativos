@@ -8,6 +8,13 @@ import type { GetCurrentUserUseCase } from "../../../application/use-cases/get-c
 import type { OAuthCallbackUseCase } from "../../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../../application/ports/oauth-provider.port";
 import type { ICacheService } from "@pgic/shared";
+import type { ITokenService } from "../../../application/ports/token-service.port";
+import type { IUserRepository } from "../../../application/ports/user-repository.port";
+import type { IAuthCredentialRepository } from "../../../application/ports/auth-credential-repository.port";
+import type { IAuthSessionRepository } from "../../../application/ports/auth-session-repository.port";
+import type { IPasswordResetTokenRepository } from "../../../application/ports/password-reset-token-repository.port";
+import type { IPasswordHasher } from "../../../application/ports/password-hasher.port";
+import type { IAccessLogRepository } from "../../../application/ports/access-log-repository.port";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
@@ -26,11 +33,19 @@ describe("AuthController", () => {
   let googleProvider: IOAuthProvider | null;
   let githubProvider: IOAuthProvider | null;
   let cache: ICacheService;
+  let tokenService: ITokenService;
+  let userRepository: IUserRepository;
+  let authCredentialRepository: IAuthCredentialRepository;
+  let authSessionRepository: IAuthSessionRepository;
+  let passwordResetTokenRepository: IPasswordResetTokenRepository;
+  let passwordHasher: IPasswordHasher;
+  let accessLogRepository: IAccessLogRepository;
   let res: Response;
   let next: NextFunction;
 
   const baseUrl = "https://api.example.com";
   const jwtExpiresInSeconds = 3600;
+  const refreshTokenExpiresInSeconds = 60 * 60 * 24 * 30;
 
   const mockUser = {
     id: "user-1",
@@ -56,6 +71,32 @@ describe("AuthController", () => {
       set: vi.fn(),
       delete: vi.fn(),
     } as unknown as ICacheService;
+    tokenService = { sign: vi.fn().mockReturnValue("token-123"), verify: vi.fn() } as unknown as ITokenService;
+    userRepository = { findByIdentifier: vi.fn(), findById: vi.fn() } as unknown as IUserRepository;
+    authCredentialRepository = { save: vi.fn(), getPasswordHashByUserId: vi.fn() } as unknown as IAuthCredentialRepository;
+    authSessionRepository = {
+      create: vi.fn().mockResolvedValue({
+        id: "session-1",
+        userId: "user-1",
+        refreshTokenHash: "hash",
+        ip: null,
+        userAgent: null,
+        lastActivityAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000),
+        revokedAt: null,
+        revokeReason: null,
+        createdAt: new Date(),
+      }),
+      findByRefreshTokenHash: vi.fn(),
+      touch: vi.fn(),
+      revoke: vi.fn(),
+      revokeAllExcept: vi.fn(),
+      revokeAllByUserId: vi.fn(),
+      listByUserId: vi.fn().mockResolvedValue([]),
+    } as unknown as IAuthSessionRepository;
+    passwordResetTokenRepository = { create: vi.fn(), findByTokenHash: vi.fn(), markUsed: vi.fn() } as unknown as IPasswordResetTokenRepository;
+    passwordHasher = { hash: vi.fn(), verify: vi.fn() } as unknown as IPasswordHasher;
+    accessLogRepository = { create: vi.fn(), list: vi.fn() } as unknown as IAccessLogRepository;
     res = createMockResponse();
     next = ((err: unknown) => {
       const { statusCode, message } = mapApplicationErrorToHttp(err);
@@ -73,7 +114,16 @@ describe("AuthController", () => {
       githubProvider,
       baseUrl,
       cache,
-      jwtExpiresInSeconds
+      jwtExpiresInSeconds,
+      refreshTokenExpiresInSeconds,
+      tokenService,
+      userRepository,
+      authCredentialRepository,
+      authSessionRepository,
+      passwordResetTokenRepository,
+      passwordHasher,
+      accessLogRepository,
+      false
     );
   }
 
@@ -89,6 +139,8 @@ describe("AuthController", () => {
       expect(res.json).toHaveBeenCalledWith({
         user: mockUser,
         accessToken: "token-123",
+        refreshToken: expect.any(String),
+        sessionId: "session-1",
         expiresIn: "1h",
       });
     });
@@ -135,7 +187,7 @@ describe("AuthController", () => {
     it("deve retornar 200 e body com user, accessToken e expiresIn em sucesso", async () => {
       vi.mocked(loginUseCase.execute).mockResolvedValue(mockAuthResult);
       const controller = createController();
-      const req = createMockRequest({ body: { email: "u@example.com", password: "Pass123!" } });
+      const req = createMockRequest({ body: { identifier: "u@example.com", password: "Pass123!" } });
 
       await controller.login(req, res, next);
 
@@ -143,6 +195,8 @@ describe("AuthController", () => {
       expect(res.json).toHaveBeenCalledWith({
         user: mockUser,
         accessToken: "token-123",
+        refreshToken: expect.any(String),
+        sessionId: "session-1",
         expiresIn: "1h",
       });
     });
@@ -225,7 +279,16 @@ describe("AuthController", () => {
         githubProvider,
         baseUrl,
         cache,
-        jwtExpiresInSeconds
+        jwtExpiresInSeconds,
+        refreshTokenExpiresInSeconds,
+        tokenService,
+        userRepository,
+        authCredentialRepository,
+        authSessionRepository,
+        passwordResetTokenRepository,
+        passwordHasher,
+        accessLogRepository,
+        false
       );
       vi.mocked(cache.set).mockResolvedValue(undefined);
       const req = createMockRequest();
@@ -279,7 +342,16 @@ describe("AuthController", () => {
         githubProvider,
         baseUrl,
         cache,
-        jwtExpiresInSeconds
+        jwtExpiresInSeconds,
+        refreshTokenExpiresInSeconds,
+        tokenService,
+        userRepository,
+        authCredentialRepository,
+        authSessionRepository,
+        passwordResetTokenRepository,
+        passwordHasher,
+        accessLogRepository,
+        false
       );
       const req = createMockRequest({ query: {} });
 
@@ -309,7 +381,16 @@ describe("AuthController", () => {
         githubProvider,
         baseUrl,
         cache,
-        jwtExpiresInSeconds
+        jwtExpiresInSeconds,
+        refreshTokenExpiresInSeconds,
+        tokenService,
+        userRepository,
+        authCredentialRepository,
+        authSessionRepository,
+        passwordResetTokenRepository,
+        passwordHasher,
+        accessLogRepository,
+        false
       );
       const req = createMockRequest({ query: { code: validCode, state: validState } });
 
@@ -324,7 +405,7 @@ describe("AuthController", () => {
       vi.mocked(cache.get).mockResolvedValue("1");
       vi.mocked(cache.delete).mockResolvedValue(undefined);
       vi.mocked(oauthCallbackUseCase.execute).mockResolvedValue({
-        user: { ...mockUser, isNewUser: false, createdAt: mockUser.createdAt! },
+        user: { ...mockUser, login: "u", role: "user", isNewUser: false, createdAt: mockUser.createdAt! },
         accessToken: "oauth-token",
       });
       const mockProvider: IOAuthProvider = {
@@ -341,7 +422,16 @@ describe("AuthController", () => {
         githubProvider,
         baseUrl,
         cache,
-        jwtExpiresInSeconds
+        jwtExpiresInSeconds,
+        refreshTokenExpiresInSeconds,
+        tokenService,
+        userRepository,
+        authCredentialRepository,
+        authSessionRepository,
+        passwordResetTokenRepository,
+        passwordHasher,
+        accessLogRepository,
+        false
       );
       const req = createMockRequest({ query: { code: validCode, state: validState } });
 
@@ -356,7 +446,9 @@ describe("AuthController", () => {
       );
       expect(res.json).toHaveBeenCalledWith({
         user: expect.objectContaining({ id: mockUser.id, email: mockUser.email, name: mockUser.name }),
-        accessToken: "oauth-token",
+        accessToken: "token-123",
+        refreshToken: expect.any(String),
+        sessionId: "session-1",
         expiresIn: "1h",
       });
     });

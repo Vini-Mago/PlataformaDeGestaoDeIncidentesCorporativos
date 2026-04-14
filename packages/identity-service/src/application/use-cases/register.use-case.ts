@@ -47,9 +47,23 @@ export class RegisterUseCase {
     if (existing) {
       throw new UserAlreadyExistsError("User with this email already exists");
     }
+    const login = (dto.login ?? dto.email.split("@")[0]).trim().toLowerCase();
+    const findByLogin = (this.userRepository as IUserRepository & { findByLogin?: (login: string) => Promise<User | null> }).findByLogin;
+    const existingLogin = findByLogin ? await findByLogin.call(this.userRepository, login) : null;
+    if (existingLogin) {
+      throw new UserAlreadyExistsError("User with this login already exists");
+    }
 
     const id = randomUUID();
-    const user = User.create(id, email, dto.name);
+    const user = User.create(id, email, dto.name, "user", {
+      login,
+      phone: dto.phone,
+      department: dto.department,
+      jobTitle: dto.jobTitle,
+      photoUrl: dto.photoUrl,
+      preferredLanguage: dto.preferredLanguage,
+      timeZone: dto.timeZone,
+    });
     const passwordHash = await this.passwordHasher.hash(dto.password);
 
     await this.registrationPersistence.saveUserAndCredential(user, passwordHash, {
@@ -79,7 +93,10 @@ export class RegisterUseCase {
       user: {
         id: user.id,
         email: user.email.value,
+        login: user.profile.login,
         name: user.name,
+        role: user.role,
+        status: user.status,
         createdAt: user.createdAt.toISOString(),
       },
       accessToken,

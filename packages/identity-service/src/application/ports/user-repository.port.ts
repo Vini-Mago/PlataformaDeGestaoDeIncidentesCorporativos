@@ -11,4 +11,6 @@ export interface IUserRepository {
   saveUserAndOutbox(user: User, outboxEvent: OutboxEvent): Promise<void>;
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
+  findByLogin(login: string): Promise<User | null>;
+  findByIdentifier(identifier: string): Promise<User | null>;
 }
