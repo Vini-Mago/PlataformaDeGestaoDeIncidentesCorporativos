@@ -4,7 +4,7 @@ import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { LoginDto } from "../dtos/login.dto";
 import type { AuthUserDto } from "../dtos/auth-response.dto";
-import { InvalidCredentialsError } from "../errors";
+import { InvalidCredentialsError, UserInactiveError } from "../errors";
 
 export interface LoginResultDto {
   user: AuthUserDto;
@@ -20,9 +20,26 @@ export class LoginUseCase {
   ) {}
 
   async execute(dto: LoginDto): Promise<LoginResultDto> {
-    const user = await this.userRepository.findByEmail(dto.email);
+    const identifier = dto.identifier || dto.email || dto.login;
+    if (!identifier) {
+      throw new InvalidCredentialsError("Invalid email or password");
+    }
+    const repo = this.userRepository as IUserRepository & {
+      findByIdentifier?: (value: string) => Promise<Awaited<ReturnType<IUserRepository["findByEmail"]>>>;
+      findByLogin?: (value: string) => Promise<Awaited<ReturnType<IUserRepository["findByEmail"]>>>;
+    };
+    const user = repo.findByIdentifier
+      ? await repo.findByIdentifier(identifier)
+      : identifier.includes("@")
+        ? await this.userRepository.findByEmail(identifier)
+        : repo.findByLogin
+          ? await repo.findByLogin(identifier)
+          : await this.userRepository.findByEmail(identifier);
     if (!user) {
       throw new InvalidCredentialsError("Invalid email or password");
+    }
+    if (user.status !== "active") {
+      throw new UserInactiveError("User is inactive");
     }
 
     const hash = await this.authCredentialRepository.getPasswordHashByUserId(user.id);

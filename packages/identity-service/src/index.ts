@@ -45,6 +45,10 @@ if (!Number.isInteger(jwtExpiresInSeconds) || jwtExpiresInSeconds < 1) {
   process.exit(1);
 }
 const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;
+const refreshTokenExpiresInSeconds = parseInt(
+  process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS ?? String(60 * 60 * 24 * 30),
+  10
+);
 
 if (isProduction && (!jwtSecret || jwtSecret.length < 32)) {
   logger.error("JWT_SECRET must be set and at least 32 characters in production");
@@ -65,12 +69,14 @@ async function bootstrap() {
     rabbitmqUrl,
     jwtSecret,
     jwtExpiresInSeconds,
+    refreshTokenExpiresInSeconds,
     baseUrl,
     googleOAuth,
     githubOAuth,
   });
 
   await container.connectRabbitMQ();
+  await container.ensureAuthorizationSeed();
   const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
   container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
 

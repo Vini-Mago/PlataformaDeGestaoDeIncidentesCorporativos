@@ -7,7 +7,9 @@ import { logger } from "@pgic/shared";
 const jwtPayloadSchema = z.object({
   sub: z.string().min(1),
   email: z.string().optional(),
+  login: z.string().optional(),
   role: z.string().optional(),
+  sid: z.string().optional(),
   exp: z.number(),
   iat: z.number(),
 });
@@ -24,9 +26,9 @@ export class JwtTokenService implements ITokenService {
   constructor(private readonly config: JwtTokenServiceConfig) {}
 
   sign(payload: Omit<TokenPayload, "iat" | "exp">): string {
-    const { sub, email, role } = payload;
+    const { sub, email, login, role, sid } = payload;
     return jwt.sign(
-      { sub, email, role: role ?? "user" },
+      { sub, email, login, role: role ?? "user", sid },
       this.config.secret,
       { expiresIn: this.config.expiresInSeconds, algorithm: "HS256" }
     );
@@ -46,7 +48,9 @@ export class JwtTokenService implements ITokenService {
       return {
         sub: data.sub,
         email: data.email ?? "",
+        login: data.login,
         role: data.role ?? "user",
+        sid: data.sid,
         iat: data.iat,
         exp: data.exp,
       };

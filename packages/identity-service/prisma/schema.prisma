@@ -8,14 +8,32 @@ datasource db {
   url      = env("IDENTITY_DATABASE_URL")
 }
 
+enum UserStatus {
+  active
+  inactive
+}
+
 model UserModel {
   id             String               @id @default(uuid())
   email          String               @unique
+  login          String               @unique
   name           String
+  status         UserStatus           @default(active)
+  phone          String?
+  department     String?              @map("department")
+  jobTitle       String?              @map("job_title")
+  photoUrl       String?              @map("photo_url")
+  preferredLanguage String?           @map("preferred_language")
+  timeZone       String?              @map("time_zone")
   role           String               @default("user")
   createdAt      DateTime             @map("created_at")
+  updatedAt      DateTime             @map("updated_at")
   authCredential AuthCredentialModel?
   oauthAccounts  OAuthAccountModel[]
+  sessions       AuthSessionModel[]
+  resetTokens    PasswordResetTokenModel[]
+  permissionOverrides UserPermissionOverrideModel[]
+  accessLogs     AccessLogModel[]
 
   @@map("users")
 }
@@ -39,6 +57,119 @@ model OAuthAccountModel {
 
   @@unique([provider, providerId])
   @@map("oauth_accounts")
+}
+
+model RoleModel {
+  id          String              @id @default(uuid())
+  name        String              @unique
+  description String?
+  createdAt   DateTime            @map("created_at")
+  updatedAt   DateTime            @map("updated_at")
+  permissions RolePermissionModel[]
+
+  @@map("roles")
+}
+
+model PermissionModel {
+  id          String                         @id @default(uuid())
+  module      String
+  action      String
+  scope       String
+  description String?
+  createdAt   DateTime                       @map("created_at")
+  roleLinks   RolePermissionModel[]
+  userOverrides UserPermissionOverrideModel[]
+
+  @@unique([module, action, scope])
+  @@map("permissions")
+}
+
+model RolePermissionModel {
+  id           String          @id @default(uuid())
+  roleName     String          @map("role_name")
+  permissionId String          @map("permission_id")
+  createdAt    DateTime        @map("created_at")
+  role         RoleModel       @relation(fields: [roleName], references: [name], onDelete: Cascade)
+  permission   PermissionModel @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleName, permissionId])
+  @@index([roleName])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserPermissionOverrideModel {
+  id           String          @id @default(uuid())
+  userId       String          @map("user_id")
+  permissionId String          @map("permission_id")
+  granted      Boolean
+  createdAt    DateTime        @map("created_at")
+  updatedAt    DateTime        @map("updated_at")
+  user         UserModel       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   PermissionModel @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@map("user_permission_overrides")
+}
+
+model AuthSessionModel {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  refreshTokenHash String    @map("refresh_token_hash")
+  ip               String?
+  userAgent        String?   @map("user_agent")
+  lastActivityAt   DateTime  @map("last_activity_at")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  revokeReason     String?   @map("revoke_reason")
+  createdAt        DateTime  @map("created_at")
+  user             UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([refreshTokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("auth_sessions")
+}
+
+model PasswordResetTokenModel {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  requesterIp String?   @map("requester_ip")
+  createdAt   DateTime  @map("created_at")
+  user        UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("password_reset_tokens")
+}
+
+model AccessLogModel {
+  id         String    @id @default(uuid())
+  userId     String?   @map("user_id")
+  identifier String?
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  method     String?
+  path       String?
+  eventType  String    @map("event_type")
+  result     String
+  statusCode Int       @map("status_code")
+  reason     String?
+  createdAt  DateTime  @map("created_at")
+  user       UserModel? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("access_logs")
 }
 
 // Outbox table for reliable event publishing (Outbox Pattern). Rows are published by the outbox relay.

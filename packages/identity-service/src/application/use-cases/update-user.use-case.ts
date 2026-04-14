@@ -16,7 +16,17 @@ export class UpdateUserUseCase {
     }
 
     let email = existing.email;
+    let login = existing.profile.login;
     let name = existing.name;
+    let role = existing.role;
+    let status = existing.status;
+    const phone = dto.phone === undefined ? existing.profile.phone : dto.phone;
+    const department = dto.department === undefined ? existing.profile.department : dto.department;
+    const jobTitle = dto.jobTitle === undefined ? existing.profile.jobTitle : dto.jobTitle;
+    const photoUrl = dto.photoUrl === undefined ? existing.profile.photoUrl : dto.photoUrl;
+    const preferredLanguage =
+      dto.preferredLanguage === undefined ? existing.profile.preferredLanguage : dto.preferredLanguage;
+    const timeZone = dto.timeZone === undefined ? existing.profile.timeZone : dto.timeZone;
 
     if (dto.email !== undefined) {
       try {
@@ -32,6 +42,16 @@ export class UpdateUserUseCase {
       }
     }
 
+    if (dto.login !== undefined) {
+      login = dto.login.trim().toLowerCase();
+      if (login !== existing.profile.login) {
+        const other = await this.userRepository.findByLogin(login);
+        if (other) {
+          throw new UserAlreadyExistsError("User with this login already exists");
+        }
+      }
+    }
+
     if (dto.name !== undefined) {
       name = dto.name.trim();
       if (!name) {
@@ -39,7 +59,32 @@ export class UpdateUserUseCase {
       }
     }
 
-    const updated = User.reconstitute(id, email.value, name, existing.createdAt, existing.role);
+    if (dto.role !== undefined) {
+      role = dto.role.trim();
+    }
+
+    if (dto.status !== undefined) {
+      status = dto.status;
+    }
+
+    const updated = User.reconstitute(
+      id,
+      email.value,
+      name,
+      existing.createdAt,
+      role,
+      new Date(),
+      status,
+      {
+        login,
+        phone,
+        department,
+        jobTitle,
+        photoUrl,
+        preferredLanguage,
+        timeZone,
+      }
+    );
 
     await this.userRepository.saveUserAndOutbox(updated, {
       eventName: USER_UPDATED_EVENT,
@@ -54,8 +99,18 @@ export class UpdateUserUseCase {
     return {
       id: updated.id,
       email: updated.email.value,
+      login: updated.profile.login,
       name: updated.name,
+      role: updated.role,
+      status: updated.status,
+      phone: updated.profile.phone,
+      department: updated.profile.department,
+      jobTitle: updated.profile.jobTitle,
+      photoUrl: updated.profile.photoUrl,
+      preferredLanguage: updated.profile.preferredLanguage,
+      timeZone: updated.profile.timeZone,
       createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 }

@@ -15,6 +15,13 @@ type OutboxRow = {
   failed_at: Date | null;
 };
 
+type OutboxTxLike = {
+  $queryRaw: <T = unknown>(query: TemplateStringsArray, ...values: unknown[]) => Promise<T>;
+  outboxModel: {
+    update: (args: unknown) => Promise<unknown>;
+  };
+};
+
 function toPlainObject(raw: unknown): object | null {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
     return null;
@@ -42,7 +49,8 @@ export class OutboxRelayAdapter {
    * Transaction selects and claims rows (claimed_at); publish and mark published/failed run outside the transaction.
    */
   async runOnce(): Promise<void> {
-    const rawRows = await this.prisma.$transaction(async (tx) => {
+    const rawRows = await this.prisma.$transaction(async (txRaw: unknown) => {
+      const tx = txRaw as OutboxTxLike;
       const rows = await tx.$queryRaw<OutboxRow[]>`
         SELECT id, event_name, payload, created_at, published_at, claimed_at, failed_at
         FROM outbox
