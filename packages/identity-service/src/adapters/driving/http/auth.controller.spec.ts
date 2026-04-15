@@ -441,7 +441,7 @@ describe("AuthController", () => {
       expect(cache.delete).toHaveBeenCalledWith("oauth_state:state-xyz");
       expect(oauthCallbackUseCase.execute).toHaveBeenCalledWith(
         validCode,
-        "https://api.example.com/api/auth/google/callback",
+        "https://api.example.com/auth/google/callback",
         mockProvider
       );
       expect(res.json).toHaveBeenCalledWith({

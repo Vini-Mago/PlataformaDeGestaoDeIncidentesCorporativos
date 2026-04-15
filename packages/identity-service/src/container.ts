@@ -51,6 +51,11 @@ export interface ContainerConfig {
   jwtExpiresInSeconds: number;
   refreshTokenExpiresInSeconds?: number;
   baseUrl: string;
+  oauthRedirectUrl?: string;
+  oauthRedirectPath?: string;
+  publicOriginOverride?: string;
+  publicAllowedHostSuffixes?: string[];
+  passwordAuthEnabled?: boolean;
   googleOAuth?: { clientId: string; clientSecret: string };
   githubOAuth?: { clientId: string; clientSecret: string };
   /** When set, used instead of RabbitMQ (e.g. no-op in integration tests). */
@@ -80,6 +85,11 @@ interface IdentityCradle {
   googleProvider: IOAuthProvider | null;
   githubProvider: IOAuthProvider | null;
   baseUrl: string;
+  oauthRedirectUrl: string | undefined;
+  oauthRedirectPath: string;
+  publicOriginOverride: string | undefined;
+  publicAllowedHostSuffixes: string[];
+  passwordAuthEnabled: boolean;
   jwtExpiresInSeconds: number;
   userCreatedNotifier: UserCreatedNotifierAdapter;
   createUserUseCase: CreateUserUseCase;
@@ -187,6 +197,15 @@ export function createContainer(config: ContainerConfig) {
     ).singleton(),
 
     baseUrl: asFunction(({ config }: { config: ContainerConfig }) => config.baseUrl).singleton(),
+    oauthRedirectUrl: asFunction(({ config }: { config: ContainerConfig }) => config.oauthRedirectUrl).singleton(),
+    oauthRedirectPath: asFunction(({ config }: { config: ContainerConfig }) => config.oauthRedirectPath ?? "/auth/callback").singleton(),
+    publicOriginOverride: asFunction(({ config }: { config: ContainerConfig }) => config.publicOriginOverride).singleton(),
+    publicAllowedHostSuffixes: asFunction(
+      ({ config }: { config: ContainerConfig }) => config.publicAllowedHostSuffixes ?? []
+    ).singleton(),
+    passwordAuthEnabled: asFunction(
+      ({ config }: { config: ContainerConfig }) => config.passwordAuthEnabled ?? false
+    ).singleton(),
     jwtExpiresInSeconds: asFunction(
       ({ config }: { config: ContainerConfig }) => config.jwtExpiresInSeconds
     ).singleton(),
@@ -276,7 +295,11 @@ export function createContainer(config: ContainerConfig) {
           cradle.passwordResetTokenRepository,
           cradle.passwordHasher,
           cradle.accessLogRepository,
-          process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true"
+          process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true",
+          cradle.oauthRedirectUrl,
+          cradle.oauthRedirectPath,
+          cradle.publicOriginOverride,
+          cradle.publicAllowedHostSuffixes
         )
     ).singleton(),
 
@@ -311,10 +334,12 @@ export function createContainer(config: ContainerConfig) {
       ({
         authController,
         authMiddleware,
+        passwordAuthEnabled,
       }: {
         authController: AuthController;
         authMiddleware: ReturnType<typeof createAuthMiddleware>;
-      }) => createAuthRoutes(authController, authMiddleware)
+        passwordAuthEnabled: boolean;
+      }) => createAuthRoutes(authController, authMiddleware, passwordAuthEnabled)
     ).singleton(),
 
     rbacRoutes: asFunction(

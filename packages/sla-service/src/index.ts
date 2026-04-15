@@ -2,7 +2,6 @@ import path from "path";
 import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
-loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
 
 import type { Server } from "http";
 import { createContainer } from "./container";
@@ -31,6 +30,40 @@ if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 const rabbitmqUrl = process.env.RABBITMQ_URL;
 const baseUrl = process.env.SLA_SERVICE_URL ?? `http://localhost:${port}`;
+const rabbitmqConnectRetries = parseInt(process.env.RABBITMQ_CONNECT_RETRIES ?? (isProduction ? "12" : "20"), 10);
+const rabbitmqConnectRetryDelayMs = parseInt(process.env.RABBITMQ_CONNECT_RETRY_DELAY_MS ?? "1500", 10);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectRabbitMQWithRetry(connect: () => Promise<void>): Promise<boolean> {
+  for (let attempt = 1; attempt <= rabbitmqConnectRetries; attempt += 1) {
+    try {
+      await connect();
+      if (attempt > 1) {
+        logger.info({ attempt }, "sla-service: RabbitMQ connected after retry");
+      }
+      return true;
+    } catch (err) {
+      const isLastAttempt = attempt >= rabbitmqConnectRetries;
+      if (isLastAttempt) {
+        if (isProduction) throw err;
+        logger.warn(
+          { err, attempts: rabbitmqConnectRetries },
+          "sla-service: RabbitMQ unavailable in development; continuing with messaging disabled"
+        );
+        return false;
+      }
+      logger.warn(
+        { err, attempt, retryInMs: rabbitmqConnectRetryDelayMs },
+        "sla-service: RabbitMQ connection failed; retrying"
+      );
+      await sleep(rabbitmqConnectRetryDelayMs);
+    }
+  }
+  return false;
+}
 
 async function bootstrap() {
   const container = createContainer({
@@ -49,9 +82,11 @@ async function bootstrap() {
   });
 
   if (rabbitmqUrl) {
-    await container.connectRabbitMQ();
-    const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
-    container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+    const rabbitConnected = await connectRabbitMQWithRetry(async () => container.connectRabbitMQ());
+    if (rabbitConnected) {
+      const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
+      container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+    }
   } else {
     logger.info("RABBITMQ_URL not set; Outbox relay disabled");
   }

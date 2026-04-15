@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { randomBytes } from "crypto";
 import type { AuthenticatedRequest } from "@pgic/shared";
 import type { RegisterUseCase } from "../../../application/use-cases/register.use-case";
 import type { LoginUseCase } from "../../../application/use-cases/login.use-case";
@@ -31,6 +32,10 @@ import type { ResetPasswordDto } from "../../../application/dtos/reset-password.
 import type { RefreshTokenDto } from "../../../application/dtos/refresh-token.dto";
 
 type AuthRequestWithSession = AuthenticatedRequest & { sessionId?: string };
+const OAUTH_LOGIN_CODE_PREFIX = "oauth_login_code:";
+const OAUTH_LOGIN_CODE_TTL_SECONDS = 60;
+const OAUTH_REDIRECT_FLOW_HEADER = "x-pgic-oauth-redirect";
+const PUBLIC_ORIGIN_HEADER = "x-pgic-public-origin";
 
 export class AuthController {
   constructor(
@@ -51,7 +56,11 @@ export class AuthController {
     private readonly passwordResetTokenRepository: IPasswordResetTokenRepository,
     private readonly passwordHasher: IPasswordHasher,
     private readonly accessLogRepository: IAccessLogRepository,
-    private readonly exposeResetTokenInResponse: boolean
+    private readonly exposeResetTokenInResponse: boolean,
+    private readonly oauthRedirectUrl?: string,
+    private readonly oauthRedirectPath: string = "/auth/callback",
+    private readonly publicOriginOverride?: string,
+    private readonly publicAllowedHostSuffixes: string[] = []
   ) {}
 
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -128,7 +137,8 @@ export class AuthController {
       sendError(res, 503, "Google OAuth is not configured");
       return;
     }
-    await performOAuthRedirect(this.googleProvider, "google", res, this.cache, this.baseUrl);
+    const redirectUri = `${this.resolvePublicOrigin(req)}/auth/google/callback`;
+    await performOAuthRedirect(this.googleProvider, res, this.cache, redirectUri);
   };
 
   googleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -141,7 +151,8 @@ export class AuthController {
       sendError(res, 503, "GitHub OAuth is not configured");
       return;
     }
-    await performOAuthRedirect(this.githubProvider, "github", res, this.cache, this.baseUrl);
+    const redirectUri = `${this.resolvePublicOrigin(req)}/auth/github/callback`;
+    await performOAuthRedirect(this.githubProvider, res, this.cache, redirectUri);
   };
 
   githubCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -182,6 +193,29 @@ export class AuthController {
       });
     } catch (err) {
       await this.logAccess(req, "auth.refresh", "failure", 401);
+      next(err);
+    }
+  };
+
+  exchangeOAuthCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const code = (req.body as { code?: string })?.code?.trim();
+      if (!code) {
+        sendError(res, 400, "Invalid OAuth exchange code");
+        return;
+      }
+      const cacheKey = OAUTH_LOGIN_CODE_PREFIX + code;
+      const payloadCached = await this.cache.get<unknown>(cacheKey);
+      if (!payloadCached) {
+        sendError(res, 400, "Invalid or expired OAuth exchange code");
+        return;
+      }
+      await this.cache.delete(cacheKey);
+      const payload = typeof payloadCached === "string"
+        ? JSON.parse(payloadCached) as OAuthCallbackResponseDto
+        : payloadCached as OAuthCallbackResponseDto;
+      res.status(200).json(payload);
+    } catch (err) {
       next(err);
     }
   };
@@ -313,6 +347,7 @@ export class AuthController {
     providerName: string
   ): Promise<void> => {
     if (!provider) {
+      if (this.redirectOAuthError(res, "OAuth provider is not configured", req)) return;
       sendError(res, 503, providerName + " OAuth is not configured");
       return;
     }
@@ -320,6 +355,7 @@ export class AuthController {
     const state = Array.isArray(req.query.state) ? req.query.state[0] : req.query.state;
     const parsed = oauthCallbackQuerySchema.safeParse({ code, state });
     if (!parsed.success) {
+      if (this.redirectOAuthError(res, "Invalid OAuth callback parameters", req)) return;
       sendValidationError(res, parsed.error);
       return;
     }
@@ -327,13 +363,14 @@ export class AuthController {
     const stateKey = OAUTH_STATE_PREFIX + query.state;
     const stateValid = await this.cache.get<string>(stateKey);
     if (!stateValid) {
+      if (this.redirectOAuthError(res, "Invalid or expired OAuth state", req)) return;
       sendError(res, 400, "Invalid or expired state");
       return;
     }
     await this.cache.delete(stateKey);
 
     try {
-      const redirectUri = this.baseUrl + "/api/auth/" + providerName + "/callback";
+      const redirectUri = this.resolvePublicOrigin(req) + "/auth/" + providerName + "/callback";
       const result = await this.oauthCallbackUseCase.execute(query.code, redirectUri, provider);
       const session = await this.createSessionForUser(result.user.id, req);
       const accessToken = this.tokenService.sign({
@@ -350,11 +387,104 @@ export class AuthController {
       };
       if (session.refreshToken) body.refreshToken = session.refreshToken;
       if (session.id) body.sessionId = session.id;
+      const callbackUrl = this.createOAuthRedirectCallbackUrl(req);
+      if (callbackUrl) {
+        const exchangeCode = randomBytes(24).toString("hex");
+        await this.cache.set(
+          OAUTH_LOGIN_CODE_PREFIX + exchangeCode,
+          JSON.stringify(body),
+          OAUTH_LOGIN_CODE_TTL_SECONDS
+        );
+        callbackUrl.searchParams.set("code", exchangeCode);
+        res.redirect(callbackUrl.toString());
+        return;
+      }
       res.json(body);
     } catch (err) {
+      if (this.redirectOAuthError(res, "OAuth authentication failed", req)) return;
       next(err);
     }
   };
+
+  private redirectOAuthError(res: Response, message: string, req?: Request): boolean {
+    const callbackUrl = this.createOAuthRedirectCallbackUrl(req);
+    if (!callbackUrl) {
+      return false;
+    }
+    callbackUrl.searchParams.set("error", message);
+    res.redirect(callbackUrl.toString());
+    return true;
+  }
+
+  private createOAuthRedirectCallbackUrl(req?: Request): URL | null {
+    if (this.oauthRedirectUrl) {
+      return new URL(this.oauthRedirectUrl);
+    }
+    if (!req || !this.isOAuthRedirectFlow(req)) {
+      return null;
+    }
+    const origin = this.resolvePublicOrigin(req);
+    return new URL(this.oauthRedirectPath, origin);
+  }
+
+  private resolvePublicOrigin(req: Request): string {
+    const override = this.publicOriginOverride?.trim();
+    if (override && this.isValidPublicOrigin(override)) {
+      return new URL(override).origin;
+    }
+
+    const publicOrigin = this.getHeaderValue(req, PUBLIC_ORIGIN_HEADER);
+    if (publicOrigin && this.isValidPublicOrigin(publicOrigin)) {
+      return new URL(publicOrigin).origin;
+    }
+
+    const host = this.getHeaderValue(req, "host");
+    if (host && this.isAllowedPublicHost(host)) {
+      return `${req.protocol}://${host}`.replace(/\/+$/, "");
+    }
+
+    return this.baseUrl.replace(/\/+$/, "");
+  }
+
+  private isOAuthRedirectFlow(req: Request): boolean {
+    const marker = this.getHeaderValue(req, OAUTH_REDIRECT_FLOW_HEADER);
+    return marker === "1";
+  }
+
+  private getHeaderValue(req: Request, header: string): string | null {
+    const value = req.headers[header];
+    if (Array.isArray(value)) {
+      return value[0]?.split(",")[0]?.trim() ?? null;
+    }
+    if (typeof value === "string") {
+      return value.split(",")[0]?.trim() ?? null;
+    }
+    return null;
+  }
+
+  private isAllowedPublicHost(hostWithPort: string): boolean {
+    if (this.publicAllowedHostSuffixes.length === 0) {
+      return true;
+    }
+    const host = hostWithPort.split(":")[0].toLowerCase();
+    return this.publicAllowedHostSuffixes.some((suffixRaw) => {
+      const suffix = suffixRaw.toLowerCase().trim();
+      if (!suffix) return false;
+      return host === suffix || host.endsWith(`.${suffix}`);
+    });
+  }
+
+  private isValidPublicOrigin(originRaw: string): boolean {
+    try {
+      const parsed = new URL(originRaw);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return false;
+      }
+      return this.isAllowedPublicHost(parsed.host);
+    } catch {
+      return false;
+    }
+  }
 
   private async createSessionForUser(userId: string, req: Request): Promise<{ id: string; refreshToken: string }> {
     const refreshToken = createRefreshToken();

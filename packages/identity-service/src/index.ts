@@ -45,6 +45,14 @@ if (!Number.isInteger(jwtExpiresInSeconds) || jwtExpiresInSeconds < 1) {
   process.exit(1);
 }
 const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;
+const oauthRedirectUrl = process.env.OAUTH_REDIRECT_URL?.trim() || undefined;
+const oauthRedirectPath = process.env.OAUTH_REDIRECT_PATH?.trim() || "/auth/callback";
+const publicOriginOverride = process.env.PUBLIC_ORIGIN_OVERRIDE?.trim() || undefined;
+const publicAllowedHostSuffixes = (process.env.PUBLIC_ALLOWED_HOST_SUFFIXES ?? "ngrok-free.app,ngrok.app,localhost")
+  .split(",")
+  .map((part) => part.trim())
+  .filter((part) => part.length > 0);
+const passwordAuthEnabled = (process.env.PASSWORD_AUTH_ENABLED ?? "false").toLowerCase() === "true";
 const refreshTokenExpiresInSeconds = parseInt(
   process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS ?? String(60 * 60 * 24 * 30),
   10
@@ -61,6 +69,45 @@ const googleOAuth = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SE
 const githubOAuth = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
   ? { clientId: process.env.GITHUB_CLIENT_ID, clientSecret: process.env.GITHUB_CLIENT_SECRET }
   : undefined;
+const rabbitmqConnectRetries = parseInt(process.env.RABBITMQ_CONNECT_RETRIES ?? (isProduction ? "12" : "20"), 10);
+const rabbitmqConnectRetryDelayMs = parseInt(process.env.RABBITMQ_CONNECT_RETRY_DELAY_MS ?? "1500", 10);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectRabbitMQWithRetry(
+  serviceName: string,
+  connect: () => Promise<void>
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= rabbitmqConnectRetries; attempt += 1) {
+    try {
+      await connect();
+      if (attempt > 1) {
+        logger.info({ attempt }, `${serviceName}: RabbitMQ connected after retry`);
+      }
+      return true;
+    } catch (err) {
+      const isLastAttempt = attempt >= rabbitmqConnectRetries;
+      if (isLastAttempt) {
+        if (isProduction) {
+          throw err;
+        }
+        logger.warn(
+          { err, attempts: rabbitmqConnectRetries },
+          `${serviceName}: RabbitMQ unavailable in development; continuing with messaging disabled`
+        );
+        return false;
+      }
+      logger.warn(
+        { err, attempt, retryInMs: rabbitmqConnectRetryDelayMs },
+        `${serviceName}: RabbitMQ connection failed; retrying`
+      );
+      await sleep(rabbitmqConnectRetryDelayMs);
+    }
+  }
+  return false;
+}
 
 async function bootstrap() {
   const container = createContainer({
@@ -71,14 +118,24 @@ async function bootstrap() {
     jwtExpiresInSeconds,
     refreshTokenExpiresInSeconds,
     baseUrl,
+    oauthRedirectUrl,
+    oauthRedirectPath,
+    publicOriginOverride,
+    publicAllowedHostSuffixes,
+    passwordAuthEnabled,
     googleOAuth,
     githubOAuth,
   });
 
-  await container.connectRabbitMQ();
   await container.ensureAuthorizationSeed();
-  const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
-  container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+  const rabbitConnected = await connectRabbitMQWithRetry(
+    "identity-service",
+    async () => container.connectRabbitMQ()
+  );
+  if (rabbitConnected) {
+    const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
+    container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+  }
 
   const app = createApp(container, {
     corsOrigin: process.env.CORS_ORIGIN,
