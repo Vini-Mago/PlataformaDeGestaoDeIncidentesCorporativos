@@ -1,9 +1,8 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 
-// Load root .env first (RABBITMQ_URL, etc.); service .env overrides with override: true.
+// Load only the monorepo root .env in development.
 loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
-loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
 
 import type { Server } from "http";
 import { createContainer } from "./container";

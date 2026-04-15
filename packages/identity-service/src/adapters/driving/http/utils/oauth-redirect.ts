@@ -11,14 +11,12 @@ export const OAUTH_STATE_PREFIX = "oauth_state:";
  */
 export async function performOAuthRedirect(
   provider: IOAuthProvider,
-  basePath: string,
   res: Response,
   cache: ICacheService,
-  baseUrl: string
+  redirectUri: string
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   await cache.set(OAUTH_STATE_PREFIX + state, "1", OAUTH_STATE_TTL_SECONDS);
-  const redirectUri = `${baseUrl}/api/auth/${basePath}/callback`;
   const url = provider.getAuthorizationUrl(redirectUri, state);
   res.redirect(url);
 }

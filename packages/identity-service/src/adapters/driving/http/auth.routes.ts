@@ -1,11 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
-import { asyncHandler } from "@pgic/shared";
+import { asyncHandler, sendError } from "@pgic/shared";
 import { AuthController } from "./auth.controller";
 import {
   validateRegister,
   validateLogin,
   validateRefreshToken,
+  validateOAuthExchangeCode,
   validateForgotPassword,
   validateResetPassword,
 } from "./auth.validation";
@@ -36,13 +37,28 @@ const forgotPasswordRateLimiter = rateLimit({
 
 export function createAuthRoutes(
   controller: AuthController,
-  authMiddleware: (req: Request, res: Response, next: NextFunction) => void
+  authMiddleware: (req: Request, res: Response, next: NextFunction) => void,
+  passwordAuthEnabled: boolean
 ): Router {
   const router = Router();
+  const requirePasswordAuthEnabled = (_req: Request, res: Response, next: NextFunction): void => {
+    if (passwordAuthEnabled) {
+      next();
+      return;
+    }
+    sendError(res, 403, "Password authentication disabled");
+  };
 
-  router.post("/auth/register", authRateLimiter, validateRegister, asyncHandler(controller.register.bind(controller)));
-  router.post("/auth/login", authRateLimiter, validateLogin, asyncHandler(controller.login.bind(controller)));
+  router.post(
+    "/auth/register",
+    authRateLimiter,
+    requirePasswordAuthEnabled,
+    validateRegister,
+    asyncHandler(controller.register.bind(controller))
+  );
+  router.post("/auth/login", authRateLimiter, requirePasswordAuthEnabled, validateLogin, asyncHandler(controller.login.bind(controller)));
   router.post("/auth/refresh", validateRefreshToken, asyncHandler(controller.refresh.bind(controller)));
+  router.post("/auth/exchange-code", validateOAuthExchangeCode, asyncHandler(controller.exchangeOAuthCode.bind(controller)));
   router.post("/auth/logout", authMiddleware, asyncHandler(controller.logout.bind(controller)));
   router.post("/auth/logout-others", authMiddleware, asyncHandler(controller.logoutOthers.bind(controller)));
   router.get("/auth/sessions", authMiddleware, asyncHandler(controller.listSessions.bind(controller)));
@@ -50,10 +66,16 @@ export function createAuthRoutes(
   router.post(
     "/auth/forgot-password",
     forgotPasswordRateLimiter,
+    requirePasswordAuthEnabled,
     validateForgotPassword,
     asyncHandler(controller.forgotPassword.bind(controller))
   );
-  router.post("/auth/reset-password", validateResetPassword, asyncHandler(controller.resetPassword.bind(controller)));
+  router.post(
+    "/auth/reset-password",
+    requirePasswordAuthEnabled,
+    validateResetPassword,
+    asyncHandler(controller.resetPassword.bind(controller))
+  );
   router.get("/auth/me", authMiddleware, asyncHandler(controller.me.bind(controller)));
 
   router.get("/auth/google", oauthRateLimiter, asyncHandler(controller.googleRedirect.bind(controller)));

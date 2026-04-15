@@ -33,12 +33,18 @@ describe("Auth API integration", () => {
     jwtSecret: "integration-test-secret-min-32-chars-for-jwt",
     jwtExpiresInSeconds: 3600,
     baseUrl: "http://localhost:3001",
+    passwordAuthEnabled: true,
     eventPublisherOverride: createNoOpEventPublisher(),
     cacheOverride: createNoOpCache(),
   };
 
   const container = createContainer(config);
   const app = createApp(container);
+  const passwordDisabledContainer = createContainer({
+    ...config,
+    passwordAuthEnabled: false,
+  });
+  const passwordDisabledApp = createApp(passwordDisabledContainer);
 
   let dbAvailable = false;
   let redisAvailable = false;
@@ -88,6 +94,7 @@ describe("Auth API integration", () => {
     if (connected) {
       await container.disconnect();
     }
+    await passwordDisabledContainer.disconnect();
   });
 
   beforeEach(async () => {
@@ -356,6 +363,60 @@ describe("Auth API integration", () => {
       if (!dbAvailable) skip();
       const res = await request(app).get("/health").expect(200);
       expect(res.body).toMatchObject({ service: "identity-service" });
+    });
+  });
+
+  describe("Password auth disabled", () => {
+    it("returns 403 on register when password auth is disabled", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(passwordDisabledApp)
+        .post("/api/auth/register")
+        .send({
+          email: "blocked@example.com",
+          name: "Blocked",
+          password: "SecurePass123",
+        })
+        .expect(403);
+
+      expect(res.body).toHaveProperty("error", "Password authentication disabled");
+    });
+
+    it("returns 403 on login when password auth is disabled", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(passwordDisabledApp)
+        .post("/api/auth/login")
+        .send({
+          email: "blocked@example.com",
+          password: "SecurePass123",
+        })
+        .expect(403);
+
+      expect(res.body).toHaveProperty("error", "Password authentication disabled");
+    });
+
+    it("returns 403 on forgot-password when password auth is disabled", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(passwordDisabledApp)
+        .post("/api/auth/forgot-password")
+        .send({
+          identifier: "blocked@example.com",
+        })
+        .expect(403);
+
+      expect(res.body).toHaveProperty("error", "Password authentication disabled");
+    });
+
+    it("returns 403 on reset-password when password auth is disabled", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(passwordDisabledApp)
+        .post("/api/auth/reset-password")
+        .send({
+          token: "any-token",
+          password: "SecurePass123",
+        })
+        .expect(403);
+
+      expect(res.body).toHaveProperty("error", "Password authentication disabled");
     });
   });
 });

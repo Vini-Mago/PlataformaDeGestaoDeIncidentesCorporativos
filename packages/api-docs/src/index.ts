@@ -2,7 +2,6 @@ import path from "path";
 import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
-dotenv.config();
 
 import express from "express";
 import swaggerUi from "swagger-ui-express";
