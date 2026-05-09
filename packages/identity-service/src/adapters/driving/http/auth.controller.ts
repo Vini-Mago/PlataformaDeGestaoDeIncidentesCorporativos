@@ -14,6 +14,8 @@ import type { IAuthSessionRepository } from "../../../application/ports/auth-ses
 import type { IPasswordResetTokenRepository } from "../../../application/ports/password-reset-token-repository.port";
 import type { IPasswordHasher } from "../../../application/ports/password-hasher.port";
 import type { IAccessLogRepository } from "../../../application/ports/access-log-repository.port";
+import type { IAuthorizationRepository } from "../../../application/ports/authorization-repository.port";
+import { resolveEffectivePermissionKeys } from "../../../application/services/effective-permissions";
 import type { RegisterDto } from "../../../application/dtos/register.dto";
 import type { LoginDto } from "../../../application/dtos/login.dto";
 import type { AuthResponseDto } from "../../../application/dtos/auth-response.dto";
@@ -56,6 +58,7 @@ export class AuthController {
     private readonly passwordResetTokenRepository: IPasswordResetTokenRepository,
     private readonly passwordHasher: IPasswordHasher,
     private readonly accessLogRepository: IAccessLogRepository,
+    private readonly authorizationRepository: IAuthorizationRepository,
     private readonly exposeResetTokenInResponse: boolean,
     private readonly oauthRedirectUrl?: string,
     private readonly oauthRedirectPath: string = "/auth/callback",
@@ -68,8 +71,8 @@ export class AuthController {
       const dto: RegisterDto = req.body;
       const result = await this.registerUseCase.execute(dto);
       const session = await this.createSessionForUser(result.user.id, req);
-      const accessToken = this.tokenService.sign({
-        sub: result.user.id,
+      const accessToken = await this.signAccessToken({
+        userId: result.user.id,
         email: result.user.email,
         login: result.user.login ?? result.user.email,
         role: result.user.role ?? "user",
@@ -95,8 +98,8 @@ export class AuthController {
       const dto: LoginDto = req.body;
       const result = await this.loginUseCase.execute(dto);
       const session = await this.createSessionForUser(result.user.id, req);
-      const accessToken = this.tokenService.sign({
-        sub: result.user.id,
+      const accessToken = await this.signAccessToken({
+        userId: result.user.id,
         email: result.user.email,
         login: result.user.login ?? result.user.email,
         role: result.user.role ?? "user",
@@ -177,8 +180,8 @@ export class AuthController {
 
       await this.authSessionRepository.revoke(existing.id, "rotated");
       const session = await this.createSessionForUser(user.id, req);
-      const accessToken = this.tokenService.sign({
-        sub: user.id,
+      const accessToken = await this.signAccessToken({
+        userId: user.id,
         email: user.email.value,
         login: user.profile.login,
         role: user.role,
@@ -373,8 +376,8 @@ export class AuthController {
       const redirectUri = this.resolvePublicOrigin(req) + "/auth/" + providerName + "/callback";
       const result = await this.oauthCallbackUseCase.execute(query.code, redirectUri, provider);
       const session = await this.createSessionForUser(result.user.id, req);
-      const accessToken = this.tokenService.sign({
-        sub: result.user.id,
+      const accessToken = await this.signAccessToken({
+        userId: result.user.id,
         email: result.user.email,
         login: result.user.login ?? result.user.email,
         role: result.user.role ?? "user",
@@ -484,6 +487,28 @@ export class AuthController {
     } catch {
       return false;
     }
+  }
+
+  private async signAccessToken(params: {
+    userId: string;
+    email: string;
+    login: string;
+    role: string;
+    sid?: string;
+  }): Promise<string> {
+    const perms = await resolveEffectivePermissionKeys(
+      this.authorizationRepository,
+      params.userId,
+      params.role
+    );
+    return this.tokenService.sign({
+      sub: params.userId,
+      email: params.email,
+      login: params.login,
+      role: params.role,
+      sid: params.sid,
+      perms,
+    });
   }
 
   private async createSessionForUser(userId: string, req: Request): Promise<{ id: string; refreshToken: string }> {

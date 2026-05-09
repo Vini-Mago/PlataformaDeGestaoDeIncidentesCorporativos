@@ -31,3 +31,11 @@ export class InvalidStatusFilterError extends AppError {
     Object.setPrototypeOf(this, InvalidStatusFilterError.prototype);
   }
 }
+
+export class ServiceRequestForbiddenError extends AppError {
+  override name = "ServiceRequestForbiddenError";
+  constructor() {
+    super("Forbidden");
+    Object.setPrototypeOf(this, ServiceRequestForbiddenError.prototype);
+  }
+}

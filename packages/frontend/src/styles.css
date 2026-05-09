@@ -23,6 +23,55 @@ body {
   box-shadow: 0 14px 40px rgba(19, 43, 65, 0.12);
 }
 
+.container.wide {
+  max-width: 960px;
+}
+
+.panel {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+table.incidents {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+table.incidents th,
+table.incidents td {
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+table.incidents th {
+  font-weight: 700;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.hint {
+  font-size: 0.88rem;
+  color: #6b7280;
+}
+
+.banner-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  font-size: 0.92rem;
+}
+
 h1 {
   margin-top: 0;
   font-size: 1.8rem;
@@ -59,6 +108,23 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(35, 95, 158, 0.2);
 }
 
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #c7d0d9;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #235f9e;
+  box-shadow: 0 0 0 3px rgba(35, 95, 158, 0.2);
+}
+
 button {
   border: 0;
   border-radius: 10px;
@@ -73,6 +139,16 @@ button {
 button:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+button.btn-secondary {
+  background: #ffffff;
+  color: #0f4d8a;
+  border: 2px solid #0f4d8a;
+}
+
+button.btn-secondary:hover:not(:disabled) {
+  background: #f0f6fc;
 }
 
 .actions {
@@ -101,4 +177,13 @@ button:disabled {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
 }

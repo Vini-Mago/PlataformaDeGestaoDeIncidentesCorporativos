@@ -10,6 +10,8 @@ export interface JwtPayload {
   email?: string;
   role?: string;
   sid?: string;
+  /** Chaves `module:action:scope` (RBAC), opcional em tokens antigos. */
+  perms?: string[];
 }
 
 /**
@@ -24,6 +26,8 @@ declare global {
       userEmail?: string;
       userRole?: string;
       sessionId?: string;
+      /** Derivado de `perms` no JWT (Set para lookup O(1)). */
+      permissionKeys?: Set<string>;
     }
   }
 }
@@ -65,6 +69,8 @@ export function createAuthMiddleware(
     req.userEmail = payload.email;
     req.userRole = payload.role ?? "user";
     req.sessionId = payload.sid;
+    req.permissionKeys =
+      payload.perms && payload.perms.length > 0 ? new Set(payload.perms) : undefined;
     next();
   };
 }

@@ -50,6 +50,7 @@ describe("ServiceRequestController", () => {
           status: "Submitted",
           catalogItemId: "cat-1",
         },
+        userRole: "admin",
       } as any;
       const res = {
         json: vi.fn(),
@@ -67,7 +68,7 @@ describe("ServiceRequestController", () => {
     });
 
     it("passes empty filters when query is empty", async () => {
-      const req = { query: {} } as any;
+      const req = { query: {}, userRole: "admin" } as any;
       const res = { json: vi.fn() } as any;
 
       await controller().list(req, res);
@@ -80,7 +81,7 @@ describe("ServiceRequestController", () => {
     });
 
     it("throws InvalidStatusFilterError when status is invalid", async () => {
-      const req = { query: { status: "InvalidStatus" } } as any;
+      const req = { query: { status: "InvalidStatus" }, userRole: "admin" } as any;
       const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
       const next = vi.fn();
 

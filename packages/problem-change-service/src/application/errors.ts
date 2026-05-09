@@ -39,3 +39,19 @@ export class InvalidChangeRiskFilterError extends AppError {
     Object.setPrototypeOf(this, InvalidChangeRiskFilterError.prototype);
   }
 }
+
+export class ProblemForbiddenError extends AppError {
+  override name = "ProblemForbiddenError";
+  constructor() {
+    super("Forbidden");
+    Object.setPrototypeOf(this, ProblemForbiddenError.prototype);
+  }
+}
+
+export class ChangeForbiddenError extends AppError {
+  override name = "ChangeForbiddenError";
+  constructor() {
+    super("Forbidden");
+    Object.setPrototypeOf(this, ChangeForbiddenError.prototype);
+  }
+}

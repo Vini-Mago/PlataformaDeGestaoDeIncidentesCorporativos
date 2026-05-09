@@ -26,7 +26,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "load-test": "tsx scripts/load-test.ts",
-    "db:ensure": "tsx scripts/ensure-database.ts"
+    "db:ensure": "tsx scripts/ensure-database.ts",
+    "db:migrate:deploy": "pnpm --filter identity-service run prisma:migrate:deploy && pnpm --filter request-service run prisma:migrate:deploy && pnpm --filter incident-service run prisma:migrate:deploy && pnpm --filter problem-change-service run prisma:migrate:deploy && pnpm --filter sla-service run prisma:migrate:deploy && pnpm --filter escalation-service run prisma:migrate:deploy && pnpm --filter notification-service run prisma:migrate:deploy && pnpm --filter audit-service run prisma:migrate:deploy && pnpm --filter reporting-service run prisma:migrate:deploy"
   },
   "engines": {
     "node": ">=18"

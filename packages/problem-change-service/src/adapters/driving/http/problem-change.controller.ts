@@ -18,6 +18,13 @@ import {
   type ListChangesInput,
 } from "../../../application/use-cases/list-changes.use-case";
 import { asyncHandler } from "@pgic/shared";
+import {
+  canReadAllChanges,
+  canReadAllProblems,
+  isChangeOwner,
+  isProblemOwner,
+} from "./problem-change-access.helper";
+import { ChangeForbiddenError, ProblemForbiddenError } from "../../../application/errors";
 
 export class ProblemChangeController {
   constructor(
@@ -39,18 +46,28 @@ export class ProblemChangeController {
     res.status(201).json(problem);
   });
 
-  listProblemsHandler = asyncHandler(async (req: Request, res: Response) => {
+  listProblemsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    let createdById = req.query.createdById as string | undefined;
+    if (!canReadAllProblems(req)) {
+      createdById = req.userId;
+    }
     const input: ListProblemsInput = {
       status: parseProblemStatusFilter(req.query.status),
-      createdById: req.query.createdById as string | undefined,
+      createdById,
     };
     const list = await this.listProblems.execute(input);
     res.json(list);
   });
 
-  getProblemHandler = asyncHandler(async (req: Request, res: Response) => {
+  getProblemHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const problem = await this.getProblem.execute(id);
+    if (!canReadAllProblems(req)) {
+      const uid = req.userId;
+      if (!uid || !isProblemOwner(problem, uid)) {
+        throw new ProblemForbiddenError();
+      }
+    }
     res.json(problem);
   });
 
@@ -64,19 +81,29 @@ export class ProblemChangeController {
     res.status(201).json(change);
   });
 
-  listChangesHandler = asyncHandler(async (req: Request, res: Response) => {
+  listChangesHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    let createdById = req.query.createdById as string | undefined;
+    if (!canReadAllChanges(req)) {
+      createdById = req.userId;
+    }
     const input: ListChangesInput = {
       status: parseChangeStatusFilter(req.query.status),
-      createdById: req.query.createdById as string | undefined,
+      createdById,
       risk: parseChangeRiskFilter(req.query.risk),
     };
     const list = await this.listChanges.execute(input);
     res.json(list);
   });
 
-  getChangeHandler = asyncHandler(async (req: Request, res: Response) => {
+  getChangeHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const change = await this.getChange.execute(id);
+    if (!canReadAllChanges(req)) {
+      const uid = req.userId;
+      if (!uid || !isChangeOwner(change, uid)) {
+        throw new ChangeForbiddenError();
+      }
+    }
     res.json(change);
   });
 }

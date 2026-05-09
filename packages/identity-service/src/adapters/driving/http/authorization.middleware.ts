@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { sendError } from "@pgic/shared";
+import { matchesJwtPermission, sendError } from "@pgic/shared";
 import type { IAuthorizationRepository } from "../../../application/ports/authorization-repository.port";
 
 export function createRequirePermission(authorizationRepository: IAuthorizationRepository) {
@@ -11,6 +11,15 @@ export function createRequirePermission(authorizationRepository: IAuthorizationR
       }
       if (req.userRole === "admin") {
         next();
+        return;
+      }
+
+      if (req.permissionKeys && req.permissionKeys.size > 0) {
+        if (matchesJwtPermission(req.permissionKeys, module, action, scope)) {
+          next();
+          return;
+        }
+        sendError(res, 403, "Forbidden");
         return;
       }
 

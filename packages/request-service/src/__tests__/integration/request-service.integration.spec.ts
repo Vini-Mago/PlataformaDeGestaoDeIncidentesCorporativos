@@ -31,7 +31,7 @@ describe("Request Service API integration", () => {
 
   let dbAvailable = false;
   const userId = "11111111-1111-1111-1111-111111111111";
-  const authToken = createTestJwt({ sub: userId, email: "user@test.com", role: "user" });
+  const authToken = createTestJwt({ sub: userId, email: "user@test.com", role: "admin" });
 
   beforeAll(async () => {
     try {

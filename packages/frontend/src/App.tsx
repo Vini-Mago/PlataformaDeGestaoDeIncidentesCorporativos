@@ -1,5 +1,7 @@
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth-context";
+import { IncidentSection } from "./IncidentSection";
+import { ServiceRequestSection } from "./ServiceRequestSection";
 
 function AuthEntryPage() {
   const { isAuthenticated, signInWithGoogle } = useAuth();
@@ -53,10 +55,11 @@ function DashboardPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container wide">
       <div className="topbar">
         <h1>Área protegida</h1>
         <button
+          type="button"
           onClick={() => {
             void signOut().finally(() => navigate("/login", { replace: true }));
           }}
@@ -64,11 +67,14 @@ function DashboardPage() {
           Sair
         </button>
       </div>
-      <p>Você está autenticado no backend.</p>
+      <p>Você está autenticado no backend (sessão via BFF / cookies).</p>
       <p><strong>Nome:</strong> {user.name}</p>
       <p><strong>E-mail:</strong> {user.email}</p>
       <p><strong>ID:</strong> {user.id}</p>
       <p><strong>Role:</strong> {user.role ?? "user"}</p>
+
+      <IncidentSection />
+      <ServiceRequestSection />
     </main>
   );
 }

@@ -295,6 +295,7 @@ export function createContainer(config: ContainerConfig) {
           cradle.passwordResetTokenRepository,
           cradle.passwordHasher,
           cradle.accessLogRepository,
+          cradle.authorizationRepository,
           process.env.EXPOSE_RESET_TOKEN_IN_RESPONSE === "true",
           cradle.oauthRedirectUrl,
           cradle.oauthRedirectPath,

@@ -6,6 +6,8 @@ import {
   InvalidProblemStatusFilterError,
   InvalidChangeStatusFilterError,
   InvalidChangeRiskFilterError,
+  ProblemForbiddenError,
+  ChangeForbiddenError,
 } from "../../../application/errors";
 
 describe("mapApplicationErrorToHttp (problem-change-service)", () => {
@@ -42,6 +44,20 @@ describe("mapApplicationErrorToHttp (problem-change-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(400);
     expect(result.message).toBe("Invalid change risk filter: Critical");
+  });
+
+  it("maps ProblemForbiddenError to 403", () => {
+    const err = new ProblemForbiddenError();
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(403);
+    expect(result.message).toBe("Forbidden");
+  });
+
+  it("maps ChangeForbiddenError to 403", () => {
+    const err = new ChangeForbiddenError();
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(403);
+    expect(result.message).toBe("Forbidden");
   });
 
   it("returns 500 and generic message for unmapped error", () => {

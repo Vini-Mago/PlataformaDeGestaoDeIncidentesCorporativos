@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAnyJwtPermission, requireJwtPermission } from "@pgic/shared";
 import type { CatalogItemController } from "./catalog-item.controller";
 import type { ServiceRequestController } from "./service-request.controller";
 import type { RequestHandler } from "express";
@@ -15,17 +16,43 @@ export function createRoutes(
 ): Router {
   const router = Router();
 
+  const readRequest = requireAnyJwtPermission([
+    { module: "requests", action: "read", scope: "all" },
+    { module: "requests", action: "read", scope: "own" },
+  ]);
+  const updateRequest = requireAnyJwtPermission([
+    { module: "requests", action: "update", scope: "all" },
+    { module: "requests", action: "update", scope: "own" },
+  ]);
+
   // Catalog items: list and get are public; create requires auth.
   router.get("/catalog-items", catalogController.list as RequestHandler);
   router.get("/catalog-items/:id", catalogController.getById as RequestHandler);
-  router.post("/catalog-items", authMiddleware, validateCreateCatalogItem, catalogController.create as RequestHandler);
+  router.post(
+    "/catalog-items",
+    authMiddleware,
+    requireJwtPermission("requests", "create", "all"),
+    validateCreateCatalogItem,
+    catalogController.create as RequestHandler
+  );
 
-  // Service requests: all mutations require auth; list and getById require auth (RF-2.1).
-  router.post("/service-requests", authMiddleware, validateCreateServiceRequest, requestController.create as RequestHandler);
-  router.get("/service-requests", authMiddleware, requestController.list as RequestHandler);
-  router.get("/service-requests/:id", authMiddleware, requestController.getById as RequestHandler);
-  router.post("/service-requests/:id/submit", authMiddleware, requestController.submit as RequestHandler);
-  router.post("/service-requests/:id/comments", authMiddleware, validateAddRequestComment, requestController.addComment as RequestHandler);
+  router.post(
+    "/service-requests",
+    authMiddleware,
+    requireJwtPermission("requests", "create", "all"),
+    validateCreateServiceRequest,
+    requestController.create as RequestHandler
+  );
+  router.get("/service-requests", authMiddleware, readRequest, requestController.list as RequestHandler);
+  router.get("/service-requests/:id", authMiddleware, readRequest, requestController.getById as RequestHandler);
+  router.post("/service-requests/:id/submit", authMiddleware, updateRequest, requestController.submit as RequestHandler);
+  router.post(
+    "/service-requests/:id/comments",
+    authMiddleware,
+    updateRequest,
+    validateAddRequestComment,
+    requestController.addComment as RequestHandler
+  );
 
   return router;
 }

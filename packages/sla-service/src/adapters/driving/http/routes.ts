@@ -1,4 +1,5 @@
 import { Router, type RequestHandler } from "express";
+import { requireAnyJwtPermission, requireJwtPermission } from "@pgic/shared";
 import type { SlaController } from "./sla.controller";
 import {
   validateIdParam,
@@ -12,13 +13,30 @@ export function createRoutes(
 ): Router {
   const router = Router();
 
-  router.post("/calendars", authMiddleware, validateCreateCalendar, controller.createCalendarHandler as RequestHandler);
-  router.get("/calendars", authMiddleware, controller.listCalendarsHandler as RequestHandler);
-  router.get("/calendars/:id", authMiddleware, validateIdParam, controller.getCalendarHandler as RequestHandler);
+  const readSla = requireAnyJwtPermission([
+    { module: "sla", action: "read", scope: "all" },
+    { module: "sla", action: "manage", scope: "all" },
+  ]);
 
-  router.post("/sla-policies", authMiddleware, validateCreateSlaPolicy, controller.createSlaPolicyHandler as RequestHandler);
-  router.get("/sla-policies", authMiddleware, controller.listSlaPoliciesHandler as RequestHandler);
-  router.get("/sla-policies/:id", authMiddleware, validateIdParam, controller.getSlaPolicyHandler as RequestHandler);
+  router.post(
+    "/calendars",
+    authMiddleware,
+    requireJwtPermission("sla", "manage", "all"),
+    validateCreateCalendar,
+    controller.createCalendarHandler as RequestHandler
+  );
+  router.get("/calendars", authMiddleware, readSla, controller.listCalendarsHandler as RequestHandler);
+  router.get("/calendars/:id", authMiddleware, readSla, validateIdParam, controller.getCalendarHandler as RequestHandler);
+
+  router.post(
+    "/sla-policies",
+    authMiddleware,
+    requireJwtPermission("sla", "manage", "all"),
+    validateCreateSlaPolicy,
+    controller.createSlaPolicyHandler as RequestHandler
+  );
+  router.get("/sla-policies", authMiddleware, readSla, controller.listSlaPoliciesHandler as RequestHandler);
+  router.get("/sla-policies/:id", authMiddleware, readSla, validateIdParam, controller.getSlaPolicyHandler as RequestHandler);
 
   return router;
 }

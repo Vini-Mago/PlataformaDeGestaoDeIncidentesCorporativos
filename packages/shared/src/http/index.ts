@@ -18,5 +18,12 @@ export {
   type JwtPayload,
   type AuthenticatedRequest,
 } from "./auth.middleware";
+export {
+  matchesJwtPermission,
+  requireJwtPermission,
+  requireAnyJwtPermission,
+  type PermissionScope,
+  type JwtPermissionAlternative,
+} from "./require-jwt-permission.middleware";
 export type { ITokenVerifier, TokenVerifierPayload } from "./token-verifier.port";
 export { JwtTokenVerifier } from "./jwt-token-verifier";

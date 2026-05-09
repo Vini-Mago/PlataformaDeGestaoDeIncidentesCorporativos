@@ -4,6 +4,7 @@ import {
   IncidentNotFoundError,
   InvalidStatusTransitionError,
   InvalidStatusFilterError,
+  IncidentForbiddenError,
 } from "../../../application/errors";
 
 describe("mapApplicationErrorToHttp (incident-service)", () => {
@@ -26,6 +27,13 @@ describe("mapApplicationErrorToHttp (incident-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(400);
     expect(result.message).toBe("Invalid status filter: InvalidStatus");
+  });
+
+  it("maps IncidentForbiddenError to 403", () => {
+    const err = new IncidentForbiddenError();
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(403);
+    expect(result.message).toBe("Forbidden");
   });
 
   it("returns 500 and generic message for unmapped error", () => {

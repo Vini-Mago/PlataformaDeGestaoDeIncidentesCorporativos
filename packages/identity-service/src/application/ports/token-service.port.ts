@@ -8,6 +8,8 @@ export interface TokenPayload {
   login?: string;
   role: string;
   sid?: string;
+  /** Chaves RBAC efetivas para consumo nos microsserviços sem consultar o identity DB. */
+  perms?: string[];
   iat?: number;
   exp?: number;
 }

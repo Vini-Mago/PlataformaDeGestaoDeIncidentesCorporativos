@@ -1,5 +1,11 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "@pgic/shared";
+import {
+  canReadAllIncidents,
+  canUpdateAllIncidents,
+  isIncidentParticipant,
+} from "./incident-access.helper";
+import { IncidentForbiddenError } from "../../../application/errors";
 import type { CreateIncidentDto } from "../../../application/dtos/create-incident.dto";
 import type { ChangeIncidentStatusDto } from "../../../application/dtos/change-incident-status.dto";
 import type { AssignIncidentDto } from "../../../application/dtos/assign-incident.dto";
@@ -54,11 +60,16 @@ export class IncidentController {
     res.status(201).json(incident);
   });
 
-  list = asyncHandler(async (req: Request, res: Response) => {
-    const requesterId = req.query.requesterId as string | undefined;
+  list = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const status = parseStatusFilter(req.query.status);
     const assignedToId = req.query.assignedToId as string | undefined;
     const assignedTeamId = req.query.assignedTeamId as string | undefined;
+
+    let requesterId = req.query.requesterId as string | undefined;
+    if (!canReadAllIncidents(req)) {
+      requesterId = req.userId;
+    }
+
     const list = await this.listIncidents.execute({
       requesterId,
       status,
@@ -68,19 +79,32 @@ export class IncidentController {
     res.json(list);
   });
 
-  getById = asyncHandler(async (req: Request, res: Response) => {
+  getById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const incident = await this.getIncident.execute(id);
+    if (!canReadAllIncidents(req)) {
+      const uid = req.userId;
+      if (!uid || !isIncidentParticipant(incident, uid)) {
+        throw new IncidentForbiddenError();
+      }
+    }
     res.json(incident);
   });
 
   changeStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { toStatus, comment } = req.body as ChangeIncidentStatusDto;
+    const uid = req.userId;
+    if (!canUpdateAllIncidents(req)) {
+      const current = await this.getIncident.execute(id);
+      if (!uid || !isIncidentParticipant(current, uid)) {
+        throw new IncidentForbiddenError();
+      }
+    }
     const incident = await this.changeIncidentStatus.execute(
       id,
       toStatus,
-      req.userId ?? null,
+      uid ?? null,
       comment ?? null
     );
     res.json(incident);
@@ -104,6 +128,12 @@ export class IncidentController {
       return;
     }
     const { id } = req.params;
+    if (!canUpdateAllIncidents(req)) {
+      const current = await this.getIncident.execute(id);
+      if (!isIncidentParticipant(current, userId)) {
+        throw new IncidentForbiddenError();
+      }
+    }
     const comment = await this.addIncidentComment.execute(
       id,
       userId,

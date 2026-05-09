@@ -7,6 +7,8 @@ export interface TokenVerifierPayload {
   email?: string;
   role?: string;
   sid?: string;
+  /** Chaves `module:action:scope` emitidas pelo identity-service (RBAC). */
+  perms?: string[];
 }
 
 /**

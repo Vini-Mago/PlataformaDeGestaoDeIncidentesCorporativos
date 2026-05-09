@@ -8,6 +8,7 @@ const jwtPayloadSchema = z.object({
   email: z.string().optional(),
   role: z.string().optional(),
   sid: z.string().optional(),
+  perms: z.array(z.string()).optional(),
   exp: z.number().optional(),
   iat: z.number().optional(),
 });
@@ -47,6 +48,7 @@ export class JwtTokenVerifier implements ITokenVerifier {
         email: data.email,
         role: data.role,
         sid: data.sid,
+        perms: data.perms,
       };
     } catch (err) {
       logger.debug({ err }, "JWT verify failed");

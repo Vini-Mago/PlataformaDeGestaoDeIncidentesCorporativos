@@ -44,18 +44,19 @@ type PrismaAuthorizationClientLike = {
   };
 };
 
-const DEFAULT_ROLES: Array<{ name: string; description: string }> = [
-  { name: "admin", description: "Administrator" },
-  { name: "user", description: "End user" },
-  { name: "gestor", description: "Manager" },
-];
-
-const DEFAULT_PERMISSIONS: Array<{
+type PermissionSeed = {
   module: string;
   action: string;
   scope: string;
   description: string;
-}> = [
+};
+
+function key(module: string, action: string, scope: string): string {
+  return `${module}:${action}:${scope}`;
+}
+
+/** IAM / plataforma (identity-service). */
+const IAM_PERMISSIONS: PermissionSeed[] = [
   { module: "users", action: "create", scope: "all", description: "Create users" },
   { module: "users", action: "read", scope: "all", description: "Read users" },
   { module: "users", action: "update", scope: "all", description: "Update users" },
@@ -67,15 +68,99 @@ const DEFAULT_PERMISSIONS: Array<{
   { module: "access_logs", action: "read", scope: "all", description: "Read access logs" },
 ];
 
-const ROLE_PERMISSION_KEYS: Record<string, string[]> = {
-  admin: DEFAULT_PERMISSIONS.map((p) => `${p.module}:${p.action}:${p.scope}`),
-  gestor: ["users:read:all", "access_logs:read:all"],
-  user: ["users:read:all", "users:update:own", "sessions:manage:own"],
-};
+/** Domínio ITSM alinhado a RF-2.2 (módulos PGIC). Usado por RBAC e futura enforcement nos microsserviços. */
+const ITSM_PERMISSIONS: PermissionSeed[] = [
+  { module: "incidents", action: "read", scope: "all", description: "View all incidents" },
+  { module: "incidents", action: "read", scope: "own", description: "View own incidents" },
+  { module: "incidents", action: "create", scope: "all", description: "Open incidents" },
+  { module: "incidents", action: "update", scope: "all", description: "Update any incident" },
+  { module: "incidents", action: "update", scope: "own", description: "Update own incident (e.g. comments)" },
+  { module: "incidents", action: "assign", scope: "all", description: "Assign or reassign incidents" },
+  { module: "requests", action: "read", scope: "all", description: "View all service requests" },
+  { module: "requests", action: "read", scope: "own", description: "View own service requests" },
+  { module: "requests", action: "create", scope: "all", description: "Submit service requests" },
+  { module: "requests", action: "update", scope: "all", description: "Process service requests" },
+  { module: "requests", action: "approve", scope: "all", description: "Approve or reject requests" },
+  { module: "problems", action: "read", scope: "all", description: "View problems" },
+  { module: "problems", action: "create", scope: "all", description: "Create problems" },
+  { module: "problems", action: "update", scope: "all", description: "Update problems" },
+  { module: "changes", action: "read", scope: "all", description: "View changes" },
+  { module: "changes", action: "create", scope: "all", description: "Create changes" },
+  { module: "changes", action: "update", scope: "all", description: "Update changes" },
+  { module: "changes", action: "approve", scope: "all", description: "Approve changes" },
+  { module: "sla", action: "read", scope: "all", description: "View SLA policies and timers" },
+  { module: "sla", action: "manage", scope: "all", description: "Manage SLA policies and calendars" },
+  { module: "escalation", action: "read", scope: "all", description: "View escalation rules and history" },
+  { module: "escalation", action: "manage", scope: "all", description: "Manage escalation rules" },
+  { module: "notifications", action: "read", scope: "all", description: "View notification configuration" },
+  { module: "notifications", action: "manage", scope: "all", description: "Manage templates and channels" },
+  { module: "audit", action: "read", scope: "all", description: "Read domain audit trail" },
+  { module: "audit", action: "create", scope: "all", description: "Create audit entries" },
+  { module: "reporting", action: "read", scope: "all", description: "View dashboards and KPIs" },
+  { module: "reporting", action: "create", scope: "all", description: "Create report definitions" },
+  { module: "reporting", action: "export", scope: "all", description: "Export reports (PDF/CSV)" },
+  { module: "settings", action: "read", scope: "all", description: "View platform settings" },
+  { module: "settings", action: "manage", scope: "all", description: "Manage platform settings" },
+];
 
-function key(module: string, action: string, scope: string): string {
-  return `${module}:${action}:${scope}`;
-}
+const DEFAULT_PERMISSIONS: PermissionSeed[] = [...IAM_PERMISSIONS, ...ITSM_PERMISSIONS];
+
+const ITSM_READ_ALL_KEYS = ITSM_PERMISSIONS.filter(
+  (p) => p.action === "read" && p.scope === "all"
+).map((p) => key(p.module, p.action, p.scope));
+
+const ANALISTA_ITSM_KEYS = ITSM_PERMISSIONS.filter(
+  (p) => !(p.module === "settings" && p.action === "manage")
+).map((p) => key(p.module, p.action, p.scope));
+
+const DEFAULT_ROLES: Array<{ name: string; description: string }> = [
+  { name: "admin", description: "Administrator" },
+  { name: "gestor", description: "Manager" },
+  { name: "analista", description: "Support analyst" },
+  { name: "noc", description: "Network Operations Center" },
+  { name: "user", description: "End user" },
+];
+
+const ROLE_PERMISSION_KEYS: Record<string, string[]> = {
+  admin: DEFAULT_PERMISSIONS.map((p) => key(p.module, p.action, p.scope)),
+  gestor: [
+    "users:read:all",
+    "access_logs:read:all",
+    ...ITSM_READ_ALL_KEYS,
+    "reporting:export:all",
+    "incidents:create:all",
+    "incidents:assign:all",
+    "requests:create:all",
+    "requests:approve:all",
+    "changes:approve:all",
+  ],
+  analista: ["users:read:all", "users:update:own", "sessions:manage:own", ...ANALISTA_ITSM_KEYS],
+  noc: [
+    "users:read:all",
+    "sessions:manage:own",
+    key("incidents", "read", "all"),
+    key("incidents", "assign", "all"),
+    key("incidents", "update", "all"),
+    key("requests", "read", "all"),
+    key("problems", "read", "all"),
+    key("changes", "read", "all"),
+    key("sla", "read", "all"),
+    key("escalation", "read", "all"),
+    key("notifications", "read", "all"),
+    key("audit", "read", "all"),
+  ],
+  user: [
+    "users:read:all",
+    "users:update:own",
+    "sessions:manage:own",
+    key("incidents", "read", "own"),
+    key("incidents", "create", "all"),
+    key("incidents", "update", "own"),
+    key("requests", "read", "own"),
+    key("requests", "create", "all"),
+    key("requests", "update", "own"),
+  ],
+};
 
 export class PrismaAuthorizationRepository implements IAuthorizationRepository {
   constructor(private readonly prisma: PrismaClient) {}
