@@ -1,0 +1,631 @@
+@startuml BPMN - Plataforma de Gestao de Incidentes Corporativos
+
+' ============================================================
+' BPMN - Plataforma de Gestao de Incidentes Corporativos (PGIC)
+' Compativel ext. jebbs: sem !theme; sem  (Creole); legenda sem tabela Markdown
+' ============================================================
+
+skinparam backgroundColor #FEFEFE
+skinparam swimlaneWidth 220
+skinparam ActivityBorderColor #333333
+skinparam ActivityBackgroundColor #E8F4FD
+skinparam ActivityDiamondBackgroundColor #FFF3CD
+skinparam ActivityDiamondBorderColor #856404
+skinparam ArrowColor #555555
+skinparam PartitionBorderColor #2C3E50
+skinparam PartitionBackgroundColor #F8F9FA
+skinparam NoteBackgroundColor #FFF9C4
+skinparam NoteBorderColor #F9A825
+
+title BPMN - Plataforma de Gestao de Incidentes Corporativos (PGIC) - Processo completo ate encerramento
+
+|#E3F2FD| Usuario / Solicitante |
+|#E8F5E9| Identity Service |
+|#FFF3E0| Incident Service |
+|#F3E5F5| SLA Service |
+|#FFEBEE| Escalation Service |
+|#E0F7FA| Notification Service |
+|#FBE9E7| Audit Service |
+|#F1F8E9| Problem-Change Service |
+|#FFFDE7| Reporting Service |
+
+' ============================================================
+' FASE 1 - AUTENTICACAO E ABERTURA DO INCIDENTE
+' ============================================================
+
+|Usuario / Solicitante|
+start
+:Detecta falha ou
+problema no servico;
+
+:Acessa a plataforma
+(API Gateway / Nginx);
+
+|Identity Service|
+:Realiza autenticacao
+(Login JWT / OAuth2);
+
+if (Credenciais validas?) then (sim)
+  :Gera Token JWT
+  (userId, role, iat, exp);
+
+  :Publica evento
+  user.created (se novo);
+
+  |Audit Service|
+  :Registra log de
+  autenticacao;
+  note right
+    AuditEntry:
+    action = "user_login"
+    resourceType = "user"
+  end note
+
+else (nao)
+  |Identity Service|
+  :Retorna erro 401
+  (Unauthorized);
+  |Usuario / Solicitante|
+  :Recebe mensagem de
+  erro de autenticacao;
+  stop
+endif
+
+|Usuario / Solicitante|
+:Preenche formulario
+de abertura de incidente;
+note right
+  Dados:
+  - titulo
+  - descricao
+  - criticidade (Low/Medium/High/Critical)
+  - servico afetado
+end note
+
+:Envia POST
+/api/incidents;
+
+' ============================================================
+' FASE 2 - CRIACAO E REGISTRO DO INCIDENTE
+' ============================================================
+
+|Incident Service|
+:Valida dados de entrada
+(ValidateBodyMiddleware);
+
+if (Dados validos?) then (sim)
+  :Cria Incidente no banco
+  status = "Open"
+  requesterId = userId do JWT;
+
+  :Grava registro no Outbox
+  (transacao atomica);
+  note right
+    Outbox Pattern:
+    eventName = "incident.created"
+    payload = {incidentId, title,
+    criticality, status, requesterId}
+  end note
+
+  :Outbox Relay publica evento
+  no RabbitMQ (a cada 2s);
+  note left
+    Exchange: incident.events
+    Routing Key: incident_created
+  end note
+
+else (nao)
+  :Retorna erro 400
+  (Bad Request);
+  |Usuario / Solicitante|
+  :Recebe mensagem de
+  erro de validacao;
+  stop
+endif
+
+' ============================================================
+' FASE 3 - PROCESSAMENTO ASSINCRONO (PARALELO)
+' ============================================================
+
+fork
+  |Notification Service|
+  :Consome evento
+  incident.created;
+
+  :Cria notificacao
+  (email, in_app, push);
+  note right
+    NotificationModel:
+    type = "email"
+    recipient = equipe responsavel
+    status = "pending"
+  end note
+
+  :Envia notificacao
+  para equipe de suporte;
+
+fork again
+  |Audit Service|
+  :Consome evento
+  incident.created;
+
+  :Registra entrada de auditoria;
+  note left
+    AuditEntry:
+    action = "incident_created"
+    resourceType = "incident"
+    metadata = {criticality}
+  end note
+
+fork again
+  |Reporting Service|
+  :Consome evento
+  incident.created;
+
+  :Atualiza agregacoes
+  e contadores do dashboard;
+  note right
+    KPIs atualizados:
+    - Volume de incidentes
+    - Incidentes por criticidade
+    - Incidentes por servico
+  end note
+
+fork again
+  |SLA Service|
+  :Consome evento
+  incident.created;
+
+  :Busca SlaPolicyModel
+  correspondente;
+  note left
+    Criterios de match:
+    - ticketType = "incident"
+    - criticality do incidente
+    - serviceId (se configurado)
+    - Prioridade da politica
+  end note
+
+  if (Politica SLA encontrada?) then (sim)
+    :Calcula janela de resposta
+    e resolucao (em minutos uteis);
+    note right
+      CalendarModel:
+      - Dias uteis (Seg-Sex)
+      - Horario comercial (8h-18h)
+      - Feriados excluidos
+    end note
+
+    :Inicia monitoramento
+    de tempos SLA;
+
+  else (nao)
+    :Sem politica SLA
+    aplicavel;
+  endif
+
+fork again
+  |Escalation Service|
+  :Consome evento
+  incident.created;
+
+  :Avalia EscalationRules
+  para o incidente;
+  note left
+    Condicoes avaliadas:
+    - criticality == "Critical"?
+    - no_first_response_minutes?
+    - sla_risk_percent > 80%?
+  end note
+
+  if (Regra de escalonamento\ndisparada?) then (sim)
+    :Executa acoes automaticas;
+    note right
+      Acoes possiveis:
+      - notify_manager
+      - reassign_level2
+      - change_priority
+      - alert
+    end note
+
+    :Grava EscalationHistory;
+
+    |Notification Service|
+    :Envia alerta de
+    escalonamento ao gestor;
+
+  else (nao)
+    |Escalation Service|
+    :Nenhuma regra disparada
+    (aguarda proximos eventos);
+  endif
+
+end fork
+
+' ============================================================
+' FASE 4 - TRIAGEM E ATRIBUICAO
+' ============================================================
+
+|Usuario / Solicitante|
+:Recebe confirmacao
+de abertura do incidente;
+
+|Incident Service|
+:Analista visualiza
+lista de incidentes abertos;
+note right
+  GET /api/incidents
+  ?status=Open
+  &assignedTeamId=minha-equipe
+end note
+
+:Analista atribui incidente
+(equipe + responsavel);
+note left
+  PATCH /api/incidents/{id}/assign
+  {
+    assignedTeamId: "team-db",
+    assignedToId: "analyst-senior"
+  }
+end note
+
+:Publica evento
+  incident.assigned (Outbox);
+
+fork
+  |Notification Service|
+  :Notifica analista
+  atribuido por email/in_app;
+
+fork again
+  |Audit Service|
+  :Registra atribuicao
+  na trilha de auditoria;
+
+end fork
+
+' ============================================================
+' FASE 5 - ANALISE E INVESTIGACAO
+' ============================================================
+
+|Incident Service|
+:Analista altera status
+  para "InAnalysis";
+note right
+  PATCH /api/incidents/{id}/status
+  {
+    toStatus: "InAnalysis",
+    comment: "Iniciando investigacao"
+  }
+
+  Transicao valida:
+  Open -> InAnalysis [OK]
+end note
+
+:Cria IncidentStatusHistory
+(fromStatus, toStatus, comment);
+
+:Publica evento
+  incident.status_changed (Outbox);
+
+fork
+  |SLA Service|
+  :Reavalia tempo
+  de resposta SLA;
+
+  if (Tempo de resposta\ndentro do SLA?) then (sim)
+    :SLA de resposta
+    atendido;
+  else (nao)
+    :Publica evento
+    sla.breach (resposta);
+  endif
+
+fork again
+  |Audit Service|
+  :Registra mudanca
+  de status;
+
+fork again
+  |Notification Service|
+  :Notifica stakeholders
+  sobre atualizacao;
+
+end fork
+
+|Incident Service|
+:Analista adiciona
+comentarios de investigacao;
+note left
+  POST /api/incidents/{id}/comments
+  {
+    body: "Identificada falha
+    no pool de conexoes"
+  }
+end note
+
+:Analista altera status
+  para "InProgress";
+
+' ============================================================
+' FASE 6 - MONITORAMENTO SLA CONTINUO
+' ============================================================
+
+|SLA Service|
+:Monitora continuamente
+tempo de resolucao;
+
+if (Risco de violacao SLA\n(>80% do tempo)?) then (sim)
+  :Publica evento
+  sla.risk;
+
+  |Escalation Service|
+  :Consome evento sla.risk;
+
+  :Avalia regras de
+  escalonamento por risco;
+
+  if (Regra de escalonamento\npor risco SLA?) then (sim)
+    :Executa escalonamento
+    (notify_manager / reassign);
+
+    :Grava EscalationHistory;
+
+    |Notification Service|
+    :Envia alerta urgente
+    ao gestor e equipe;
+
+  else (nao)
+    |Escalation Service|
+    :Registra avaliacao
+    sem acao;
+  endif
+
+else (nao)
+  |SLA Service|
+  :Tempo dentro do
+  limiar aceitavel;
+endif
+
+|SLA Service|
+if (SLA violado\n(tempo excedido)?) then (sim)
+  :Publica evento
+  sla.breach (resolucao);
+
+  |Escalation Service|
+  :Consome evento sla.breach;
+
+  :Executa escalonamento
+  critico (alert + reassign);
+
+  :Grava EscalationHistory
+  (breach);
+
+  |Notification Service|
+  :Envia alerta critico
+  a toda cadeia de gestao;
+
+  |Audit Service|
+  :Registra violacao
+  de SLA na auditoria;
+
+else (nao)
+  |SLA Service|
+  :SLA dentro do prazo;
+endif
+
+' ============================================================
+' FASE 7 - RESOLUCAO
+' ============================================================
+
+|Incident Service|
+:Analista aplica correcao
+  e altera status para "Resolved";
+note right
+  PATCH /api/incidents/{id}/status
+  {
+    toStatus: "Resolved",
+    comment: "Pool de conexoes
+    reconfigurado, servico
+    restaurado"
+  }
+
+  Transicao valida:
+  InProgress -> Resolved [OK]
+
+  Define resolvedAt = now()
+end note
+
+:Cria IncidentStatusHistory;
+
+:Publica evento
+  incident.status_changed(status = Resolved);
+
+fork
+  |SLA Service|
+  :Calcula MTTR
+  (Mean Time To Repair);
+  note right
+    MTTR = resolvedAt - createdAt
+    (em minutos uteis)
+  end note
+
+  if (Resolvido dentro do SLA?) then (sim)
+    :SLA de resolucao
+    atendido;
+  else (nao)
+    :SLA de resolucao
+    violado;
+  endif
+
+fork again
+  |Notification Service|
+  :Notifica solicitante
+  que incidente foi resolvido;
+
+  |Usuario / Solicitante|
+  :Recebe notificacao
+  de resolucao;
+
+fork again
+  |Audit Service|
+  :Registra resolucao
+  na trilha de auditoria;
+
+fork again
+  |Reporting Service|
+  :Atualiza KPIs;
+  note left
+    - MTTR atualizado
+    - SLA compliance %
+    - Incidentes resolvidos
+  end note
+
+end fork
+
+' ============================================================
+' FASE 8 - ANALISE DE CAUSA RAIZ (OPCIONAL)
+' ============================================================
+
+|Incident Service|
+if (Incidente recorrente ou\ncriticidade alta?) then (sim)
+
+  |Problem-Change Service|
+  :Analista cria Problema
+  vinculado ao incidente;
+  note right
+    POST /api/problems
+    {
+      title: "Esgotamento recorrente
+      do pool de conexoes",
+      rootCause: "Configuracao
+      subdimensionada para pico",
+      actionPlan: "Implementar
+      auto-scaling e alertas"
+    }
+
+    status = "Open"
+  end note
+
+  :Publica evento
+  problem.created;
+
+  :Investiga causa raiz
+  e elabora plano de acao;
+
+  :Atualiza status do
+  Problema para "Resolved";
+
+  if (Mudanca necessaria?) then (sim)
+    :Cria registro de Mudanca;
+    note left
+      POST /api/changes
+      {
+        title: "Upgrade pool DB",
+        changeType: "Normal",
+        risk: "Medium",
+        justification: "Prevenir
+        recorrencia",
+        rollbackPlan: "Reverter
+        config anterior"
+      }
+    end note
+
+    :Mudanca segue fluxo de
+    aprovacao e execucao;
+    note right
+      Draft -> Submitted ->
+      InApproval -> Approved ->
+      Scheduled -> InProgress ->
+      Completed
+    end note
+
+  else (nao)
+    :Problema resolvido
+    sem mudanca formal;
+  endif
+
+else (nao)
+  |Incident Service|
+  :Segue direto para
+  encerramento;
+endif
+
+' ============================================================
+' FASE 9 - ENCERRAMENTO
+' ============================================================
+
+|Incident Service|
+:Incidente alterado
+  para "Closed";
+note right
+  PATCH /api/incidents/{id}/status
+  {
+    toStatus: "Closed"
+  }
+
+  Define closedAt = now()
+  Status terminal: sem
+  mais transicoes permitidas
+end note
+
+:Cria IncidentStatusHistory
+(Resolved -> Closed);
+
+:Publica evento
+  incident.status_changed(status = Closed);
+
+fork
+  |Audit Service|
+  :Registra encerramento
+  definitivo;
+  note right
+    AuditEntry:
+    action = "incident_closed"
+    metadata = {
+      totalDuration,
+      slaCompliance,
+      escalationsCount
+    }
+  end note
+
+fork again
+  |Notification Service|
+  :Notifica todas as partes
+  sobre encerramento;
+
+  |Usuario / Solicitante|
+  :Recebe confirmacao
+  de encerramento;
+
+fork again
+  |Reporting Service|
+  :Atualiza dashboard final;
+  note left
+    KPIs finais:
+    - MTTR consolidado
+    - MTBF atualizado
+    - SLA compliance %
+    - Uptime por servico
+    - Incidentes por equipe
+  end note
+
+end fork
+
+|Usuario / Solicitante|
+:Incidente encerrado
+com sucesso;
+stop
+
+' ============================================================
+' LEGENDA
+' ============================================================
+
+legend bottom
+  Cores swimlane: Usuario/Solicitante | Identity | Incident | SLA | Escalation | Notification | Audit | Problem-Change | Reporting
+  Comunicacao: REST via API Gateway (Nginx); RabbitMQ (Topic + Outbox)
+  Exchanges: user.events, incident.events, sla.events, problem.events, change.events
+  Outbox: gravacao atomica (dados + evento); relay ~2s; at-least-once delivery
+endlegend
+
+@enduml

@@ -1,0 +1,406 @@
+@startuml MapeamentoORM_PlataformaIncidentes
+' Ext. jebbs: sem !theme; tipos sem []; estereotipo REF_EXT em vez de guillemets
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam packageStyle rectangle
+
+title Mapeamento Objeto-Relacional (ORM) - Prisma + PostgreSQL - um schema por microservico
+
+legend
+PK = chave primaria
+FK = FK Prisma na mesma BD
+REF_EXT = ID de outro servico (sem FK entre bases)
+endlegend
+
+' =============================================================================
+' identity-service (IDENTITY_DATABASE_URL)
+' =============================================================================
+package "identity-service" {
+  entity "users" as id_users {
+    * id : UUID <<PK>>
+    --
+    * email : String <<unique>>
+    * name : String
+    * role : String
+    * created_at : DateTime
+  }
+
+  entity "auth_credentials" as id_auth {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<FK_UK>>
+    * password_hash : String
+  }
+
+  entity "oauth_accounts" as id_oauth {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<FK>>
+    * provider : String
+    * provider_id : String
+    * created_at : DateTime
+  }
+
+  note bottom of id_oauth
+    Restricao unica: (provider, provider_id)
+  end note
+
+  entity "outbox" as id_outbox {
+    * id : UUID <<PK>>
+    --
+    * event_name : String
+    * payload : JsonB
+    * created_at : DateTime
+    o published_at : DateTime
+    o claimed_at : DateTime
+    o failed_at : DateTime
+    o terminal_error : Text
+  }
+
+  id_users ||--o| id_auth : "1 : 0..1"
+  id_users ||--o{ id_oauth : "1 : N"
+}
+
+' =============================================================================
+' incident-service (INCIDENT_DATABASE_URL)
+' =============================================================================
+package "incident-service" {
+  entity "incidents" as inc_main {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * description : Text
+    * status : String
+    * criticality : String
+    o service_affected : String
+    * requester_id : UUID <<REF_EXT>>
+    o assigned_team_id : String
+    o assigned_to_id : UUID <<REF_EXT>>
+    o problem_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+    o resolved_at : DateTime
+    o closed_at : DateTime
+  }
+
+  entity "incident_status_history" as inc_hist {
+    * id : UUID <<PK>>
+    --
+    * incident_id : UUID <<FK>>
+    * from_status : String
+    * to_status : String
+    o changed_by_id : UUID <<REF_EXT>>
+    o comment : Text
+    * created_at : DateTime
+  }
+
+  entity "incident_comments" as inc_comm {
+    * id : UUID <<PK>>
+    --
+    * incident_id : UUID <<FK>>
+    * author_id : UUID <<REF_EXT>>
+    * body : Text
+    * created_at : DateTime
+  }
+
+  entity "outbox" as inc_outbox {
+    * id : UUID <<PK>>
+    --
+    * event_name : String
+    * payload : JsonB
+    * created_at : DateTime
+    o published_at : DateTime
+    o processing_at : DateTime
+    o failed_at : DateTime
+    o terminal_error : Text
+  }
+
+  entity "replicated_users" as inc_ruser {
+    * id : UUID <<PK>>
+    --
+    * email : String
+    * name : String
+    * last_event_occurred_at : DateTime
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  inc_main ||--o{ inc_hist : "onDelete: Cascade"
+  inc_main ||--o{ inc_comm : "onDelete: Cascade"
+}
+
+' =============================================================================
+' request-service (REQUEST_DATABASE_URL)
+' =============================================================================
+package "request-service" {
+  entity "service_catalog_items" as req_cat {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    o description : Text
+    o category : String
+    o responsible_team_id : String
+    o default_sla_hours : Int
+    o form_schema : Json
+    * approval_flow : String
+    * approver_role_ids : String_list
+    * is_active : Boolean
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "service_requests" as req_sr {
+    * id : UUID <<PK>>
+    --
+    * catalog_item_id : UUID <<FK>>
+    * requester_id : UUID <<REF_EXT>>
+    * status : String
+    o form_data : Json
+    o assigned_team_id : String
+    o assigned_to_id : UUID <<REF_EXT>>
+    o submitted_at : DateTime
+    o completed_at : DateTime
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "service_request_comments" as req_comm {
+    * id : UUID <<PK>>
+    --
+    * request_id : UUID <<FK>>
+    * author_id : UUID <<REF_EXT>>
+    * body : Text
+    * created_at : DateTime
+  }
+
+  entity "replicated_users" as req_ruser {
+    * id : UUID <<PK>>
+    --
+    * email : String
+    * name : String
+    * last_event_occurred_at : DateTime
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  req_cat ||--o{ req_sr : "onDelete: Restrict"
+  req_sr ||--o{ req_comm : "onDelete: Cascade"
+}
+
+' =============================================================================
+' problem-change-service (PROBLEM_CHANGE_DATABASE_URL)
+' =============================================================================
+package "problem-change-service" {
+  entity "problems" as pc_prob {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * description : Text
+    * status : String
+    o root_cause : Text
+    o action_plan : Text
+    * created_by_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+    o resolved_at : DateTime
+    o closed_at : DateTime
+  }
+
+  entity "changes" as pc_chg {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * description : Text
+    * justification : Text
+    * change_type : String
+    * risk : String
+    * status : String
+    o window_start : DateTime
+    o window_end : DateTime
+    o rollback_plan : Text
+    * created_by_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+    o completed_at : DateTime
+  }
+
+  entity "outbox" as pc_outbox {
+    * id : UUID <<PK>>
+    --
+    * event_name : String
+    * payload : JsonB
+    * created_at : DateTime
+    o published_at : DateTime
+    o discarded_at : DateTime
+    o claimed_at : DateTime
+  }
+
+  entity "replicated_users" as pc_ruser {
+    * id : UUID <<PK>>
+    --
+    * email : String
+    * name : String
+    * last_event_occurred_at : DateTime
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+}
+
+' =============================================================================
+' notification-service (NOTIFICATION_DATABASE_URL)
+' =============================================================================
+package "notification-service" {
+  entity "notifications" as notif {
+    * id : UUID <<PK>>
+    --
+    * type : String
+    * recipient : String
+    * subject : Text
+    o body : Text
+    * status : String
+    o sent_at : DateTime
+    o delivered_at : DateTime
+    o failed_at : DateTime
+    o error_message : Text
+    * created_at : DateTime
+  }
+}
+
+' =============================================================================
+' audit-service (AUDIT_DATABASE_URL)
+' =============================================================================
+package "audit-service" {
+  entity "audit_entries" as audit {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<REF_EXT>>
+    * action : String
+    * resource_type : String
+    o resource_id : String
+    o metadata : Json
+    * created_at : DateTime
+  }
+}
+
+' =============================================================================
+' escalation-service (ESCALATION_DATABASE_URL)
+' =============================================================================
+package "escalation-service" {
+  entity "escalation_rules" as esc_rule {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    o description : Text
+    * ticket_type : String
+    * condition_type : String
+    * condition_value : Text
+    * actions : String_list
+    * priority : Int
+    * is_active : Boolean
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "escalation_history" as esc_hist {
+    * id : UUID <<PK>>
+    --
+    o rule_id : UUID <<FK>>
+    * ticket_id : String <<REF_EXT>>
+    * ticket_type : String
+    * triggered_at : DateTime
+    * action_executed : String
+    o payload : Json
+    * created_at : DateTime
+  }
+
+  esc_rule ||--o{ esc_hist : "onDelete: SetNull"
+}
+
+' =============================================================================
+' sla-service (SLA_DATABASE_URL)
+' =============================================================================
+package "sla-service" {
+  entity "calendars" as sla_cal {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * timezone : String
+    * working_days : Int_list
+    * work_start_minutes : Int
+    * work_end_minutes : Int
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "holidays" as sla_hol {
+    * id : UUID <<PK>>
+    --
+    * calendar_id : UUID <<FK>>
+    * date : Date
+    o name : String
+    * created_at : DateTime
+  }
+
+  note bottom of sla_hol
+    Restricao unica: (calendar_id, date)
+  end note
+
+  entity "sla_policies" as sla_pol {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * ticket_type : String
+    o criticality : String
+    o service_id : String <<REF_EXT>>
+    o client_id : String <<REF_EXT>>
+    * response_minutes : Int
+    * resolution_minutes : Int
+    * calendar_id : UUID <<FK>>
+    * priority : Int
+    * is_active : Boolean
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "outbox" as sla_outbox {
+    * id : UUID <<PK>>
+    --
+    * event_name : String
+    * payload : JsonB
+    * created_at : DateTime
+    o published_at : DateTime
+    o claimed_at : DateTime
+    o failed_at : DateTime
+    o terminal_error : Text
+  }
+
+  sla_cal ||--o{ sla_hol : "onDelete: Cascade"
+  sla_cal ||--o{ sla_pol : "onDelete: Restrict"
+}
+
+' =============================================================================
+' reporting-service (REPORTING_DATABASE_URL)
+' =============================================================================
+package "reporting-service" {
+  entity "report_definitions" as rep_def {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    o description : Text
+    * report_type : String
+    * filters : JsonB
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+}
+
+note as N_cross
+Modelos Prisma (sufixo Model): UserModel, AuthCredentialModel,
+OAuthAccountModel, IncidentModel, ServiceRequestModel, SlaPolicyModel, etc.
+
+Integracao: IDs de utilizadores e tickets sao guardados localmente;
+replicated_users sincroniza dados de utilizador via mensagens.
+Nao existem FK entre bases de dados de servicos diferentes.
+end note
+
+@enduml

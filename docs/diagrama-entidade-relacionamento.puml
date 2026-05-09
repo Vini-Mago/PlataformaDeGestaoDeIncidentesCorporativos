@@ -1,0 +1,237 @@
+@startuml DER_Plataforma_Incidentes
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam packageStyle rectangle
+
+title Diagrama Entidade-Relacionamento - Plataforma de Gestao de Incidentes Corporativos
+
+legend
+PK = chave primaria
+FK = chave estrangeira (mesmo banco do servico)
+REF_EXT = referencia externa (sem FK entre bancos de servicos)
+endlegend
+
+package "identity-service" {
+  entity "users" as id_users {
+    * id : UUID <<PK>>
+    --
+    * email : String
+    * name : String
+    * role : String
+    * created_at : DateTime
+  }
+
+  entity "auth_credentials" as id_auth {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<FK>>
+    * password_hash : String
+  }
+
+  entity "oauth_accounts" as id_oauth {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<FK>>
+    * provider : String
+    * provider_id : String
+  }
+
+  id_users ||--o| id_auth : "1 : 0..1"
+  id_users ||--o{ id_oauth : "1 : N"
+}
+
+package "incident-service" {
+  entity "incidents" as inc {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * status : String
+    * criticality : String
+    * requester_id : UUID <<REF_EXT>>
+    o assigned_to_id : UUID <<REF_EXT>>
+    o problem_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "incident_status_history" as inc_hist {
+    * id : UUID <<PK>>
+    --
+    * incident_id : UUID <<FK>>
+    * from_status : String
+    * to_status : String
+    o changed_by_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+  }
+
+  entity "incident_comments" as inc_comm {
+    * id : UUID <<PK>>
+    --
+    * incident_id : UUID <<FK>>
+    * author_id : UUID <<REF_EXT>>
+    * body : Text
+    * created_at : DateTime
+  }
+
+  inc ||--o{ inc_hist : "1 : N"
+  inc ||--o{ inc_comm : "1 : N"
+}
+
+package "request-service" {
+  entity "service_catalog_items" as req_cat {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * approval_flow : String
+    * is_active : Boolean
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "service_requests" as req {
+    * id : UUID <<PK>>
+    --
+    * catalog_item_id : UUID <<FK>>
+    * requester_id : UUID <<REF_EXT>>
+    * status : String
+    o assigned_to_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "service_request_comments" as req_comm {
+    * id : UUID <<PK>>
+    --
+    * request_id : UUID <<FK>>
+    * author_id : UUID <<REF_EXT>>
+    * body : Text
+    * created_at : DateTime
+  }
+
+  req_cat ||--o{ req : "1 : N"
+  req ||--o{ req_comm : "1 : N"
+}
+
+package "problem-change-service" {
+  entity "problems" as prob {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * status : String
+    * created_by_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "changes" as chg {
+    * id : UUID <<PK>>
+    --
+    * title : String
+    * change_type : String
+    * risk : String
+    * status : String
+    * created_by_id : UUID <<REF_EXT>>
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+}
+
+package "escalation-service" {
+  entity "escalation_rules" as esc_rule {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * ticket_type : String
+    * condition_type : String
+    * is_active : Boolean
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "escalation_history" as esc_hist {
+    * id : UUID <<PK>>
+    --
+    o rule_id : UUID <<FK>>
+    * ticket_id : String <<REF_EXT>>
+    * ticket_type : String
+    * triggered_at : DateTime
+  }
+
+  esc_rule ||--o{ esc_hist : "1 : N"
+}
+
+package "sla-service" {
+  entity "calendars" as cal {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * timezone : String
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+
+  entity "holidays" as hol {
+    * id : UUID <<PK>>
+    --
+    * calendar_id : UUID <<FK>>
+    * date : Date
+    o name : String
+  }
+
+  entity "sla_policies" as sla {
+    * id : UUID <<PK>>
+    --
+    * ticket_type : String
+    o criticality : String
+    * response_minutes : Int
+    * resolution_minutes : Int
+    * calendar_id : UUID <<FK>>
+    * is_active : Boolean
+  }
+
+  cal ||--o{ hol : "1 : N"
+  cal ||--o{ sla : "1 : N"
+}
+
+package "notification-service" {
+  entity "notifications" as notif {
+    * id : UUID <<PK>>
+    --
+    * type : String
+    * recipient : String
+    * status : String
+    * created_at : DateTime
+  }
+}
+
+package "audit-service" {
+  entity "audit_entries" as audit {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<REF_EXT>>
+    * action : String
+    * resource_type : String
+    o resource_id : String
+    * created_at : DateTime
+  }
+}
+
+package "reporting-service" {
+  entity "report_definitions" as rep {
+    * id : UUID <<PK>>
+    --
+    * name : String
+    * report_type : String
+    * filters : JsonB
+    * created_at : DateTime
+    * updated_at : DateTime
+  }
+}
+
+' Referencias entre contextos (sem FK fisica entre bancos)
+inc }o..|| id_users : requester_id / assigned_to_id
+req }o..|| id_users : requester_id / assigned_to_id
+inc }o..|| prob : problem_id
+audit }o..|| id_users : user_id
+
+@enduml
