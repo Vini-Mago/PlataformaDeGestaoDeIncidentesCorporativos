@@ -22,10 +22,28 @@ model ProblemModel {
   resolvedAt  DateTime? @map("resolved_at")
   closedAt    DateTime? @map("closed_at")
 
+  linkedIncidents ProblemLinkedIncidentModel[]
+  linkedChanges   ChangeLinkedProblemModel[]
+
   @@index([status])
   @@index([createdAt])
   @@index([createdById])
   @@map("problems")
+}
+
+// RF-7.1: referência lógica a incidentes no incident-service (mesmo UUID; sem FK entre bases).
+model ProblemLinkedIncidentModel {
+  id         String   @id @default(uuid())
+  problemId  String   @map("problem_id")
+  incidentId String   @map("incident_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  problem ProblemModel @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, incidentId])
+  @@unique([incidentId])
+  @@index([incidentId])
+  @@map("problem_linked_incidents")
 }
 
 // RF-7.3: Changes — Draft | Submitted | InApproval | Approved | Rejected | Scheduled | InProgress | Completed | Rollback
@@ -45,11 +63,42 @@ model ChangeModel {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   completedAt   DateTime? @map("completed_at")
 
+  linkedIncidents ChangeLinkedIncidentModel[]
+  linkedProblems  ChangeLinkedProblemModel[]
+
   @@index([status])
   @@index([createdAt])
   @@index([createdById])
   @@index([risk])
   @@map("changes")
+}
+
+// RF-7.3: vínculos motivadores (referências lógicas; incident-service / mesma base para problemas).
+model ChangeLinkedIncidentModel {
+  id         String   @id @default(uuid())
+  changeId   String   @map("change_id")
+  incidentId String   @map("incident_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  change ChangeModel @relation(fields: [changeId], references: [id], onDelete: Cascade)
+
+  @@unique([changeId, incidentId])
+  @@index([incidentId])
+  @@map("change_linked_incidents")
+}
+
+model ChangeLinkedProblemModel {
+  id        String   @id @default(uuid())
+  changeId  String   @map("change_id")
+  problemId String   @map("problem_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  change  ChangeModel  @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  problem ProblemModel @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([changeId, problemId])
+  @@index([problemId])
+  @@map("change_linked_problems")
 }
 
 // Outbox for reliable event publishing (Outbox Pattern)

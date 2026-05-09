@@ -20,6 +20,11 @@ describe("GetProblemUseCase", () => {
       create: vi.fn(),
       findById: vi.fn().mockResolvedValue(mockProblem),
       list: vi.fn(),
+      getLinkedIncidentIds: vi.fn().mockResolvedValue([]),
+      listLinksForIncidents: vi.fn().mockResolvedValue([]),
+      update: vi.fn(),
+      linkIncident: vi.fn(),
+      unlinkIncident: vi.fn(),
     };
   });
 
@@ -27,8 +32,9 @@ describe("GetProblemUseCase", () => {
     const useCase = new GetProblemUseCase(problemRepository);
     const result = await useCase.execute(problemId);
 
-    expect(result).toEqual(mockProblem);
+    expect(result).toEqual({ ...mockProblem, linkedIncidentIds: [] });
     expect(problemRepository.findById).toHaveBeenCalledWith(problemId);
+    expect(problemRepository.getLinkedIncidentIds).toHaveBeenCalledWith(problemId);
   });
 
   it("throws ProblemNotFoundError when not found", async () => {

@@ -11,9 +11,18 @@ import { RabbitMqUserCreatedConsumer } from "./adapters/driving/messaging/rabbit
 import { CreateProblemUseCase } from "./application/use-cases/create-problem.use-case";
 import { ListProblemsUseCase } from "./application/use-cases/list-problems.use-case";
 import { GetProblemUseCase } from "./application/use-cases/get-problem.use-case";
+import { LinkIncidentToProblemUseCase } from "./application/use-cases/link-incident-to-problem.use-case";
+import { UnlinkIncidentFromProblemUseCase } from "./application/use-cases/unlink-incident-from-problem.use-case";
+import { ListIncidentProblemLinksUseCase } from "./application/use-cases/list-incident-problem-links.use-case";
+import { UpdateProblemUseCase } from "./application/use-cases/update-problem.use-case";
 import { CreateChangeUseCase } from "./application/use-cases/create-change.use-case";
 import { ListChangesUseCase } from "./application/use-cases/list-changes.use-case";
 import { GetChangeUseCase } from "./application/use-cases/get-change.use-case";
+import { UpdateChangeUseCase } from "./application/use-cases/update-change.use-case";
+import { LinkIncidentToChangeUseCase } from "./application/use-cases/link-incident-to-change.use-case";
+import { UnlinkIncidentFromChangeUseCase } from "./application/use-cases/unlink-incident-from-change.use-case";
+import { LinkProblemToChangeUseCase } from "./application/use-cases/link-problem-to-change.use-case";
+import { UnlinkProblemFromChangeUseCase } from "./application/use-cases/unlink-problem-from-change.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { ProblemChangeController } from "./adapters/driving/http/problem-change.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
@@ -23,6 +32,8 @@ export interface ProblemChangeContainerConfig {
   databaseUrl: string;
   jwtSecret: string;
   rabbitmqUrl?: string;
+  /** RF-7.3: mudanças High não podem saltar CAB (Submitted→Approved). Predefinição true. */
+  changeCabHighRiskPolicy?: boolean;
 }
 
 interface ProblemChangeCradle {
@@ -36,9 +47,18 @@ interface ProblemChangeCradle {
   createProblemUseCase: CreateProblemUseCase;
   listProblemsUseCase: ListProblemsUseCase;
   getProblemUseCase: GetProblemUseCase;
+  linkIncidentToProblemUseCase: LinkIncidentToProblemUseCase;
+  unlinkIncidentFromProblemUseCase: UnlinkIncidentFromProblemUseCase;
+  listIncidentProblemLinksUseCase: ListIncidentProblemLinksUseCase;
+  updateProblemUseCase: UpdateProblemUseCase;
   createChangeUseCase: CreateChangeUseCase;
   listChangesUseCase: ListChangesUseCase;
   getChangeUseCase: GetChangeUseCase;
+  updateChangeUseCase: UpdateChangeUseCase;
+  linkIncidentToChangeUseCase: LinkIncidentToChangeUseCase;
+  unlinkIncidentFromChangeUseCase: UnlinkIncidentFromChangeUseCase;
+  linkProblemToChangeUseCase: LinkProblemToChangeUseCase;
+  unlinkProblemFromChangeUseCase: UnlinkProblemFromChangeUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
   problemChangeController: ProblemChangeController;
@@ -104,6 +124,26 @@ export function createContainer(config: ProblemChangeContainerConfig) {
         new GetProblemUseCase(cradle.problemRepository)
     ).singleton(),
 
+    linkIncidentToProblemUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new LinkIncidentToProblemUseCase(cradle.problemRepository)
+    ).singleton(),
+
+    unlinkIncidentFromProblemUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new UnlinkIncidentFromProblemUseCase(cradle.problemRepository)
+    ).singleton(),
+
+    listIncidentProblemLinksUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new ListIncidentProblemLinksUseCase(cradle.problemRepository)
+    ).singleton(),
+
+    updateProblemUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new UpdateProblemUseCase(cradle.problemRepository)
+    ).singleton(),
+
     createChangeUseCase: asFunction(
       (cradle: ProblemChangeCradle) =>
         new CreateChangeUseCase(cradle.changeRepository)
@@ -117,6 +157,33 @@ export function createContainer(config: ProblemChangeContainerConfig) {
     getChangeUseCase: asFunction(
       (cradle: ProblemChangeCradle) =>
         new GetChangeUseCase(cradle.changeRepository)
+    ).singleton(),
+
+    updateChangeUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new UpdateChangeUseCase(cradle.changeRepository, {
+          cabHighRiskPolicy: cradle.config.changeCabHighRiskPolicy ?? true,
+        })
+    ).singleton(),
+
+    linkIncidentToChangeUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new LinkIncidentToChangeUseCase(cradle.changeRepository)
+    ).singleton(),
+
+    unlinkIncidentFromChangeUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new UnlinkIncidentFromChangeUseCase(cradle.changeRepository)
+    ).singleton(),
+
+    linkProblemToChangeUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new LinkProblemToChangeUseCase(cradle.changeRepository, cradle.problemRepository)
+    ).singleton(),
+
+    unlinkProblemFromChangeUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new UnlinkProblemFromChangeUseCase(cradle.changeRepository)
     ).singleton(),
 
     handleUserCreatedUseCase: asFunction(
@@ -136,9 +203,18 @@ export function createContainer(config: ProblemChangeContainerConfig) {
           cradle.createProblemUseCase,
           cradle.listProblemsUseCase,
           cradle.getProblemUseCase,
+          cradle.linkIncidentToProblemUseCase,
+          cradle.unlinkIncidentFromProblemUseCase,
+          cradle.listIncidentProblemLinksUseCase,
+          cradle.updateProblemUseCase,
           cradle.createChangeUseCase,
           cradle.listChangesUseCase,
-          cradle.getChangeUseCase
+          cradle.getChangeUseCase,
+          cradle.updateChangeUseCase,
+          cradle.linkIncidentToChangeUseCase,
+          cradle.unlinkIncidentFromChangeUseCase,
+          cradle.linkProblemToChangeUseCase,
+          cradle.unlinkProblemFromChangeUseCase
         )
     ).singleton(),
 

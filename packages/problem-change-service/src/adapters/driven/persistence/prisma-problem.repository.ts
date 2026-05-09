@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { PrismaClient } from "../../../../generated/prisma-client/index";
 import type { Problem, ProblemStatus } from "../../../domain/entities/problem.entity";
+import type { UpdateProblemPatch } from "../../../application/ports/problem-repository.port";
 import { VALID_PROBLEM_STATUSES } from "../../../domain/entities/problem.entity";
 import type {
   IProblemRepository,
@@ -49,6 +50,44 @@ export class PrismaProblemRepository implements IProblemRepository {
     return row ? this.toProblem(row) : null;
   }
 
+  async update(id: string, patch: UpdateProblemPatch): Promise<Problem | null> {
+    const existing = await this.prisma.problemModel.findUnique({ where: { id } });
+    if (!existing) {
+      return null;
+    }
+    const currentStatus = this.parseProblemStatus(existing.status);
+    let resolvedAt = existing.resolvedAt;
+    let closedAt = existing.closedAt;
+
+    if (patch.status !== undefined && patch.status !== currentStatus) {
+      const next = patch.status;
+      if (next === "Resolved") {
+        resolvedAt = resolvedAt ?? new Date();
+      }
+      if (next === "Closed") {
+        closedAt = closedAt ?? new Date();
+      }
+      if (currentStatus === "Closed" && (next === "Open" || next === "InAnalysis")) {
+        closedAt = null;
+      }
+      if (currentStatus === "Resolved" && next !== "Resolved" && next !== "Closed") {
+        resolvedAt = null;
+      }
+    }
+
+    const row = await this.prisma.problemModel.update({
+      where: { id },
+      data: {
+        ...(patch.status !== undefined && { status: patch.status }),
+        ...(patch.rootCause !== undefined && { rootCause: patch.rootCause }),
+        ...(patch.actionPlan !== undefined && { actionPlan: patch.actionPlan }),
+        resolvedAt,
+        closedAt,
+      },
+    });
+    return this.toProblem(row);
+  }
+
   async list(filters: ProblemListFilters): Promise<Problem[]> {
     const rows = await this.prisma.problemModel.findMany({
       where: {
@@ -58,6 +97,51 @@ export class PrismaProblemRepository implements IProblemRepository {
       orderBy: { createdAt: "desc" },
     });
     return rows.map((r) => this.toProblem(r));
+  }
+
+  async getLinkedIncidentIds(problemId: string): Promise<string[]> {
+    const rows = await this.prisma.problemLinkedIncidentModel.findMany({
+      where: { problemId },
+      select: { incidentId: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((r) => r.incidentId);
+  }
+
+  async listLinksForIncidents(
+    incidentIds: string[]
+  ): Promise<Array<{ incidentId: string; problemId: string; problemTitle: string }>> {
+    if (incidentIds.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.problemLinkedIncidentModel.findMany({
+      where: { incidentId: { in: incidentIds } },
+      include: {
+        problem: { select: { id: true, title: true } },
+      },
+    });
+    return rows.map((r) => ({
+      incidentId: r.incidentId,
+      problemId: r.problemId,
+      problemTitle: r.problem.title,
+    }));
+  }
+
+  async linkIncident(problemId: string, incidentId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.problemLinkedIncidentModel.deleteMany({
+        where: { incidentId },
+      });
+      await tx.problemLinkedIncidentModel.create({
+        data: { problemId, incidentId },
+      });
+    });
+  }
+
+  async unlinkIncident(problemId: string, incidentId: string): Promise<void> {
+    await this.prisma.problemLinkedIncidentModel.deleteMany({
+      where: { problemId, incidentId },
+    });
   }
 
   private parseProblemStatus(value: string): ProblemStatus {

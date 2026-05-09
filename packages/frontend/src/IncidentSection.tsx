@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "./auth";
 import {
   createIncident,
@@ -7,6 +7,14 @@ import {
   type IncidentCriticality,
   type IncidentListItem,
 } from "./api/incidents";
+import {
+  createProblem,
+  fetchIncidentProblemLinks,
+  fetchProblemsForSelect,
+  linkIncidentToProblem,
+  unlinkIncidentFromProblem,
+  type IncidentProblemLink,
+} from "./api/problem-change";
 
 const CRITICALITIES: IncidentCriticality[] = ["Low", "Medium", "High", "Critical"];
 
@@ -28,12 +36,67 @@ export function IncidentSection() {
   const [listError, setListError] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(false);
 
+  const [problemCatalog, setProblemCatalog] = useState<{ id: string; title: string }[]>([]);
+  const [catalogHint, setCatalogHint] = useState<string | null>(null);
+
+  const [incidentLinks, setIncidentLinks] = useState<IncidentProblemLink[]>([]);
+  const [linksHint, setLinksHint] = useState<string | null>(null);
+
+  const [selectedProblemByIncident, setSelectedProblemByIncident] = useState<Record<string, string>>({});
+  const [rowBusy, setRowBusy] = useState<Record<string, boolean>>({});
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [criticality, setCriticality] = useState<IncidentCriticality>("Medium");
   const [serviceAffected, setServiceAffected] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
+
+  const [npIncidentId, setNpIncidentId] = useState("");
+  const [npTitle, setNpTitle] = useState("");
+  const [npDescription, setNpDescription] = useState("");
+  const [npError, setNpError] = useState<string | null>(null);
+  const [npLoading, setNpLoading] = useState(false);
+  const [opError, setOpError] = useState<string | null>(null);
+
+  const linkByIncidentId = useMemo(() => {
+    const m = new Map<string, IncidentProblemLink>();
+    incidentLinks.forEach((r) => m.set(r.incidentId, r));
+    return m;
+  }, [incidentLinks]);
+
+  const refreshProblemOps = useCallback(async (rows: IncidentListItem[]) => {
+    setCatalogHint(null);
+    setLinksHint(null);
+    try {
+      const catalog = await fetchProblemsForSelect();
+      setProblemCatalog(catalog);
+    } catch (err) {
+      setProblemCatalog([]);
+      if (err instanceof ApiError && err.status === 403) {
+        setCatalogHint("Sem permissão para listar problemas (papel analista/gestor).");
+      } else if (err instanceof ApiError && err.status === 401) {
+        setCatalogHint("Sessão expirada ao carregar problemas.");
+      } else {
+        setCatalogHint("Não foi possível carregar o catálogo de problemas.");
+      }
+    }
+    if (rows.length === 0) {
+      setIncidentLinks([]);
+      return;
+    }
+    try {
+      const links = await fetchIncidentProblemLinks(rows.map((r) => r.id));
+      setIncidentLinks(links);
+    } catch (err) {
+      setIncidentLinks([]);
+      if (err instanceof ApiError && err.status === 403) {
+        setLinksHint("Sem permissão para resolver vínculos incidente–problema.");
+      } else if (!(err instanceof ApiError && err.status === 401)) {
+        setLinksHint("Não foi possível carregar vínculos com problemas.");
+      }
+    }
+  }, []);
 
   const loadIncidents = useCallback(async () => {
     setListLoading(true);
@@ -42,13 +105,14 @@ export function IncidentSection() {
     try {
       const rows = await fetchIncidents();
       setIncidents(rows);
+      await refreshProblemOps(rows);
     } catch (err) {
       setIncidents(null);
       setListError(mapLoadError(err));
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [refreshProblemOps]);
 
   useEffect(() => {
     void loadIncidents();
@@ -96,6 +160,83 @@ export function IncidentSection() {
       }
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const setBusy = (incidentId: string, v: boolean) => {
+    setRowBusy((prev) => ({ ...prev, [incidentId]: v }));
+  };
+
+  const handleAssociate = async (incidentId: string) => {
+    const problemId = selectedProblemByIncident[incidentId]?.trim();
+    if (!problemId) {
+      return;
+    }
+    setOpError(null);
+    setBusy(incidentId, true);
+    try {
+      await linkIncidentToProblem(problemId, incidentId);
+      if (incidents) {
+        await refreshProblemOps(incidents);
+      }
+      setSelectedProblemByIncident((prev) => ({ ...prev, [incidentId]: "" }));
+    } catch (err) {
+      setOpError(
+        err instanceof ApiError
+          ? `${err.message} (${err.status})`
+          : "Falha ao associar (é necessário problems:update no JWT)."
+      );
+    } finally {
+      setBusy(incidentId, false);
+    }
+  };
+
+  const handleUnlink = async (incidentId: string) => {
+    const link = linkByIncidentId.get(incidentId);
+    if (!link) {
+      return;
+    }
+    setOpError(null);
+    setBusy(incidentId, true);
+    try {
+      await unlinkIncidentFromProblem(link.problemId, incidentId);
+      if (incidents) {
+        await refreshProblemOps(incidents);
+      }
+    } catch (err) {
+      setOpError(err instanceof ApiError ? err.message : "Falha ao remover ligação.");
+    } finally {
+      setBusy(incidentId, false);
+    }
+  };
+
+  const handleCreateProblemAndLink = async (e: FormEvent) => {
+    e.preventDefault();
+    setNpError(null);
+    const t = npTitle.trim();
+    const d = npDescription.trim();
+    if (!npIncidentId || !t || !d) {
+      setNpError("Escolha o incidente e preencha título e descrição do problema.");
+      return;
+    }
+    setNpLoading(true);
+    try {
+      const created = await createProblem({ title: t, description: d });
+      await linkIncidentToProblem(created.id, npIncidentId);
+      setNpTitle("");
+      setNpDescription("");
+      setNpIncidentId("");
+      if (incidents) {
+        await refreshProblemOps(incidents);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setNpError(err.message);
+      } else {
+        setNpError("Não foi possível criar o problema ou associar.");
+      }
+    } finally {
+      setNpLoading(false);
     }
   };
 
@@ -167,8 +308,11 @@ export function IncidentSection() {
           </button>
         </div>
         <p className="hint">
-          Lista via <code>GET /incidents/incidents</code>. Com permissão apenas de leitura própria, só vê os seus chamados.
+          Lista via <code>GET /incidents/incidents</code>. <strong>RF-7.1:</strong> associe cada incidente a um problema existente ou crie um problema em baixo.
         </p>
+        {catalogHint ? <p className="hint">{catalogHint}</p> : null}
+        {linksHint ? <p className="hint">{linksHint}</p> : null}
+        {opError ? <div className="banner-error">{opError}</div> : null}
         {listError ? <div className="banner-error">{listError}</div> : null}
         {listLoading ? <p>A carregar incidentes…</p> : null}
         {!listLoading && incidents !== null && incidents.length === 0 && !listError ? (
@@ -183,19 +327,119 @@ export function IncidentSection() {
                   <th>Estado</th>
                   <th>Criticidade</th>
                   <th>Serviço</th>
+                  <th>Problema (RF-7.1)</th>
+                  <th>Ligar</th>
                 </tr>
               </thead>
               <tbody>
-                {incidents.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.title}</td>
-                    <td>{row.status}</td>
-                    <td>{row.criticality}</td>
-                    <td>{row.serviceAffected ?? "—"}</td>
-                  </tr>
-                ))}
+                {incidents.map((row) => {
+                  const link = linkByIncidentId.get(row.id);
+                  const busy = rowBusy[row.id];
+                  return (
+                    <tr key={row.id}>
+                      <td>{row.title}</td>
+                      <td>{row.status}</td>
+                      <td>{row.criticality}</td>
+                      <td>{row.serviceAffected ?? "—"}</td>
+                      <td>{link ? link.problemTitle : "—"}</td>
+                      <td className="table-actions">
+                        <select
+                          value={selectedProblemByIncident[row.id] ?? ""}
+                          onChange={(ev) =>
+                            setSelectedProblemByIncident((prev) => ({
+                              ...prev,
+                              [row.id]: ev.target.value,
+                            }))
+                          }
+                          disabled={busy || problemCatalog.length === 0}
+                          aria-label={`Escolher problema para ${row.title}`}
+                        >
+                          <option value="">— problema —</option>
+                          {problemCatalog.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.title}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={
+                            busy ||
+                            !selectedProblemByIncident[row.id] ||
+                            selectedProblemByIncident[row.id] === link?.problemId
+                          }
+                          onClick={() => void handleAssociate(row.id)}
+                        >
+                          Associar
+                        </button>
+                        {link ? (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            disabled={busy}
+                            onClick={() => void handleUnlink(row.id)}
+                          >
+                            Remover
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        ) : null}
+
+        {!listLoading && incidents !== null && incidents.length > 0 ? (
+          <div className="panel nested-panel">
+            <h3 style={{ marginTop: 0, fontSize: "1.05rem" }}>Novo problema e associação</h3>
+            <p className="hint">
+              Cria um registo em <code>problem-change-service</code> e liga-o ao incidente escolhido (<code>POST /problem-change/problems</code> + vínculo).
+            </p>
+            {npError ? <div className="banner-error">{npError}</div> : null}
+            <form className="form" onSubmit={(ev) => void handleCreateProblemAndLink(ev)}>
+              <label>
+                Incidente a associar
+                <select
+                  value={npIncidentId}
+                  onChange={(ev) => setNpIncidentId(ev.target.value)}
+                  disabled={npLoading}
+                  required
+                >
+                  <option value="">— Escolha —</option>
+                  {incidents.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Título do problema
+                <input
+                  value={npTitle}
+                  onChange={(ev) => setNpTitle(ev.target.value)}
+                  maxLength={255}
+                  disabled={npLoading}
+                  required
+                />
+              </label>
+              <label>
+                Descrição do problema
+                <textarea
+                  value={npDescription}
+                  onChange={(ev) => setNpDescription(ev.target.value)}
+                  rows={3}
+                  disabled={npLoading}
+                  required
+                />
+              </label>
+              <button type="submit" disabled={npLoading}>
+                {npLoading ? "A criar…" : "Criar problema e associar"}
+              </button>
+            </form>
           </div>
         ) : null}
       </section>

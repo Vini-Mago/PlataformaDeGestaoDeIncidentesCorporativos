@@ -70,6 +70,7 @@ async function bootstrap() {
     databaseUrl,
     jwtSecret,
     rabbitmqUrl,
+    changeCabHighRiskPolicy: process.env.CHANGE_CAB_HIGH_RISK !== "false",
   });
 
   const app = createApp(container, {

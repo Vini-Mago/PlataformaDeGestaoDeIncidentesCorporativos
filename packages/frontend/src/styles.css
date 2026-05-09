@@ -187,3 +187,26 @@ button.btn-secondary:hover:not(:disabled) {
   flex-wrap: wrap;
   margin-bottom: 0.35rem;
 }
+
+.nested-panel {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+td.table-actions {
+  white-space: nowrap;
+}
+
+td.table-actions select {
+  max-width: 11rem;
+  margin-right: 0.35rem;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.5rem;
+}
+
+td.table-actions button {
+  margin-right: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.85rem;
+}

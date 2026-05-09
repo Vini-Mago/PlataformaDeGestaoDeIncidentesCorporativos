@@ -29,6 +29,13 @@ describe("CreateChangeUseCase", () => {
       create: vi.fn().mockResolvedValue(mockChange),
       findById: vi.fn(),
       list: vi.fn(),
+      update: vi.fn(),
+      getLinkedIncidentIds: vi.fn(),
+      getLinkedProblemIds: vi.fn(),
+      linkIncident: vi.fn(),
+      unlinkIncident: vi.fn(),
+      linkProblem: vi.fn(),
+      unlinkProblem: vi.fn(),
     };
   });
 

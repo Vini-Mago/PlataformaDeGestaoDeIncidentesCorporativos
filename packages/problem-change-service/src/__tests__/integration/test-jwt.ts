@@ -6,20 +6,22 @@ export interface TestJwtPayload {
   sub: string;
   email?: string;
   role?: string;
+  /** RBAC no mesmo formato do JWT real (`problems:update:all`, …). */
+  perms?: string[];
 }
 
 export function createTestJwt(payload: TestJwtPayload): string {
-  return jwt.sign(
-    {
-      sub: payload.sub,
-      email: payload.email,
-      role: payload.role ?? "user",
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    },
-    TEST_JWT_SECRET,
-    { algorithm: "HS256" }
-  );
+  const body: Record<string, unknown> = {
+    sub: payload.sub,
+    email: payload.email,
+    role: payload.role ?? "user",
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  };
+  if (payload.perms !== undefined) {
+    body.perms = payload.perms;
+  }
+  return jwt.sign(body, TEST_JWT_SECRET, { algorithm: "HS256" });
 }
 
 export { TEST_JWT_SECRET };

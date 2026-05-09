@@ -288,6 +288,74 @@ describe("Request Service API integration", () => {
       expect(res.body).toHaveProperty("comments");
       expect(Array.isArray(res.body.comments)).toBe(true);
     });
+
+    const readOwnReqPerms = ["requests:read:own"];
+    const otherUserId = "22222222-2222-2222-2222-222222222222";
+
+    it("returns 404 when request does not exist (read:own token)", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnReqPerms,
+      });
+      const res = await request(app)
+        .get("/api/service-requests/00000000-0000-0000-0000-000000000000")
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(404);
+      expect(res.body).toHaveProperty("error", "Service request not found: 00000000-0000-0000-0000-000000000000");
+    });
+
+    it("returns 403 when request exists but user has read:own and is not participant", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const catalogItem = await container.prisma.serviceCatalogItemModel.create({
+        data: { name: "Other SR", approvalFlow: "none", approverRoleIds: [] },
+      });
+      const sr = await container.prisma.serviceRequestModel.create({
+        data: {
+          catalogItemId: catalogItem.id,
+          requesterId: otherUserId,
+          status: "Draft",
+        },
+      });
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnReqPerms,
+      });
+      const res = await request(app)
+        .get(`/api/service-requests/${sr.id}`)
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(403);
+      expect(res.body).toHaveProperty("error", "Forbidden");
+    });
+
+    it("returns 200 when user has read:own and is requester", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const catalogItem = await container.prisma.serviceCatalogItemModel.create({
+        data: { name: "Own SR", approvalFlow: "none", approverRoleIds: [] },
+      });
+      const sr = await container.prisma.serviceRequestModel.create({
+        data: {
+          catalogItemId: catalogItem.id,
+          requesterId: userId,
+          status: "Draft",
+        },
+      });
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnReqPerms,
+      });
+      const res = await request(app)
+        .get(`/api/service-requests/${sr.id}`)
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(200);
+      expect(res.body).toMatchObject({ id: sr.id, requesterId: userId });
+    });
   });
 
   describe("POST /api/service-requests/:id/submit (auth required)", () => {

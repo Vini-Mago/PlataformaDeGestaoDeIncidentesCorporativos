@@ -14,6 +14,11 @@ describe("ListProblemsUseCase", () => {
       create: vi.fn(),
       findById: vi.fn(),
       list: vi.fn().mockResolvedValue([]),
+      getLinkedIncidentIds: vi.fn(),
+      listLinksForIncidents: vi.fn(),
+      update: vi.fn(),
+      linkIncident: vi.fn(),
+      unlinkIncident: vi.fn(),
     };
   });
 

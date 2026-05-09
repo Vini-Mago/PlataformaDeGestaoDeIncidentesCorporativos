@@ -197,6 +197,72 @@ describe("Incident Service API integration", () => {
       expect(res.body).toHaveProperty("comments");
       expect(Array.isArray(res.body.comments)).toBe(true);
     });
+
+    const readOwnPerms = ["incidents:read:own"];
+    const otherUserId = "22222222-2222-2222-2222-222222222222";
+
+    it("returns 404 when incident does not exist (read:own token)", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const res = await request(app)
+        .get("/api/incidents/00000000-0000-0000-0000-000000000000")
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(404);
+      expect(res.body).toHaveProperty("error", "Incident not found: 00000000-0000-0000-0000-000000000000");
+    });
+
+    it("returns 403 when incident exists but user has read:own and is not a participant", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const incident = await container.prisma.incidentModel.create({
+        data: {
+          title: "Other user incident",
+          description: "Desc",
+          status: "Open",
+          criticality: "Low",
+          requesterId: otherUserId,
+        },
+      });
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const res = await request(app)
+        .get(`/api/incidents/${incident.id}`)
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(403);
+      expect(res.body).toHaveProperty("error", "Forbidden");
+    });
+
+    it("returns 200 when user has read:own and is requester", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const incident = await container.prisma.incidentModel.create({
+        data: {
+          title: "Own incident",
+          description: "Desc",
+          status: "Open",
+          criticality: "Low",
+          requesterId: userId,
+        },
+      });
+      const tokenOwn = createTestJwt({
+        sub: userId,
+        email: "own@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const res = await request(app)
+        .get(`/api/incidents/${incident.id}`)
+        .set("Authorization", `Bearer ${tokenOwn}`)
+        .expect(200);
+      expect(res.body).toMatchObject({ id: incident.id, title: "Own incident" });
+    });
   });
 
   describe("PATCH /api/incidents/:id/status (auth required)", () => {

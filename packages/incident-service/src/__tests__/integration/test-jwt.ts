@@ -6,6 +6,8 @@ export interface TestJwtPayload {
   sub: string;
   email?: string;
   role?: string;
+  /** RBAC `module:action:scope`, igual ao JWT de produção. */
+  perms?: string[];
 }
 
 export function createTestJwt(payload: TestJwtPayload): string {
@@ -14,6 +16,7 @@ export function createTestJwt(payload: TestJwtPayload): string {
       sub: payload.sub,
       email: payload.email,
       role: payload.role ?? "user",
+      ...(payload.perms && payload.perms.length > 0 ? { perms: payload.perms } : {}),
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
     },

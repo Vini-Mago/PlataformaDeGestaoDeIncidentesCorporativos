@@ -1,6 +1,8 @@
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth-context";
 import { IncidentSection } from "./IncidentSection";
+import { ProblemSection } from "./ProblemSection";
+import { ChangeSection } from "./ChangeSection";
 import { ServiceRequestSection } from "./ServiceRequestSection";
 
 function AuthEntryPage() {
@@ -74,6 +76,8 @@ function DashboardPage() {
       <p><strong>Role:</strong> {user.role ?? "user"}</p>
 
       <IncidentSection />
+      <ProblemSection />
+      <ChangeSection />
       <ServiceRequestSection />
     </main>
   );

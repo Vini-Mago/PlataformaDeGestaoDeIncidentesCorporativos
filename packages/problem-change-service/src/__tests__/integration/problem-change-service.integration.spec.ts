@@ -184,6 +184,186 @@ describe("Problem-change Service API integration", () => {
         title: "Get Test",
         status: "Open",
       });
+      expect(res.body).toHaveProperty("linkedIncidentIds");
+      expect(Array.isArray(res.body.linkedIncidentIds)).toBe(true);
+    });
+
+    const incidentA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+    it("links incident ids and returns them on GET (RF-7.1)", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Linked",
+          description: "D",
+          status: "Open",
+          createdById: userId,
+        },
+      });
+
+      await request(app)
+        .post(`/api/problems/${problem.id}/incidents`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ incidentId: incidentA })
+        .expect(204);
+
+      const res = await request(app)
+        .get(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body.linkedIncidentIds).toEqual([incidentA]);
+
+      await request(app)
+        .delete(`/api/problems/${problem.id}/incidents/${incidentA}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(204);
+
+      const afterUnlink = await request(app)
+        .get(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(afterUnlink.body.linkedIncidentIds).toEqual([]);
+    });
+
+    it("returns 404 when linking to unknown problem", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(app)
+        .post("/api/problems/00000000-0000-0000-0000-000000000000/incidents")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ incidentId: incidentA })
+        .expect(404);
+      expect(res.body).toHaveProperty("error");
+    });
+  });
+
+  describe("PATCH /api/problems/:id (RF-7.2 — auth + problems:update:all)", () => {
+    const noPermToken = createTestJwt({
+      sub: userId,
+      email: "noperm@test.com",
+      role: "user",
+      perms: ["problems:read:all"],
+    });
+
+    it("returns 401 when Authorization is missing", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      await request(app)
+        .patch("/api/problems/11111111-1111-1111-1111-111111111111")
+        .send({ rootCause: "x" })
+        .expect(401);
+    });
+
+    it("returns 403 when JWT lacks problems:update:all", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      await request(app)
+        .patch("/api/problems/11111111-1111-1111-1111-111111111111")
+        .set("Authorization", `Bearer ${noPermToken}`)
+        .send({ rootCause: "x" })
+        .expect(403);
+    });
+
+    it("returns 400 when body has no updatable fields", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Patch empty body",
+          description: "D",
+          status: "Open",
+          createdById: userId,
+        },
+      });
+      await request(app)
+        .patch(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({})
+        .expect(400);
+    });
+
+    it("returns 200 and updates causa raiz / plano", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Patch fields",
+          description: "D",
+          status: "Open",
+          createdById: userId,
+        },
+      });
+      const res = await request(app)
+        .patch(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          rootCause: "Firewall mal configurado",
+          actionPlan: "Rever regras na próxima janela",
+        })
+        .expect(200);
+      expect(res.body).toMatchObject({
+        id: problem.id,
+        rootCause: "Firewall mal configurado",
+        actionPlan: "Rever regras na próxima janela",
+        status: "Open",
+      });
+      expect(res.body).toHaveProperty("linkedIncidentIds");
+    });
+
+    it("returns 400 on invalid status transition", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Closed prob",
+          description: "D",
+          status: "Closed",
+          createdById: userId,
+        },
+      });
+      const res = await request(app)
+        .patch(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ status: "Resolved" })
+        .expect(400);
+      expect(res.body).toHaveProperty("error");
+    });
+  });
+
+  describe("GET /api/problems/linked-for-incidents (auth required)", () => {
+    it("returns link rows for requested incident ids", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Bulk link test",
+          description: "D",
+          status: "Open",
+          createdById: userId,
+        },
+      });
+      const incidentX = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+      await container.prisma.problemLinkedIncidentModel.create({
+        data: {
+          problemId: problem.id,
+          incidentId: incidentX,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/problems/linked-for-incidents?incidentIds=${encodeURIComponent(incidentX)}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({
+        incidentId: incidentX,
+        problemId: problem.id,
+        problemTitle: "Bulk link test",
+      });
+    });
+
+    it("returns 400 when incidentIds missing", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      await request(app)
+        .get("/api/problems/linked-for-incidents")
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(400);
     });
   });
 
@@ -310,6 +490,54 @@ describe("Problem-change Service API integration", () => {
         title: "Get Test Change",
         status: "Draft",
       });
+      expect(res.body.linkedIncidentIds).toEqual([]);
+      expect(res.body.linkedProblemIds).toEqual([]);
+    });
+  });
+
+  describe("PATCH /api/changes/:id (RF-7.3 — CAB High)", () => {
+    it("returns 400 when High risk jumps Submitted -> Approved with CAB policy", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const row = await container.prisma.changeModel.create({
+        data: {
+          title: "CAB test",
+          description: "D",
+          justification: "J",
+          changeType: "Normal",
+          risk: "High",
+          status: "Submitted",
+          createdById: userId,
+        },
+      });
+      const res = await request(app)
+        .patch(`/api/changes/${row.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ status: "Approved" })
+        .expect(400);
+      expect(res.body).toHaveProperty("error");
+    });
+
+    it("returns 200 when Low risk moves Submitted -> Approved", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const row = await container.prisma.changeModel.create({
+        data: {
+          title: "Fast track",
+          description: "D",
+          justification: "J",
+          changeType: "Standard",
+          risk: "Low",
+          status: "Submitted",
+          createdById: userId,
+        },
+      });
+      const res = await request(app)
+        .patch(`/api/changes/${row.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ status: "Approved" })
+        .expect(200);
+      expect(res.body).toMatchObject({ id: row.id, status: "Approved" });
+      expect(res.body.linkedIncidentIds).toEqual([]);
+      expect(res.body.linkedProblemIds).toEqual([]);
     });
   });
 

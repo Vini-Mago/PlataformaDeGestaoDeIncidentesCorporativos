@@ -4,10 +4,16 @@ import {
   ProblemNotFoundError,
   ChangeNotFoundError,
   InvalidProblemStatusFilterError,
+  InvalidProblemStatusTransitionError,
   InvalidChangeStatusFilterError,
   InvalidChangeRiskFilterError,
   ProblemForbiddenError,
   ChangeForbiddenError,
+  InvalidChangeStatusTransitionError,
+  ChangeExecutionOutsideWindowError,
+  ChangeExecutionWindowRequiredError,
+  ChangeContentLockedError,
+  ChangeSchedulingLockedError,
 } from "../../../application/errors";
 
 describe("mapApplicationErrorToHttp (problem-change-service)", () => {
@@ -30,6 +36,13 @@ describe("mapApplicationErrorToHttp (problem-change-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(400);
     expect(result.message).toBe("Invalid problem status filter: Invalid");
+  });
+
+  it("maps InvalidProblemStatusTransitionError to 400", () => {
+    const err = new InvalidProblemStatusTransitionError("Closed", "Resolved");
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(400);
+    expect(result.message).toBe("Invalid problem status transition: Closed -> Resolved");
   });
 
   it("maps InvalidChangeStatusFilterError to 400", () => {
@@ -58,6 +71,33 @@ describe("mapApplicationErrorToHttp (problem-change-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(403);
     expect(result.message).toBe("Forbidden");
+  });
+
+  it("maps InvalidChangeStatusTransitionError to 400", () => {
+    const err = new InvalidChangeStatusTransitionError("Submitted", "Approved");
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(400);
+    expect(result.message).toContain("Invalid change status transition");
+  });
+
+  it("maps ChangeExecutionOutsideWindowError to 400", () => {
+    const err = new ChangeExecutionOutsideWindowError();
+    expect(mapApplicationErrorToHttp(err).statusCode).toBe(400);
+  });
+
+  it("maps ChangeExecutionWindowRequiredError to 400", () => {
+    const err = new ChangeExecutionWindowRequiredError();
+    expect(mapApplicationErrorToHttp(err).statusCode).toBe(400);
+  });
+
+  it("maps ChangeContentLockedError to 400", () => {
+    const err = new ChangeContentLockedError();
+    expect(mapApplicationErrorToHttp(err).statusCode).toBe(400);
+  });
+
+  it("maps ChangeSchedulingLockedError to 400", () => {
+    const err = new ChangeSchedulingLockedError();
+    expect(mapApplicationErrorToHttp(err).statusCode).toBe(400);
   });
 
   it("returns 500 and generic message for unmapped error", () => {
