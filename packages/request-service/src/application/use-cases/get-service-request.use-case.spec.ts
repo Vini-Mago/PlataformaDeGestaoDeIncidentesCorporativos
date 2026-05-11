@@ -13,6 +13,7 @@ describe("GetServiceRequestUseCase", () => {
     requesterId: "user-id",
     status: "Draft" as const,
     formData: null,
+    approvalState: null,
     assignedTeamId: null,
     assignedToId: null,
     submittedAt: null,

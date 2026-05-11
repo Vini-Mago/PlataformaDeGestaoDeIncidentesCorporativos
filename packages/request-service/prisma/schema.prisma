@@ -51,6 +51,8 @@ model ServiceRequestModel {
   requesterId       String   @map("requester_id")
   status            String   // Draft | Submitted | InApproval | Approved | Rejected | InProgress | Completed | Cancelled
   formData          Json?    @map("form_data")
+  /** Progresso de aprovação multi-etapa: { "mode": "sequential", "step": number } | { "mode": "parallel", "roles": string[] } */
+  approvalState     Json?    @map("approval_state")
   assignedTeamId    String?  @map("assigned_team_id")
   assignedToId      String?  @map("assigned_to_id")
   submittedAt       DateTime? @map("submitted_at")

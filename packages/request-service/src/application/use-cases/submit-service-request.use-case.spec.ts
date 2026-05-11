@@ -24,6 +24,7 @@ describe("SubmitServiceRequestUseCase", () => {
     requesterId: "user-id",
     status: "Draft" as const,
     formData: null as Record<string, unknown> | null,
+    approvalState: null,
     assignedTeamId: null,
     assignedToId: null,
     submittedAt: null,

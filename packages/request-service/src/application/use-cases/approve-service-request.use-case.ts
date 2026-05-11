@@ -5,8 +5,11 @@ import {
   CatalogItemNotFoundError,
   InvalidStatusTransitionError,
   ServiceRequestApproverRoleForbiddenError,
+  ServiceRequestSequentialApprovalTurnError,
+  ServiceRequestParallelApprovalDuplicateError,
 } from "../errors";
 import { canApproveWithCatalogRoles } from "../helpers/service-request-approver.helper";
+import { readParallelApprovedRoles, readSequentialStep, uniqueApproverRoles } from "../../domain/approval-state";
 
 export class ApproveServiceRequestUseCase {
   constructor(
@@ -24,14 +27,87 @@ export class ApproveServiceRequestUseCase {
     if (!catalog) throw new CatalogItemNotFoundError(request.catalogItemId);
 
     const isAdminRole = userRole === "admin";
-    if (!canApproveWithCatalogRoles({ userRole, isAdminRole, approverRoleIds: catalog.approverRoleIds })) {
-      throw new ServiceRequestApproverRoleForbiddenError();
+    const flow = catalog.approvalFlow;
+    const role = userRole ?? "";
+
+    if (isAdminRole) {
+      return this.requestRepository.transition(requestId, {
+        actorId,
+        allowedFromStatuses: ["InApproval"],
+        toStatus: "Approved",
+        approvalState: null,
+      });
     }
 
-    return this.requestRepository.transition(requestId, {
-      actorId,
-      allowedFromStatuses: ["InApproval"],
-      toStatus: "Approved",
-    });
+    if (flow === "single" || flow === "none") {
+      if (!canApproveWithCatalogRoles({ userRole, isAdminRole: false, approverRoleIds: catalog.approverRoleIds })) {
+        throw new ServiceRequestApproverRoleForbiddenError();
+      }
+      return this.requestRepository.transition(requestId, {
+        actorId,
+        allowedFromStatuses: ["InApproval"],
+        toStatus: "Approved",
+        approvalState: null,
+      });
+    }
+
+    if (flow === "sequential") {
+      const step = readSequentialStep(request.approvalState);
+      const requiredRole = catalog.approverRoleIds[step];
+      if (requiredRole === undefined) {
+        throw new ServiceRequestApproverRoleForbiddenError();
+      }
+      if (role !== requiredRole) {
+        throw new ServiceRequestSequentialApprovalTurnError(requiredRole);
+      }
+      const lastIndex = catalog.approverRoleIds.length - 1;
+      if (step >= lastIndex) {
+        return this.requestRepository.transition(requestId, {
+          actorId,
+          allowedFromStatuses: ["InApproval"],
+          toStatus: "Approved",
+          approvalState: null,
+        });
+      }
+      return this.requestRepository.transition(requestId, {
+        actorId,
+        allowedFromStatuses: ["InApproval"],
+        toStatus: "InApproval",
+        approvalState: { mode: "sequential", step: step + 1 },
+        reason: `sequential:step:${step + 1}/${catalog.approverRoleIds.length}`,
+        skipOutbox: true,
+      });
+    }
+
+    if (flow === "parallel") {
+      if (!canApproveWithCatalogRoles({ userRole, isAdminRole: false, approverRoleIds: catalog.approverRoleIds })) {
+        throw new ServiceRequestApproverRoleForbiddenError();
+      }
+      const uniq = uniqueApproverRoles(catalog.approverRoleIds);
+      const approved = readParallelApprovedRoles(request.approvalState);
+      if (approved.includes(role)) {
+        throw new ServiceRequestParallelApprovalDuplicateError();
+      }
+      const nextRoles = [...approved, role];
+      const allDone = uniq.every((r) => nextRoles.includes(r));
+      if (allDone) {
+        return this.requestRepository.transition(requestId, {
+          actorId,
+          allowedFromStatuses: ["InApproval"],
+          toStatus: "Approved",
+          approvalState: null,
+        });
+      }
+      return this.requestRepository.transition(requestId, {
+        actorId,
+        allowedFromStatuses: ["InApproval"],
+        toStatus: "InApproval",
+        approvalState: { mode: "parallel", roles: nextRoles },
+        reason: `parallel:${nextRoles.length}/${uniq.length}`,
+        skipOutbox: true,
+      });
+    }
+
+    throw new ServiceRequestApproverRoleForbiddenError();
   }
 }

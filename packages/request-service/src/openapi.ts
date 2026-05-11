@@ -41,6 +41,7 @@ const ServiceRequestSchema = z.object({
   completedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  approvalState: z.record(z.unknown()).nullable(),
 }).openapi("ServiceRequest");
 
 const CommentSchema = z.object({
@@ -173,7 +174,8 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/api/service-requests/{id}/approve",
-  summary: "Approve request (InApproval → Approved); requires requests:approve:all and catalog approver role when set",
+  summary:
+    "Approve request (InApproval → Approved, or intermediate InApproval for sequential/parallel); requests:approve:all + regras de papel do catálogo",
   tags: ["Service Requests"],
   security: [{ bearerAuth: [] }],
   request: { params: z.object({ id: z.string().uuid() }) },

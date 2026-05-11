@@ -466,7 +466,7 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [x] Modelar **requisição** com estados: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada (ajustar nomes ao seu domínio).
-2. [ ] Implementar **aprovação sequencial ou paralela** conforme configuração do item.
+2. [x] Implementar **aprovação sequencial ou paralela** conforme configuração do item. *(Campo `approval_state` JSON; `sequential` = ordem em `approverRoleIds`; `parallel` = cada papel distinto deve aprovar; `single` inalterado.)*
 3. [x] Registrar **quem aprovou/rejeitou**, quando e motivo. *(Tabela `service_request_workflow_events` + endpoints approve/reject.)*
 4. [~] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
 
@@ -477,7 +477,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 4.4 Integração assíncrona futura
 
-- [~] Publicar eventos `request.created`, `request.approved` para notificação e auditoria quando esses serviços estiverem prontos. *(Contratos em `@pgic/shared` — `EXCHANGE_REQUEST_EVENTS`, `REQUEST_*_EVENT`; publicação outbox a ligar.)*
+- [~] Publicar eventos `request.*` para **auditoria** e reporting quando houver consumidor dedicado. *(Contratos + outbox + relay no request-service; **notification-service** consome `request.events` → in-app ao solicitante.)*
 
 ### Balanço de saída da Fase 4
 

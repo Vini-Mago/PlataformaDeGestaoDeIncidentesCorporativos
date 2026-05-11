@@ -17,6 +17,8 @@ export interface ServiceRequest {
   requesterId: string;
   status: ServiceRequestStatus;
   formData: Record<string, unknown> | null;
+  /** Progresso de aprovação sequencial/paralelo; null em fluxo single ou após aprovação final. */
+  approvalState: Record<string, unknown> | null;
   assignedTeamId: string | null;
   assignedToId: string | null;
   submittedAt: Date | null;

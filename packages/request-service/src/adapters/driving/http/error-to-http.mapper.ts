@@ -6,6 +6,8 @@ import {
   InvalidStatusFilterError,
   ServiceRequestForbiddenError,
   ServiceRequestApproverRoleForbiddenError,
+  ServiceRequestSequentialApprovalTurnError,
+  ServiceRequestParallelApprovalDuplicateError,
   FormDataValidationError,
   InvalidCatalogFormSchemaError,
 } from "../../../application/errors";
@@ -17,6 +19,8 @@ const map = createErrorToHttpMapper([
   [InvalidStatusFilterError, 400],
   [ServiceRequestForbiddenError, 403],
   [ServiceRequestApproverRoleForbiddenError, 403],
+  [ServiceRequestSequentialApprovalTurnError, 403],
+  [ServiceRequestParallelApprovalDuplicateError, 400],
   [FormDataValidationError, 400],
   [InvalidCatalogFormSchemaError, 500],
 ]);

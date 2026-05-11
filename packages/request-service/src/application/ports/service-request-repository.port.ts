@@ -24,6 +24,10 @@ export interface TransitionServiceRequestParams {
   reason?: string | null;
   submittedAt?: Date;
   completedAt?: Date;
+  /** Atualiza JSON `approval_state` (null limpa). Omitir para não alterar o campo. */
+  approvalState?: Record<string, unknown> | null;
+  /** Marcos InApproval→InApproval não publicam outbox (evita spam de eventos). */
+  skipOutbox?: boolean;
 }
 
 export interface IServiceRequestRepository {

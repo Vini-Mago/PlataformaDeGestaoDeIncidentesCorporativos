@@ -7,6 +7,8 @@ import {
   InvalidStatusFilterError,
   ServiceRequestForbiddenError,
   ServiceRequestApproverRoleForbiddenError,
+  ServiceRequestSequentialApprovalTurnError,
+  ServiceRequestParallelApprovalDuplicateError,
   FormDataValidationError,
   InvalidCatalogFormSchemaError,
 } from "../../../application/errors";
@@ -52,6 +54,20 @@ describe("mapApplicationErrorToHttp (request-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(403);
     expect(result.message).toContain("role");
+  });
+
+  it("maps ServiceRequestSequentialApprovalTurnError to 403", () => {
+    const err = new ServiceRequestSequentialApprovalTurnError("gestor");
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(403);
+    expect(result.message).toContain("gestor");
+  });
+
+  it("maps ServiceRequestParallelApprovalDuplicateError to 400", () => {
+    const err = new ServiceRequestParallelApprovalDuplicateError();
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(400);
+    expect(result.message).toContain("already");
   });
 
   it("maps FormDataValidationError to 400", () => {

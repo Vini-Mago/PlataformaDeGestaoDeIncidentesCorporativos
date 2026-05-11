@@ -34,6 +34,7 @@ describe("CreateServiceRequestUseCase", () => {
     requesterId,
     status: "Draft",
     formData: null,
+    approvalState: null,
     assignedTeamId: null,
     assignedToId: null,
     submittedAt: null,

@@ -8,7 +8,7 @@ import {
   REQUEST_STARTED_EVENT,
   REQUEST_SUBMITTED_EVENT,
 } from "@pgic/shared";
-import { PrismaClient } from "../../../../generated/prisma-client/index.js";
+import { Prisma, PrismaClient } from "../../../../generated/prisma-client/index.js";
 import type {
   ServiceRequest,
   ServiceRequestComment,
@@ -108,6 +108,10 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
           status: params.toStatus,
           ...(params.submittedAt && { submittedAt: params.submittedAt }),
           ...(params.completedAt && { completedAt: params.completedAt }),
+          ...(params.approvalState !== undefined && {
+            approvalState:
+              params.approvalState === null ? Prisma.JsonNull : (params.approvalState as Prisma.InputJsonValue),
+          }),
         },
       });
       await tx.serviceRequestWorkflowEventModel.create({
@@ -119,7 +123,8 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
           reason: params.reason ?? null,
         },
       });
-      const eventName = outboxEventNameForToStatus(params.toStatus as ServiceRequestStatus);
+      const eventName =
+        params.skipOutbox === true ? null : outboxEventNameForToStatus(params.toStatus as ServiceRequestStatus);
       if (eventName) {
         const trimmedReason =
           params.reason != null && params.reason.trim().length > 0 ? params.reason.trim() : undefined;
@@ -199,6 +204,7 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
     requesterId: string;
     status: string;
     formData: unknown;
+    approvalState: unknown;
     assignedTeamId: string | null;
     assignedToId: string | null;
     submittedAt: Date | null;
@@ -212,6 +218,7 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
       requesterId: row.requesterId,
       status: row.status as ServiceRequestStatus,
       formData: row.formData as Record<string, unknown> | null,
+      approvalState: (row.approvalState as Record<string, unknown> | null) ?? null,
       assignedTeamId: row.assignedTeamId,
       assignedToId: row.assignedToId,
       submittedAt: row.submittedAt,

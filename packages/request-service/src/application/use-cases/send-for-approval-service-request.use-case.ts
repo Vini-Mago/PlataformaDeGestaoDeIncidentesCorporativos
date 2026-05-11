@@ -2,6 +2,7 @@ import type { IServiceRequestRepository } from "../ports/service-request-reposit
 import type { IServiceCatalogRepository } from "../ports/service-catalog-repository.port";
 import { ServiceRequestNotFoundError, CatalogItemNotFoundError, InvalidStatusTransitionError } from "../errors";
 import { catalogRequiresInApprovalQueue } from "../../domain/catalog-approval-policy";
+import { initialApprovalStateForCatalog } from "../../domain/approval-state";
 
 export class SendForApprovalServiceRequestUseCase {
   constructor(
@@ -20,6 +21,15 @@ export class SendForApprovalServiceRequestUseCase {
     if (!catalog) throw new CatalogItemNotFoundError(request.catalogItemId);
 
     const toStatus = catalogRequiresInApprovalQueue(catalog) ? "InApproval" : "Approved";
+    if (toStatus === "InApproval") {
+      const approvalState = initialApprovalStateForCatalog(catalog);
+      return this.requestRepository.transition(requestId, {
+        actorId,
+        allowedFromStatuses: ["Submitted"],
+        toStatus,
+        approvalState,
+      });
+    }
     return this.requestRepository.transition(requestId, {
       actorId,
       allowedFromStatuses: ["Submitted"],

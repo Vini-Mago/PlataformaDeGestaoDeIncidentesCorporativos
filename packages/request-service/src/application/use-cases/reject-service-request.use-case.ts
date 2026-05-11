@@ -33,6 +33,7 @@ export class RejectServiceRequestUseCase {
       allowedFromStatuses: ["InApproval"],
       toStatus: "Rejected",
       reason,
+      approvalState: null,
     });
   }
 }

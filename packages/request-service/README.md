@@ -25,12 +25,12 @@ Cada transição bem-sucedida grava uma linha em `service_request_workflow_event
 |--------|-----------|------------------|
 | `POST /service-requests/:id/submit` | Draft → Submitted | `requests:update:own` (participante) ou `update:all` |
 | `POST /service-requests/:id/send-for-approval` | Submitted → **InApproval** se `approvalFlow` ≠ `none`; senão → **Approved** | Idem submit |
-| `POST /service-requests/:id/approve` | InApproval → Approved | `requests:approve:all` + papel JWT ∈ `approverRoleIds` do catálogo (se lista não vazia); `role === admin` ignora a lista |
-| `POST /service-requests/:id/reject` | InApproval → Rejected | Corpo opcional `{ "reason": "..." }`. Mesmas regras que approve |
+| `POST /service-requests/:id/approve` | InApproval → Approved (ou InApproval intermédio) | `requests:approve:all`; `role === admin` aprova de imediato. **`single`:** qualquer papel em `approverRoleIds`. **`sequential`:** só `approverRoleIds[step]` (`approval_state.step`). **`parallel`:** cada papel distinto em `approverRoleIds` deve aprovar uma vez (ordem livre). |
+| `POST /service-requests/:id/reject` | InApproval → Rejected | Corpo opcional `{ "reason": "..." }`. Mesmas regras de papel que approve; limpa `approval_state`. |
 | `POST /service-requests/:id/start` | Approved → InProgress | `requests:update:all` |
 | `POST /service-requests/:id/complete` | InProgress → Completed | `requests:update:all` |
 
-- **Fluxos `single` / `sequential` / `parallel`:** nesta versão tratam-se como um único estado **InApproval** até approve/reject (evolução futura: múltiplos níveis).
+- **`approval_state` (JSON):** `sequential` → `{ "mode": "sequential", "step": n }`; `parallel` → `{ "mode": "parallel", "roles": [...] }`; `single` → `null`. Marcos intermédios (InApproval→InApproval) não geram evento na outbox.
 - **Rejeição:** terminal; reabrir para novo ciclo seria um endpoint `resubmit` futuro, se necessário.
 
 - `POST /service-requests/:id/comments` — Add comment (auth required).

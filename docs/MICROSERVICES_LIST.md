@@ -93,7 +93,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 ### Integrações
 
 - **Consome:** `user.created` (RabbitMQ, exchange `user.events`, fila `request.user_created`, routing key `user_created`). Eventos publicados pelo identity-service via **Outbox Pattern** (tabela `outbox`, relay publica no RabbitMQ). O request-service replica os dados na tabela `replicated_users` para uso em listagens (ex.: nome do solicitante).
-- **Pode publicar:** exchange topic `request.events` (`@pgic/shared`: `EXCHANGE_REQUEST_EVENTS`, routing keys `request_created`, `request_submitted`, … e nomes lógicos `request.created`, `request.approved`, etc.). Implementação outbox + relay ainda a ligar; validação de `formData` contra `formSchema` (JSON Schema) já no serviço.
+- **Publica:** exchange topic `request.events` (`@pgic/shared`: `EXCHANGE_REQUEST_EVENTS`, routing keys `request_created`, `request_submitted`, …) via **Outbox Pattern** (tabela `outbox`, relay publica no RabbitMQ). Validação de `formData` contra `formSchema` (JSON Schema) na criação e ao submeter.
 
 ### Prefixo no gateway
 
@@ -271,6 +271,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 ### Integrações
 
 - **Consome:** mensagens da fila de notificação (publicadas por incident-service, request-service, escalation-service, etc.)
+- **Consome (RabbitMQ):** exchange `request.events` (topic), fila `notification.request_events` (`QUEUE_REQUEST_EVENTS_NOTIFICATION` em `@pgic/shared`), routing keys `request_*` — cria notificação **in_app** para o `requesterId` em eventos de ciclo de vida da requisição (quando `RABBITMQ_URL` está definido).
 - **Integra com:** SMTP, Slack API, Teams API, webhooks externos
 
 ### Prefixo no gateway

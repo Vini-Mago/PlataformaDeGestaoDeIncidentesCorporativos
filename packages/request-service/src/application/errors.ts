@@ -49,6 +49,24 @@ export class ServiceRequestApproverRoleForbiddenError extends AppError {
   }
 }
 
+/** Aprovação sequencial: o papel JWT não corresponde ao passo atual (`approverRoleIds[step]`). */
+export class ServiceRequestSequentialApprovalTurnError extends AppError {
+  override name = "ServiceRequestSequentialApprovalTurnError";
+  constructor(public readonly expectedRole: string) {
+    super(`Sequential approval: this step requires role "${expectedRole}"`);
+    Object.setPrototypeOf(this, ServiceRequestSequentialApprovalTurnError.prototype);
+  }
+}
+
+/** Aprovação paralela: o mesmo papel já registou aprovação. */
+export class ServiceRequestParallelApprovalDuplicateError extends AppError {
+  override name = "ServiceRequestParallelApprovalDuplicateError";
+  constructor() {
+    super("Your role has already approved this request");
+    Object.setPrototypeOf(this, ServiceRequestParallelApprovalDuplicateError.prototype);
+  }
+}
+
 /** JSON Schema do catálogo é sintaticamente inválido para o motor de validação. */
 export class InvalidCatalogFormSchemaError extends AppError {
   override name = "InvalidCatalogFormSchemaError";

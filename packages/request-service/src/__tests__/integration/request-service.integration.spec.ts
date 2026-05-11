@@ -676,6 +676,119 @@ describe("Request Service API integration", () => {
       const rejectEvt = detail.body.workflowEvents.find((e: { toStatus: string }) => e.toStatus === "Rejected");
       expect(rejectEvt?.reason).toBe("Falta documentação");
     });
+
+    it("approvalFlow sequential: gestor then supervisor", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const cat = await container.prisma.serviceCatalogItemModel.create({
+        data: {
+          name: "Sequential cat",
+          approvalFlow: "sequential",
+          approverRoleIds: ["gestor", "supervisor"],
+        },
+      });
+      const created = await request(app)
+        .post("/api/service-requests")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ catalogItemId: cat.id, formData: {} })
+        .expect(201);
+      const rid = created.body.id as string;
+      await request(app)
+        .post(`/api/service-requests/${rid}/submit`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      await request(app)
+        .post(`/api/service-requests/${rid}/send-for-approval`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      const d1 = await request(app)
+        .get(`/api/service-requests/${rid}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(d1.body.status).toBe("InApproval");
+      expect(d1.body.approvalState).toEqual({ mode: "sequential", step: 0 });
+
+      const gestorTok = createTestJwt({
+        sub: "55555555-5555-5555-5555-555555555555",
+        email: "g2@test.com",
+        role: "gestor",
+        perms: ["requests:approve:all", "requests:read:all"],
+      });
+      await request(app)
+        .post(`/api/service-requests/${rid}/approve`)
+        .set("Authorization", `Bearer ${gestorTok}`)
+        .expect(200);
+
+      const d2 = await request(app)
+        .get(`/api/service-requests/${rid}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(d2.body.status).toBe("InApproval");
+      expect(d2.body.approvalState).toEqual({ mode: "sequential", step: 1 });
+
+      const supervisorTok = createTestJwt({
+        sub: "66666666-6666-6666-6666-666666666666",
+        email: "sup2@test.com",
+        role: "supervisor",
+        perms: ["requests:approve:all", "requests:read:all"],
+      });
+      const fin = await request(app)
+        .post(`/api/service-requests/${rid}/approve`)
+        .set("Authorization", `Bearer ${supervisorTok}`)
+        .expect(200);
+      expect(fin.body.status).toBe("Approved");
+      expect(fin.body.approvalState).toBeNull();
+    });
+
+    it("approvalFlow parallel: both roles must approve", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const cat = await container.prisma.serviceCatalogItemModel.create({
+        data: {
+          name: "Parallel cat",
+          approvalFlow: "parallel",
+          approverRoleIds: ["gestor", "supervisor"],
+        },
+      });
+      const created = await request(app)
+        .post("/api/service-requests")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ catalogItemId: cat.id, formData: {} })
+        .expect(201);
+      const rid = created.body.id as string;
+      await request(app)
+        .post(`/api/service-requests/${rid}/submit`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      await request(app)
+        .post(`/api/service-requests/${rid}/send-for-approval`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      const gestorTok = createTestJwt({
+        sub: "77777777-7777-7777-7777-777777777777",
+        email: "g3@test.com",
+        role: "gestor",
+        perms: ["requests:approve:all", "requests:read:all"],
+      });
+      const mid = await request(app)
+        .post(`/api/service-requests/${rid}/approve`)
+        .set("Authorization", `Bearer ${gestorTok}`)
+        .expect(200);
+      expect(mid.body.status).toBe("InApproval");
+      expect(mid.body.approvalState).toEqual({ mode: "parallel", roles: ["gestor"] });
+
+      const supervisorTok = createTestJwt({
+        sub: "88888888-8888-8888-8888-888888888888",
+        email: "sup3@test.com",
+        role: "supervisor",
+        perms: ["requests:approve:all", "requests:read:all"],
+      });
+      const fin = await request(app)
+        .post(`/api/service-requests/${rid}/approve`)
+        .set("Authorization", `Bearer ${supervisorTok}`)
+        .expect(200);
+      expect(fin.body.status).toBe("Approved");
+    });
   });
 
   describe("GET /health", () => {

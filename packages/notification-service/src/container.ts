@@ -1,10 +1,12 @@
 import { createContainer as createAwilixContainer, asValue, asFunction } from "awilix";
 import { PrismaClient } from "../generated/prisma-client/index";
-import { createAuthMiddleware, JwtTokenVerifier } from "@pgic/shared";
+import { createAuthMiddleware, JwtTokenVerifier, logger } from "@pgic/shared";
 import { PrismaNotificationRepository } from "./adapters/driven/persistence/prisma-notification.repository";
 import { CreateNotificationUseCase } from "./application/use-cases/create-notification.use-case";
 import { ListNotificationsUseCase } from "./application/use-cases/list-notifications.use-case";
 import { GetNotificationUseCase } from "./application/use-cases/get-notification.use-case";
+import { HandleRequestDomainEventUseCase } from "./application/use-cases/handle-request-domain-event.use-case";
+import { RabbitMqRequestEventsConsumer } from "./adapters/driving/messaging/rabbitmq-request-events.consumer";
 import { NotificationController } from "./adapters/driving/http/notification.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -12,6 +14,8 @@ import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http
 export interface NotificationContainerConfig {
   databaseUrl: string;
   jwtSecret: string;
+  /** Quando definido, inicia consumidor `request.events` → notificações in-app ao solicitante. */
+  rabbitmqUrl?: string;
 }
 
 interface NotificationCradle {
@@ -19,6 +23,8 @@ interface NotificationCradle {
   prisma: PrismaClient;
   notificationRepository: PrismaNotificationRepository;
   createNotificationUseCase: CreateNotificationUseCase;
+  handleRequestDomainEventUseCase: HandleRequestDomainEventUseCase;
+  requestDomainEventsConsumer: RabbitMqRequestEventsConsumer | null;
   listNotificationsUseCase: ListNotificationsUseCase;
   getNotificationUseCase: GetNotificationUseCase;
   notificationController: NotificationController;
@@ -47,6 +53,17 @@ export function createContainer(config: NotificationContainerConfig) {
       (cradle: NotificationCradle) =>
         new CreateNotificationUseCase(cradle.notificationRepository)
     ).singleton(),
+
+    handleRequestDomainEventUseCase: asFunction(
+      (cradle: NotificationCradle) =>
+        new HandleRequestDomainEventUseCase(cradle.createNotificationUseCase)
+    ).singleton(),
+
+    requestDomainEventsConsumer: asFunction((cradle: NotificationCradle) => {
+      const url = cradle.config.rabbitmqUrl;
+      if (!url) return null;
+      return new RabbitMqRequestEventsConsumer(url, cradle.handleRequestDomainEventUseCase);
+    }).singleton(),
 
     listNotificationsUseCase: asFunction(
       (cradle: NotificationCradle) =>
@@ -92,11 +109,19 @@ export function createContainer(config: NotificationContainerConfig) {
       return c.routes;
     },
     mapApplicationErrorToHttp,
+    get requestDomainEventsConsumer() {
+      return c.requestDomainEventsConsumer;
+    },
     async disconnect(): Promise<void> {
+      try {
+        if (c.requestDomainEventsConsumer) await c.requestDomainEventsConsumer.stop();
+      } catch (err) {
+        logger.error({ err }, "requestDomainEventsConsumer.stop() failed on disconnect");
+      }
       try {
         await c.prisma.$disconnect();
       } catch (err) {
-        console.error("Error disconnecting Prisma client", err);
+        logger.error({ err }, "Error disconnecting Prisma client");
       }
     },
   };

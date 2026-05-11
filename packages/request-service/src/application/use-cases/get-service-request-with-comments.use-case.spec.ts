@@ -13,6 +13,7 @@ describe("GetServiceRequestWithCommentsUseCase", () => {
     requesterId: "user-id",
     status: "Submitted" as const,
     formData: null,
+    approvalState: null,
     assignedTeamId: null,
     assignedToId: null,
     submittedAt: new Date("2025-01-15T10:00:00Z"),
@@ -67,6 +68,7 @@ describe("GetServiceRequestWithCommentsUseCase", () => {
     expect(result.submittedAt).toBe("2025-01-15T10:00:00.000Z");
     expect(result.createdAt).toBe("2025-01-14T09:00:00.000Z");
     expect(result.updatedAt).toBe("2025-01-15T10:00:00.000Z");
+    expect(result.approvalState).toBeNull();
     expect(result.comments).toHaveLength(1);
     expect(result.comments[0]).toMatchObject({
       id: "comment-1",

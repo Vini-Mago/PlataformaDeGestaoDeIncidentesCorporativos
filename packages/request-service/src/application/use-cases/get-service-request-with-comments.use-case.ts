@@ -17,6 +17,7 @@ export interface ServiceRequestWithComments {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  approvalState: Record<string, unknown> | null;
   comments: Array<{
     id: string;
     requestId: string;
@@ -57,6 +58,7 @@ export class GetServiceRequestWithCommentsUseCase {
       completedAt: request.completedAt ? toIso(request.completedAt) : null,
       createdAt: toIso(request.createdAt),
       updatedAt: toIso(request.updatedAt),
+      approvalState: request.approvalState,
       comments: comments.map((c) => ({
         id: c.id,
         requestId: c.requestId,

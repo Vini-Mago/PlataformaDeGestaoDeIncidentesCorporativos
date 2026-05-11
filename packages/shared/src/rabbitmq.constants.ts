@@ -13,8 +13,8 @@ export const QUEUE_USER_UPDATED_REQUEST = "request.user_updated";
 export const QUEUE_USER_CREATED_REQUEST_FAILED = "request.user_created.failed";
 
 /**
- * Request / service-catalog events (topic). Publicados pelo request-service (evolução: outbox + relay).
- * Consumidores típicos: notification-service, audit-service.
+ * Request / service-catalog events (topic). Publicados pelo request-service (outbox + relay).
+ * Consumidores: notification-service (`notification.request_events`); audit/reporting podem bindar o mesmo exchange.
  */
 export const EXCHANGE_REQUEST_EVENTS = "request.events";
 export const ROUTING_KEY_REQUEST_CREATED = "request_created";
@@ -31,6 +31,20 @@ export const REQUEST_APPROVED_EVENT = "request.approved";
 export const REQUEST_REJECTED_EVENT = "request.rejected";
 export const REQUEST_STARTED_EVENT = "request.started";
 export const REQUEST_COMPLETED_EVENT = "request.completed";
+
+/** Fila do notification-service para todos os routing keys de `request.events` (topic). */
+export const QUEUE_REQUEST_EVENTS_NOTIFICATION = "notification.request_events";
+
+/** Nomes lógicos dos eventos de requisição (payload publicado pelo request-service via outbox). */
+export const REQUEST_DOMAIN_EVENT_NAMES = [
+  REQUEST_CREATED_EVENT,
+  REQUEST_SUBMITTED_EVENT,
+  REQUEST_IN_APPROVAL_EVENT,
+  REQUEST_APPROVED_EVENT,
+  REQUEST_REJECTED_EVENT,
+  REQUEST_STARTED_EVENT,
+  REQUEST_COMPLETED_EVENT,
+] as const;
 
 /** Incident events (exchange + routing keys). Published by incident-service (Outbox Pattern). */
 export const EXCHANGE_INCIDENT_EVENTS = "incident.events";
