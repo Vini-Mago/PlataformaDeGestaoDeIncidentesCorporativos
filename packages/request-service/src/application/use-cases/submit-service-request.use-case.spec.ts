@@ -7,6 +7,8 @@ describe("SubmitServiceRequestUseCase", () => {
   let requestRepository: IServiceRequestRepository;
 
   const requestId = "11111111-1111-1111-1111-111111111111";
+  const actorId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
   const draftRequest = {
     id: requestId,
     catalogItemId: "catalog-id",
@@ -31,9 +33,10 @@ describe("SubmitServiceRequestUseCase", () => {
   beforeEach(() => {
     requestRepository = {
       create: vi.fn(),
-      findById: vi.fn().mockResolvedValue(draftRequest),
+      findById: vi.fn(),
       list: vi.fn(),
-      updateStatus: vi.fn().mockResolvedValue(submittedRequest),
+      transition: vi.fn().mockResolvedValue(submittedRequest),
+      getWorkflowEvents: vi.fn(),
       addComment: vi.fn(),
       getComments: vi.fn(),
     };
@@ -42,77 +45,71 @@ describe("SubmitServiceRequestUseCase", () => {
   it("submits a Draft request successfully", async () => {
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    const result = await useCase.execute(requestId);
+    const result = await useCase.execute(requestId, actorId);
 
     expect(result).toEqual(submittedRequest);
-    expect(requestRepository.findById).toHaveBeenCalledWith(requestId);
-    expect(requestRepository.updateStatus).toHaveBeenCalledWith(
+    expect(requestRepository.transition).toHaveBeenCalledWith(
       requestId,
-      "Submitted",
-      expect.objectContaining({ submittedAt: expect.any(Date) })
+      expect.objectContaining({
+        actorId,
+        allowedFromStatuses: ["Draft"],
+        toStatus: "Submitted",
+        submittedAt: expect.any(Date),
+      })
     );
   });
 
   it("throws ServiceRequestNotFoundError when request does not exist", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue(null);
+    vi.mocked(requestRepository.transition).mockRejectedValue(new ServiceRequestNotFoundError(requestId));
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute(requestId)).rejects.toThrow(ServiceRequestNotFoundError);
-    await expect(useCase.execute(requestId)).rejects.toThrow(`Service request not found: ${requestId}`);
-    expect(requestRepository.updateStatus).not.toHaveBeenCalled();
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(ServiceRequestNotFoundError);
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(`Service request not found: ${requestId}`);
   });
 
   it("throws InvalidStatusTransitionError when request is already Submitted", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue({
-      ...draftRequest,
-      status: "Submitted",
-    });
+    vi.mocked(requestRepository.transition).mockRejectedValue(
+      new InvalidStatusTransitionError("Submitted", "Submitted")
+    );
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute(requestId)).rejects.toThrow(InvalidStatusTransitionError);
-    await expect(useCase.execute(requestId)).rejects.toThrow(
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(
       "Invalid status transition from Submitted to Submitted"
     );
-    expect(requestRepository.updateStatus).not.toHaveBeenCalled();
   });
 
   it("throws InvalidStatusTransitionError when request is InProgress", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue({
-      ...draftRequest,
-      status: "InProgress",
-    });
+    vi.mocked(requestRepository.transition).mockRejectedValue(
+      new InvalidStatusTransitionError("InProgress", "Submitted")
+    );
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute(requestId)).rejects.toThrow(InvalidStatusTransitionError);
-    expect(requestRepository.updateStatus).not.toHaveBeenCalled();
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
 
   it("throws InvalidStatusTransitionError when request is Completed", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue({
-      ...draftRequest,
-      status: "Completed",
-    });
+    vi.mocked(requestRepository.transition).mockRejectedValue(
+      new InvalidStatusTransitionError("Completed", "Submitted")
+    );
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute(requestId)).rejects.toThrow(InvalidStatusTransitionError);
-    expect(requestRepository.updateStatus).not.toHaveBeenCalled();
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
 
   it("throws InvalidStatusTransitionError when request is Cancelled", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue({
-      ...draftRequest,
-      status: "Cancelled",
-    });
+    vi.mocked(requestRepository.transition).mockRejectedValue(
+      new InvalidStatusTransitionError("Cancelled", "Submitted")
+    );
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute(requestId)).rejects.toThrow(InvalidStatusTransitionError);
-    expect(requestRepository.updateStatus).not.toHaveBeenCalled();
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
 
-  it("handles unusual requestId (empty string) — repository returns null, throws not found", async () => {
-    vi.mocked(requestRepository.findById).mockResolvedValue(null);
+  it("handles unusual requestId (empty string) — transition throws not found", async () => {
+    vi.mocked(requestRepository.transition).mockRejectedValue(new ServiceRequestNotFoundError(""));
     const useCase = new SubmitServiceRequestUseCase(requestRepository);
 
-    await expect(useCase.execute("")).rejects.toThrow(ServiceRequestNotFoundError);
+    await expect(useCase.execute("", actorId)).rejects.toThrow(ServiceRequestNotFoundError);
   });
 });

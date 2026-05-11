@@ -31,6 +31,7 @@ describe("GetCurrentUserUseCase", () => {
       id: "user-123",
       email: "u@example.com",
       name: "Nome Completo",
+      role: "user",
       createdAt: "2025-01-15T12:00:00.000Z",
     });
     expect(userRepository.findById).toHaveBeenCalledWith("user-123");

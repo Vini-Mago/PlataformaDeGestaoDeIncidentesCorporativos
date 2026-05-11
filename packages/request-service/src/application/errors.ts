@@ -39,3 +39,12 @@ export class ServiceRequestForbiddenError extends AppError {
     Object.setPrototypeOf(this, ServiceRequestForbiddenError.prototype);
   }
 }
+
+/** Utilizador autenticado não tem o papel exigido pelo catálogo para aprovar/rejeitar. */
+export class ServiceRequestApproverRoleForbiddenError extends AppError {
+  override name = "ServiceRequestApproverRoleForbiddenError";
+  constructor() {
+    super("Your role is not allowed to approve this request type");
+    Object.setPrototypeOf(this, ServiceRequestApproverRoleForbiddenError.prototype);
+  }
+}

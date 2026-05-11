@@ -31,12 +31,25 @@ describe("GetServiceRequestWithCommentsUseCase", () => {
     },
   ];
 
+  const mockWorkflowEvents = [
+    {
+      id: "evt-1",
+      requestId,
+      actorId: "user-id",
+      fromStatus: "Draft" as const,
+      toStatus: "Submitted" as const,
+      reason: null,
+      createdAt: new Date("2025-01-15T10:00:00Z"),
+    },
+  ];
+
   beforeEach(() => {
     requestRepository = {
       create: vi.fn(),
       findById: vi.fn().mockResolvedValue(mockRequest),
       list: vi.fn(),
-      updateStatus: vi.fn(),
+      transition: vi.fn(),
+      getWorkflowEvents: vi.fn().mockResolvedValue(mockWorkflowEvents),
       addComment: vi.fn(),
       getComments: vi.fn().mockResolvedValue(mockComments),
     };
@@ -62,15 +75,25 @@ describe("GetServiceRequestWithCommentsUseCase", () => {
       body: "First comment",
       createdAt: "2025-01-14T12:00:00.000Z",
     });
+    expect(result.workflowEvents).toHaveLength(1);
+    expect(result.workflowEvents[0]).toMatchObject({
+      id: "evt-1",
+      fromStatus: "Draft",
+      toStatus: "Submitted",
+      reason: null,
+      createdAt: "2025-01-15T10:00:00.000Z",
+    });
   });
 
   it("returns request with empty comments array when no comments", async () => {
     vi.mocked(requestRepository.getComments).mockResolvedValue([]);
+    vi.mocked(requestRepository.getWorkflowEvents).mockResolvedValue([]);
     const useCase = new GetServiceRequestWithCommentsUseCase(requestRepository);
 
     const result = await useCase.execute(requestId);
 
     expect(result.comments).toEqual([]);
+    expect(result.workflowEvents).toEqual([]);
   });
 
   it("returns null for submittedAt when request has no submittedAt", async () => {
@@ -93,5 +116,6 @@ describe("GetServiceRequestWithCommentsUseCase", () => {
 
     await expect(useCase.execute(requestId)).rejects.toThrow(ServiceRequestNotFoundError);
     expect(requestRepository.getComments).not.toHaveBeenCalled();
+    expect(requestRepository.getWorkflowEvents).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import type { AuthenticatedRequest } from "@pgic/shared";
 import {
   canReadAllServiceRequests,
@@ -8,11 +8,17 @@ import {
 import { ServiceRequestForbiddenError } from "../../../application/errors";
 import type { CreateServiceRequestDto } from "../../../application/dtos/create-service-request.dto";
 import type { AddRequestCommentDto } from "../../../application/dtos/add-request-comment.dto";
+import type { RejectServiceRequestDto } from "../../../application/dtos/reject-service-request.dto";
 import type { CreateServiceRequestUseCase } from "../../../application/use-cases/create-service-request.use-case";
 import type { ListServiceRequestsUseCase } from "../../../application/use-cases/list-service-requests.use-case";
 import type { GetServiceRequestWithCommentsUseCase } from "../../../application/use-cases/get-service-request-with-comments.use-case";
 import type { SubmitServiceRequestUseCase } from "../../../application/use-cases/submit-service-request.use-case";
 import type { AddRequestCommentUseCase } from "../../../application/use-cases/add-request-comment.use-case";
+import type { SendForApprovalServiceRequestUseCase } from "../../../application/use-cases/send-for-approval-service-request.use-case";
+import type { ApproveServiceRequestUseCase } from "../../../application/use-cases/approve-service-request.use-case";
+import type { RejectServiceRequestUseCase } from "../../../application/use-cases/reject-service-request.use-case";
+import type { StartServiceRequestUseCase } from "../../../application/use-cases/start-service-request.use-case";
+import type { CompleteServiceRequestUseCase } from "../../../application/use-cases/complete-service-request.use-case";
 import type { ServiceRequestStatus } from "../../../domain/entities/service-request.entity";
 import { InvalidStatusFilterError } from "../../../application/errors";
 import { asyncHandler } from "@pgic/shared";
@@ -42,6 +48,11 @@ export class ServiceRequestController {
     private readonly listServiceRequests: ListServiceRequestsUseCase,
     private readonly getServiceRequestWithComments: GetServiceRequestWithCommentsUseCase,
     private readonly submitServiceRequest: SubmitServiceRequestUseCase,
+    private readonly sendForApprovalServiceRequest: SendForApprovalServiceRequestUseCase,
+    private readonly approveServiceRequest: ApproveServiceRequestUseCase,
+    private readonly rejectServiceRequest: RejectServiceRequestUseCase,
+    private readonly startServiceRequest: StartServiceRequestUseCase,
+    private readonly completeServiceRequest: CompleteServiceRequestUseCase,
     private readonly addRequestComment: AddRequestCommentUseCase
   ) {}
 
@@ -92,7 +103,70 @@ export class ServiceRequestController {
         throw new ServiceRequestForbiddenError();
       }
     }
-    const request = await this.submitServiceRequest.execute(id);
+    const request = await this.submitServiceRequest.execute(id, uid);
+    res.json(request);
+  });
+
+  sendForApproval = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const uid = req.userId;
+    if (!uid) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const existing = await this.getServiceRequestWithComments.execute(id);
+    if (!canUpdateAllServiceRequests(req)) {
+      if (!uid || !isServiceRequestParticipant(existing, uid)) {
+        throw new ServiceRequestForbiddenError();
+      }
+    }
+    const request = await this.sendForApprovalServiceRequest.execute(id, uid);
+    res.json(request);
+  });
+
+  approve = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const uid = req.userId;
+    if (!uid) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const request = await this.approveServiceRequest.execute(id, uid, req.userRole);
+    res.json(request);
+  });
+
+  reject = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const uid = req.userId;
+    if (!uid) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const body = req.body as RejectServiceRequestDto;
+    const reason = body.reason?.trim() ? body.reason.trim() : null;
+    const request = await this.rejectServiceRequest.execute(id, uid, req.userRole, reason);
+    res.json(request);
+  });
+
+  start = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const uid = req.userId;
+    if (!uid) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const request = await this.startServiceRequest.execute(id, uid);
+    res.json(request);
+  });
+
+  complete = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const uid = req.userId;
+    if (!uid) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const request = await this.completeServiceRequest.execute(id, uid);
     res.json(request);
   });
 

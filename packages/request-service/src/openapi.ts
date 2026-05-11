@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createCatalogItemSchema } from "./application/dtos/create-catalog-item.dto";
 import { createServiceRequestSchema } from "./application/dtos/create-service-request.dto";
 import { addRequestCommentSchema } from "./application/dtos/add-request-comment.dto";
+import { rejectServiceRequestSchema } from "./application/dtos/reject-service-request.dto";
 
 extendZodWithOpenApi(z);
 
@@ -50,8 +51,19 @@ const CommentSchema = z.object({
   createdAt: z.string().datetime(),
 }).openapi("Comment");
 
+const WorkflowEventSchema = z.object({
+  id: z.string().uuid(),
+  requestId: z.string().uuid(),
+  actorId: z.string(),
+  fromStatus: z.string(),
+  toStatus: z.string(),
+  reason: z.string().nullable(),
+  createdAt: z.string().datetime(),
+}).openapi("ServiceRequestWorkflowEvent");
+
 const ServiceRequestWithCommentsSchema = ServiceRequestSchema.extend({
   comments: z.array(CommentSchema),
+  workflowEvents: z.array(WorkflowEventSchema),
 }).openapi("ServiceRequestWithComments");
 
 registry.registerPath({
@@ -138,6 +150,89 @@ registry.registerPath({
     200: { description: "Submitted", content: { "application/json": { schema: ServiceRequestSchema } } },
     400: { description: "Invalid transition", content: { "application/json": { schema: ErrorSchema } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/service-requests/{id}/send-for-approval",
+  summary: "Send for approval (Submitted → InApproval or Approved if catalog approvalFlow is none)",
+  tags: ["Service Requests"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Updated request", content: { "application/json": { schema: ServiceRequestSchema } } },
+    400: { description: "Invalid transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/service-requests/{id}/approve",
+  summary: "Approve request (InApproval → Approved); requires requests:approve:all and catalog approver role when set",
+  tags: ["Service Requests"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Approved", content: { "application/json": { schema: ServiceRequestSchema } } },
+    400: { description: "Invalid transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden or wrong approver role", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/service-requests/{id}/reject",
+  summary: "Reject request (InApproval → Rejected)",
+  tags: ["Service Requests"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: rejectServiceRequestSchema.openapi("RejectBody") } } },
+  },
+  responses: {
+    200: { description: "Rejected", content: { "application/json": { schema: ServiceRequestSchema } } },
+    400: { description: "Invalid transition or validation", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden or wrong approver role", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/service-requests/{id}/start",
+  summary: "Start fulfilment (Approved → InProgress); requires requests:update:all",
+  tags: ["Service Requests"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "In progress", content: { "application/json": { schema: ServiceRequestSchema } } },
+    400: { description: "Invalid transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/service-requests/{id}/complete",
+  summary: "Complete request (InProgress → Completed); requires requests:update:all",
+  tags: ["Service Requests"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Completed", content: { "application/json": { schema: ServiceRequestSchema } } },
+    400: { description: "Invalid transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
   },
 });

@@ -24,6 +24,15 @@ export interface ServiceRequestWithComments {
     body: string;
     createdAt: string;
   }>;
+  workflowEvents: Array<{
+    id: string;
+    requestId: string;
+    actorId: string;
+    fromStatus: string;
+    toStatus: string;
+    reason: string | null;
+    createdAt: string;
+  }>;
 }
 
 export class GetServiceRequestWithCommentsUseCase {
@@ -34,6 +43,7 @@ export class GetServiceRequestWithCommentsUseCase {
     if (!request) throw new ServiceRequestNotFoundError(id);
 
     const comments = await this.requestRepository.getComments(id);
+    const workflowEvents = await this.requestRepository.getWorkflowEvents(id);
 
     return {
       id: request.id,
@@ -53,6 +63,15 @@ export class GetServiceRequestWithCommentsUseCase {
         authorId: c.authorId,
         body: c.body,
         createdAt: toIso(c.createdAt),
+      })),
+      workflowEvents: workflowEvents.map((e) => ({
+        id: e.id,
+        requestId: e.requestId,
+        actorId: e.actorId,
+        fromStatus: e.fromStatus,
+        toStatus: e.toStatus,
+        reason: e.reason,
+        createdAt: toIso(e.createdAt),
       })),
     };
   }

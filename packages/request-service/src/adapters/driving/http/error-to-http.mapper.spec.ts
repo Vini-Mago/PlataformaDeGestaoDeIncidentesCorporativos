@@ -6,6 +6,7 @@ import {
   InvalidStatusTransitionError,
   InvalidStatusFilterError,
   ServiceRequestForbiddenError,
+  ServiceRequestApproverRoleForbiddenError,
 } from "../../../application/errors";
 
 describe("mapApplicationErrorToHttp (request-service)", () => {
@@ -42,6 +43,13 @@ describe("mapApplicationErrorToHttp (request-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(403);
     expect(result.message).toBe("Forbidden");
+  });
+
+  it("maps ServiceRequestApproverRoleForbiddenError to 403", () => {
+    const err = new ServiceRequestApproverRoleForbiddenError();
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(403);
+    expect(result.message).toContain("role");
   });
 
   it("returns 500 and generic message for unmapped error", () => {

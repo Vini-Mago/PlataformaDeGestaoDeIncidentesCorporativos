@@ -33,12 +33,19 @@ describe("ServiceRequestController", () => {
     };
   });
 
+  const noop = { execute: vi.fn() };
+
   const controller = () =>
     new ServiceRequestController(
       createServiceRequest,
       listServiceRequests,
       getServiceRequestWithComments,
       submitServiceRequest,
+      noop as any,
+      noop as any,
+      noop as any,
+      noop as any,
+      noop as any,
       addRequestComment
     );
 

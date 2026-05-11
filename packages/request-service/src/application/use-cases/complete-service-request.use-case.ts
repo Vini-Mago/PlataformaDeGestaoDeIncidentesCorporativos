@@ -1,15 +1,15 @@
 import type { IServiceRequestRepository } from "../ports/service-request-repository.port";
 
-export class SubmitServiceRequestUseCase {
+export class CompleteServiceRequestUseCase {
   constructor(private readonly requestRepository: IServiceRequestRepository) {}
 
-  async execute(requestId: string, actorId: string) {
-    const submittedAt = new Date();
+  execute(requestId: string, actorId: string) {
+    const completedAt = new Date();
     return this.requestRepository.transition(requestId, {
       actorId,
-      allowedFromStatuses: ["Draft"],
-      toStatus: "Submitted",
-      submittedAt,
+      allowedFromStatuses: ["InProgress"],
+      toStatus: "Completed",
+      completedAt,
     });
   }
 }

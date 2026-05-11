@@ -3,12 +3,15 @@ import type {
   ServiceRequest,
   ServiceRequestComment,
   ServiceRequestStatus,
+  ServiceRequestWorkflowEvent,
 } from "../../../domain/entities/service-request.entity.js";
 import type {
   IServiceRequestRepository,
   CreateServiceRequestData,
   ListServiceRequestsFilter,
+  TransitionServiceRequestParams,
 } from "../../../application/ports/service-request-repository.port.js";
+import { ServiceRequestNotFoundError, InvalidStatusTransitionError } from "../../../application/errors.js";
 
 export class PrismaServiceRequestRepository implements IServiceRequestRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -44,20 +47,51 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
     return rows.map((r) => this.toRequestEntity(r));
   }
 
-  async updateStatus(
-    id: string,
-    status: ServiceRequestStatus,
-    meta?: { submittedAt?: Date; completedAt?: Date }
-  ): Promise<ServiceRequest> {
-    const row = await this.prisma.serviceRequestModel.update({
-      where: { id },
-      data: {
-        status,
-        ...(meta?.submittedAt && { submittedAt: meta.submittedAt }),
-        ...(meta?.completedAt && { completedAt: meta.completedAt }),
-      },
+  async transition(id: string, params: TransitionServiceRequestParams): Promise<ServiceRequest> {
+    const allowed = new Set(params.allowedFromStatuses);
+    return await this.prisma.$transaction(async (tx) => {
+      const current = await tx.serviceRequestModel.findUnique({ where: { id } });
+      if (!current) {
+        throw new ServiceRequestNotFoundError(id);
+      }
+      if (!allowed.has(current.status as ServiceRequestStatus)) {
+        throw new InvalidStatusTransitionError(current.status, params.toStatus);
+      }
+      const row = await tx.serviceRequestModel.update({
+        where: { id },
+        data: {
+          status: params.toStatus,
+          ...(params.submittedAt && { submittedAt: params.submittedAt }),
+          ...(params.completedAt && { completedAt: params.completedAt }),
+        },
+      });
+      await tx.serviceRequestWorkflowEventModel.create({
+        data: {
+          requestId: id,
+          actorId: params.actorId,
+          fromStatus: current.status,
+          toStatus: params.toStatus,
+          reason: params.reason ?? null,
+        },
+      });
+      return this.toRequestEntity(row);
     });
-    return this.toRequestEntity(row);
+  }
+
+  async getWorkflowEvents(requestId: string): Promise<ServiceRequestWorkflowEvent[]> {
+    const rows = await this.prisma.serviceRequestWorkflowEventModel.findMany({
+      where: { requestId },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      requestId: r.requestId,
+      actorId: r.actorId,
+      fromStatus: r.fromStatus as ServiceRequestStatus,
+      toStatus: r.toStatus as ServiceRequestStatus,
+      reason: r.reason,
+      createdAt: r.createdAt,
+    }));
   }
 
   async addComment(

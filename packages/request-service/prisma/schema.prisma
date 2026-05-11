@@ -28,6 +28,22 @@ model ServiceCatalogItemModel {
   @@map("service_catalog_items")
 }
 
+// RF-6.2 — trilha de transições (quem, de→para, quando; motivo opcional em rejeição).
+model ServiceRequestWorkflowEventModel {
+  id         String   @id @default(uuid())
+  requestId  String   @map("request_id")
+  actorId    String   @map("actor_id")
+  fromStatus String   @map("from_status")
+  toStatus   String   @map("to_status")
+  reason     String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  request ServiceRequestModel @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("service_request_workflow_events")
+}
+
 // RF-6.2: Service request — instance created from a catalog item, with workflow (Draft → Submitted → InApproval → Approved/Rejected → InProgress → Completed).
 model ServiceRequestModel {
   id                String   @id @default(uuid())
@@ -44,6 +60,7 @@ model ServiceRequestModel {
 
   catalogItem       ServiceCatalogItemModel @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
   comments          ServiceRequestCommentModel[]
+  workflowEvents    ServiceRequestWorkflowEventModel[]
 
   @@index([catalogItemId])
   @@index([requesterId])

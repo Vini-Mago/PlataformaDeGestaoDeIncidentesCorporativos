@@ -4,6 +4,8 @@ Este documento consolida o **intuito estratégico** da **Plataforma de Gestão d
 
 **Como usar:** os itens marcados com `[ ]` são verificáveis (implementação, configuração, teste ou evidência em produção). Itens com `[~]` podem significar “parcialmente atendido”, “documentado mas não implantado” ou “depende de ambiente”. Ajuste os marcadores conforme o estado real do seu deployment.
 
+**Última revisão dos marcadores neste ficheiro (inspeção do código e da infra local do monorepo PGIC):** 2026-05-11. `[x]` indica evidência no repositório; `[~]` indica implementação parcial, só em desenvolvimento ou dependente de política/ambiente; `[ ]` mantém-se quando não há suporte no código atual (ex.: CI/CD, HA em produção, integration-service dedicado).
+
 ---
 
 ## 1. Sumário executivo — o que é o PGIC e qual problema resolve
@@ -85,34 +87,34 @@ Esta base é o que permite afirmar que o projeto **não é apenas um CRUD único
 
 Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível com operações reais (cadastro em lote, desativação sem quebrar histórico, perfis operacionais NOC/Suporte/Gestor/Admin).
 
-- [ ] **Cadastro, edição e exclusão/desativação de usuários** com dados mínimos e política de senha (RF-1.1–RF-1.3).
-- [ ] **RBAC** com perfis alinhados à operação (Usuário Final, Analista, NOC, Gestor, Administrador) e, se aplicável, permissões granulares e exceções por usuário (RF-1.4, RF-2.2).
-- [ ] **Autenticação segura** JWT e/ou OAuth2; hash forte de senha; opcional integração AD/LDAP em roadmap (RF-1.5).
-- [ ] **Recuperação de senha** com fluxo assíncrono (fila), expiração de token/código, mensagem genérica na UI, rate limiting (RF-1.6).
-- [ ] **Controle de sessão** — timeout, refresh, revogação ao desativar usuário, possibilidade de encerrar outras sessões (RF-1.7).
-- [ ] **Coerência com eventos** — ex.: publicação `user.created` para réplicas em outros serviços (*MICROSERVICES_LIST.md*).
+- [x] **Cadastro, edição e exclusão/desativação de usuários** com dados mínimos e política de senha (RF-1.1–RF-1.3).
+- [x] **RBAC** com perfis alinhados à operação (Usuário Final, Analista, NOC, Gestor, Administrador) e, se aplicável, permissões granulares e exceções por usuário (RF-1.4, RF-2.2).
+- [~] **Autenticação segura** JWT e/ou OAuth2; hash forte de senha; opcional integração AD/LDAP em roadmap (RF-1.5). *(JWT + OAuth Google/GitHub opcional; Argon2; AD/LDAP não implementado.)*
+- [~] **Recuperação de senha** com fluxo assíncrono (fila), expiração de token/código, mensagem genérica na UI, rate limiting (RF-1.6). *(Token, expiração, resposta genérica e rate limit no serviço; envio de e-mail via fila/SMTP não evidenciado no identity.)*
+- [x] **Controle de sessão** — timeout, refresh, revogação ao desativar usuário, possibilidade de encerrar outras sessões (RF-1.7).
+- [x] **Coerência com eventos** — ex.: publicação `user.created` para réplicas em outros serviços (*MICROSERVICES_LIST.md*).
 
 ### 4.2 Controle de acesso (RequisitosCorp §2.2 ↔ RF-2.x)
 
-- [ ] **Autorização em todas as camadas** — middleware no back-end; UI não é fronteira de segurança (RF-2.1).
-- [ ] **Permissões por módulo** (Incidentes, Requisições, Problemas, Mudanças, Relatórios, Configurações, Usuários) e por ação/escopo (RF-2.2).
-- [ ] **Logs de acesso** — login sucesso/falha, logout, acesso a recursos sensíveis, correlação com IP/user-agent (RF-2.3).
+- [x] **Autorização em todas as camadas** — middleware no back-end; UI não é fronteira de segurança (RF-2.1).
+- [x] **Permissões por módulo** (Incidentes, Requisições, Problemas, Mudanças, Relatórios, Configurações, Usuários) e por ação/escopo (RF-2.2).
+- [x] **Logs de acesso** — login sucesso/falha, logout, acesso a recursos sensíveis, correlação com IP/user-agent (RF-2.3).
 
 ### 4.3 Auditoria e rastreamento (RequisitosCorp §2.3 ↔ RF-3.x)
 
-- [ ] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1).
-- [ ] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2).
+- [~] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Histórico de estado/comentários em incidentes; audit-service com API dedicada; cobertura transversal e anexos a consolidar.)*
+- [~] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2). *(Histórico de status em incident-service; demais entidades parcial.)*
 - [ ] **Versionamento** onde compliance exigir — recuperação de versões anteriores, política de retenção (RF-3.3).
-- [ ] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*).
+- [~] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*). *(Serviço e API existentes; consumo automático de todos os eventos de domínio a verificar.)*
 
 ### 4.4 Dashboard com KPIs (RequisitosCorp §2.4 ↔ RF-4.x)
 
-- [ ] **Métricas estratégicas** — MTTR, MTBF, % SLA cumprido, disponibilidade/uptime por serviço, volume por período (RF-4.1).
-- [ ] **Indicadores operacionais** — abertos por criticidade, em risco de SLA, filas por equipe, recém-abertos (RF-4.2).
-- [ ] **Filtros** por período, serviço, equipe, criticidade, unidade (RF-4.3).
+- [~] **Métricas estratégicas** — MTTR, MTBF, % SLA cumprido, disponibilidade/uptime por serviço, volume por período (RF-4.1). *(reporting-service com CRUD de definições; agregações MTTR/MTBF em produto ainda não evidenciadas.)*
+- [~] **Indicadores operacionais** — abertos por criticidade, em risco de SLA, filas por equipe, recém-abertos (RF-4.2).
+- [~] **Filtros** por período, serviço, equipe, criticidade, unidade (RF-4.3).
 - [ ] **Exportação** PDF/CSV/Excel; relatórios pesados em background com notificação (RF-4.4).
-- [ ] **Atualização dinâmica** — polling curto ou WebSocket/SSE; “última atualização” visível (RF-4.5).
-- [ ] **Cache de agregados** (Redis) com TTL definido para não sobrecarregar consultas.
+- [~] **Atualização dinâmica** — polling curto ou WebSocket/SSE; “última atualização” visível (RF-4.5). *(SPA no frontend; dashboards executivos completos pendentes.)*
+- [~] **Cache de agregados** (Redis) com TTL definido para não sobrecarregar consultas. *(Redis no Compose; uso para KPIs agregados ainda não generalizado.)*
 
 ---
 
@@ -120,30 +122,30 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.1 Gestão de incidentes (RF-5.x) — *incident-service*
 
-- [ ] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1).
-- [ ] **Criticidade, impacto, serviço afetado, equipe** — regras de roteamento e impacto em SLA (RF-5.2).
-- [ ] **Workflow** com estados e transições permitidas; invalidação de transições ilegais com mensagem clara (RF-5.3).
-- [ ] **SLA de resposta e resolução** por tipo/criticidade/serviço; exibição de contadores e estados de pausa (RF-5.4).
-- [ ] Eventos de domínio para outros serviços (`incident.created`, mudança de status, atribuição).
+- [~] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1). *(API + UI manual; ingestão automática dedicada não evidenciada.)*
+- [~] **Criticidade, impacto, serviço afetado, equipe** — regras de roteamento e impacto em SLA (RF-5.2). *(Modelo com criticidade e serviço; ligação operacional completa ao sla-service a consolidar na UX.)*
+- [x] **Workflow** com estados e transições permitidas; invalidação de transições ilegais com mensagem clara (RF-5.3).
+- [~] **SLA de resposta e resolução** por tipo/criticidade/serviço; exibição de contadores e estados de pausa (RF-5.4). *(sla-service existe; contadores no incidente/UI a verificar.)*
+- [x] Eventos de domínio para outros serviços (`incident.created`, mudança de status, atribuição).
 
 ### 5.2 Requisições de serviço (RF-6.x) — *request-service*
 
-- [ ] **Catálogo** de itens com categoria, equipe, SLA padrão, formulário dinâmico e fluxo de aprovação (RF-6.1).
-- [ ] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2).
-- [ ] Réplica de usuários para exibição (`user.created` → `replicated_users`, conforme documentação do serviço).
+- [x] **Catálogo** de itens com categoria, equipe, SLA padrão, formulário dinâmico e fluxo de aprovação (RF-6.1).
+- [~] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2). *(Submit Draft→Submitted implementado; transições de aprovação/atendimento documentadas como TODO no request-service.)*
+- [x] Réplica de usuários para exibição (`user.created` → `replicated_users`, conforme documentação do serviço).
 
 ### 5.3 Problemas e mudanças (RF-7.x) — *problem-change-service*
 
-- [ ] Problemas com **vínculo N:1** a incidentes; lista de incidentes por problema (RF-7.1).
-- [ ] **Causa raiz** e **plano de ação** documentados e auditáveis (RF-7.2).
-- [ ] **Mudanças** com janela, risco, rollback, aprovações e estados até Concluída/Rollback (RF-7.3).
+- [x] Problemas com **vínculo N:1** a incidentes; lista de incidentes por problema (RF-7.1).
+- [x] **Causa raiz** e **plano de ação** documentados e auditáveis (RF-7.2).
+- [~] **Mudanças** com janela, risco, rollback, aprovações e estados até Concluída/Rollback (RF-7.3). *(Modelo e domínio com estados e janela; fluxo CAB completo a validar face aos use cases expostos.)*
 
 ### 5.4 SLA e escalonamento (RF-8.x) — *sla-service*, *escalation-service*, *notification-service*
 
-- [ ] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1).
-- [ ] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2).
-- [ ] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3).
-- [ ] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4).
+- [~] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service com calendários e políticas; maturidade operacional a confirmar em testes e UI.)*
+- [~] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2).
+- [~] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Serviço presente; regras e histórico completos a evidenciar.)*
+- [~] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(notification-service presente; canais/DLQ documentados operacionalmente — pendente.)*
 
 ### 5.5 Integrações externas (RF-9.x) — *integration-service* (planejado)
 
@@ -154,9 +156,9 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.6 Processamento assíncrono (RF-10.x)
 
-- [ ] **Jobs em background** para relatórios, KPIs, e-mails em massa, sincronizações (RF-10.1).
-- [ ] **Retry** com backoff e **DLQ** após N falhas; ferramenta ou API para reprocessar (RF-10.2).
-- [ ] **Outbox pattern** onde eventos devem ser consistentes com o estado transacional (recomendação em *MICROSERVICES_LIST.md*).
+- [~] **Jobs em background** para relatórios, KPIs, e-mails em massa, sincronizações (RF-10.1). *(Relays outbox e workers parciais; jobs de relatório pesado não generalizados.)*
+- [~] **Retry** com backoff e **DLQ** após N falhas; ferramenta ou API para reprocessar (RF-10.2).
+- [x] **Outbox pattern** onde eventos devem ser consistentes com o estado transacional (recomendação em *MICROSERVICES_LIST.md*).
 
 ---
 
@@ -164,36 +166,36 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 6.1 Segurança
 
-- [ ] Criptografia em trânsito (HTTPS) e proteção de dados sensíveis em repouso conforme modelo de ameaças.
-- [ ] Defesas contra **SQL injection** (Prisma parametrizado + revisão), **XSS** no front, validação de entrada nos DTOs.
-- [ ] **Rate limiting** em APIs expostas (gateway ou serviço).
+- [~] Criptografia em trânsito (HTTPS) e proteção de dados sensíveis em repouso conforme modelo de ameaças. *(TLS típico em produção; stack local HTTP.)*
+- [~] Defesas contra **SQL injection** (Prisma parametrizado + revisão), **XSS** no front, validação de entrada nos DTOs. *(Prisma + Zod; CSP/monitorização XSS em maturação.)*
+- [~] **Rate limiting** em APIs expostas (gateway ou serviço). *(Express rate-limit em rotas sensíveis do identity; sem `limit_req` no Nginx.)*
 - [ ] **Backup** automatizado do PostgreSQL e política de retenção.
 - [ ] **LGPD** — base legal, minimização, retenção, anonimização em desativação quando exigido, registro de operações sobre dados pessoais.
 
 ### 6.2 Performance
 
-- [ ] Tempos de resposta aceitáveis para operações síncronas críticas.
-- [ ] **Redis** para cache de configurações, sessões e agregados de KPI.
-- [ ] Otimização de consultas e índices por serviço.
-- [ ] Tarefas pesadas **fora** do request HTTP principal (filas).
+- [~] Tempos de resposta aceitáveis para operações síncronas críticas. *(Sem metas p95/p99 documentadas no repositório.)*
+- [~] **Redis** para cache de configurações, sessões e agregados de KPI. *(Redis no Compose; cache OAuth/sessão no identity; KPIs agregados a expandir.)*
+- [x] Otimização de consultas e índices por serviço.
+- [~] Tarefas pesadas **fora** do request HTTP principal (filas). *(Mensageria e outbox; relatórios pesados assíncronos genéricos pendentes.)*
 
 ### 6.3 Escalabilidade
 
-- [ ] Serviços **stateless** onde possível; sessão/token externalizados.
-- [ ] Escalabilidade horizontal de instâncias atrás do gateway/load balancer (evolução além do Compose).
-- [ ] Desacoplamento via mensageria para picos de carga.
+- [x] Serviços **stateless** onde possível; sessão/token externalizados.
+- [~] Escalabilidade horizontal de instâncias atrás do gateway/load balancer (evolução além do Compose). *(Nginx como gateway local; LB cloud/K8s fora do repo.)*
+- [x] Desacoplamento via mensageria para picos de carga.
 
 ### 6.4 Disponibilidade
 
-- [ ] **Health checks** por serviço.
+- [x] **Health checks** por serviço.
 - [ ] Monitoramento e alertas (métricas, logs centralizados).
 - [ ] Estratégia de failover para banco e broker em ambientes produtivos.
 
 ### 6.5 Interoperabilidade
 
-- [ ] APIs **REST** padronizadas, JSON, erros consistentes (`ErrorResponseDto` no shared).
-- [ ] **Versionamento** de API documentado (caminho ou cabeçalho).
-- [ ] Contratos estáveis para integradores e para **testes de contrato** entre serviços.
+- [x] APIs **REST** padronizadas, JSON, erros consistentes (`ErrorResponseDto` no shared).
+- [~] **Versionamento** de API documentado (caminho ou cabeçalho). *(OpenAPI por serviço e api-docs; política `/v1` global a formalizar.)*
+- [~] Contratos estáveis para integradores e para **testes de contrato** entre serviços. *(OpenAPI e testes de integração; pact/contrato formal opcional.)*
 
 ---
 
@@ -201,25 +203,25 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 7.1 Microsserviços (§4)
 
-- [ ] Responsabilidade única por serviço; fronteiras alinhadas ao domínio ITSM (*MICROSERVICES.md*).
-- [ ] APIs REST próprias por serviço; banco dedicado por serviço quando aplicável (padrão `*_service` no Postgres).
-- [ ] Comunicação assíncrona para eventos de domínio e workloads.
+- [x] Responsabilidade única por serviço; fronteiras alinhadas ao domínio ITSM (*MICROSERVICES.md*).
+- [x] APIs REST próprias por serviço; banco dedicado por serviço quando aplicável (padrão `*_service` no Postgres).
+- [x] Comunicação assíncrona para eventos de domínio e workloads.
 
 ### 7.2 Separação front-end / back-end (§5)
 
-- [ ] Front-end (e **bff** se usado) consumindo apenas APIs; sem lógica de negócio exclusiva no cliente.
-- [ ] Documentação unificada (**api-docs** / Swagger) para reduzir atrito de integração.
+- [x] Front-end (e **bff** se usado) consumindo apenas APIs; sem lógica de negócio exclusiva no cliente.
+- [x] Documentação unificada (**api-docs** / Swagger) para reduzir atrito de integração.
 
 ### 7.3 Estratégia de dados (§6)
 
-- [ ] **PostgreSQL** para dados transacionais e relacionamentos fortes.
-- [ ] **Redis** para cache/sessão/rate limit.
+- [x] **PostgreSQL** para dados transacionais e relacionamentos fortes.
+- [x] **Redis** para cache/sessão/rate limit.
 - [ ] Uso de **document store** para alto volume de logs/auditoria se/ad quando o volume justificar (*visãogeral.md*).
 
 ### 7.4 RabbitMQ e processamento assíncrono (§7–§8)
 
-- [ ] Filas para integração, notificação, relatórios, consumers idempotentes onde necessário.
-- [ ] **Dead-letter queues** e política de retry documentada operacionalmente.
+- [~] Filas para integração, notificação, relatórios, consumers idempotentes onde necessário.
+- [~] **Dead-letter queues** e política de retry documentada operacionalmente.
 
 ---
 
@@ -227,27 +229,27 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 8.1 Integrações (§9)
 
-- [ ] Contratos de entrada/saída versionados; logs com correlação (trace id).
-- [ ] Timeouts e retries configuráveis por integração.
+- [~] Contratos de entrada/saída versionados; logs com correlação (trace id). *(Logger shared; correlação ponta-a-ponta a uniformizar.)*
+- [~] Timeouts e retries configuráveis por integração.
 
 ### 8.2 Infraestrutura (§10)
 
-- [ ] **Docker** para padronizar execução local e CI.
+- [x] **Docker** para padronizar execução local e CI. *(Docker Compose para Postgres, Redis, RabbitMQ, Nginx; apps em dev via host.)*
 - [ ] **Orquestração** (Kubernetes ou similar) para produção com auto scaling — roadmap infra.
 - [ ] **CI/CD** — build, testes, deploy com gates de qualidade.
 
 ### 8.3 Testes (§11)
 
-- [ ] Testes unitários nos use cases (Vitest no monorepo).
-- [ ] Testes de integração (API + banco + fila em ambiente controlado).
+- [x] Testes unitários nos use cases (Vitest no monorepo).
+- [x] Testes de integração (API + banco + fila em ambiente controlado).
 - [ ] Testes de carga em endpoints críticos (opcional por estágio).
 - [ ] Testes de segurança (SAST/DAST conforme política).
 - [ ] Testes de contrato entre produtores/consumidores de APIs e eventos.
 
 ### 8.4 Governança (§12)
 
-- [ ] Fluxo Git com branches e **code review** obrigatório.
-- [ ] Documentação técnica viva (README, docs, ADRs se adotados).
+- [~] Fluxo Git com branches e **code review** obrigatório. *(Git em uso; política de branch/review não versionada no repo.)*
+- [x] Documentação técnica viva (README, docs, ADRs se adotados).
 - [ ] Monitoramento contínuo e política de segurança da informação no SDLC.
 
 ---
@@ -290,12 +292,12 @@ Esse fluxo explica a **relação lógica** entre o “intuito” da PGIC (operar
 
 Considere a PGIC alinhada ao **RequisitosCorp** quando, no mínimo:
 
-- [ ] Os fluxos críticos de **autenticação, autorização e auditoria** estão implementados e testados de ponta a ponta.
-- [ ] **Incidentes** e/ou **requisições** percorrem ciclo completo com **histórico** consultável.
-- [ ] **SLA** (mesmo que em versão inicial) aplica regras de forma explicável e testável.
+- [~] Os fluxos críticos de **autenticação, autorização e auditoria** estão implementados e testados de ponta a ponta.
+- [~] **Incidentes** e/ou **requisições** percorrem ciclo completo com **histórico** consultável. *(Incidente com histórico; requisição com workflow completo ainda parcial.)*
+- [~] **SLA** (mesmo que em versão inicial) aplica regras de forma explicável e testável.
 - [ ] **Integrações** críticas têm logs, retry e caminho de recuperação (DLQ/reprocessamento).
 - [ ] **Dashboard/relatórios** refletem filtros e exportação com dados consistentes com o back-end.
-- [ ] **Infra de desenvolvimento** (Compose, migrations, gateway) está documentada e reproduzível; **roadmap** claro para HA e CI/CD em produção.
+- [~] **Infra de desenvolvimento** (Compose, migrations, gateway) está documentada e reproduzível; **roadmap** claro para HA e CI/CD em produção.
 
 ---
 

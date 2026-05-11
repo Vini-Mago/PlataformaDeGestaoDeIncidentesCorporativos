@@ -26,7 +26,8 @@ describe("ListServiceRequestsUseCase", () => {
       create: vi.fn(),
       findById: vi.fn(),
       list: vi.fn().mockResolvedValue(mockRequests),
-      updateStatus: vi.fn(),
+      transition: vi.fn(),
+      getWorkflowEvents: vi.fn(),
       addComment: vi.fn(),
       getComments: vi.fn(),
     };

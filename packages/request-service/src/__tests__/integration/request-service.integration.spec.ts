@@ -287,6 +287,8 @@ describe("Request Service API integration", () => {
       });
       expect(res.body).toHaveProperty("comments");
       expect(Array.isArray(res.body.comments)).toBe(true);
+      expect(res.body).toHaveProperty("workflowEvents");
+      expect(Array.isArray(res.body.workflowEvents)).toBe(true);
     });
 
     const readOwnReqPerms = ["requests:read:own"];
@@ -392,6 +394,17 @@ describe("Request Service API integration", () => {
         .expect(200);
       expect(res.body.status).toBe("Submitted");
       expect(res.body).toHaveProperty("submittedAt");
+
+      const getRes = await request(app)
+        .get(`/api/service-requests/${req.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(getRes.body.workflowEvents.length).toBeGreaterThanOrEqual(1);
+      expect(getRes.body.workflowEvents[0]).toMatchObject({
+        fromStatus: "Draft",
+        toStatus: "Submitted",
+        actorId: userId,
+      });
     });
 
     it("returns 400 when submitting already Submitted request", async ({ skip }) => {
@@ -476,6 +489,118 @@ describe("Request Service API integration", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .send({ body: "" })
         .expect(400);
+    });
+  });
+
+  describe("Service request workflow (integration)", () => {
+    it("approvalFlow none: Submitted → Approved on send-for-approval, then start and complete", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const catalogItem = await container.prisma.serviceCatalogItemModel.create({
+        data: { name: "No approval cat", approvalFlow: "none", approverRoleIds: [] },
+      });
+      const req = await container.prisma.serviceRequestModel.create({
+        data: {
+          catalogItemId: catalogItem.id,
+          requesterId: userId,
+          status: "Submitted",
+          submittedAt: new Date(),
+        },
+      });
+
+      const send = await request(app)
+        .post(`/api/service-requests/${req.id}/send-for-approval`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(send.body.status).toBe("Approved");
+
+      const start = await request(app)
+        .post(`/api/service-requests/${req.id}/start`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(start.body.status).toBe("InProgress");
+
+      const done = await request(app)
+        .post(`/api/service-requests/${req.id}/complete`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(done.body.status).toBe("Completed");
+      expect(done.body.completedAt).toBeTruthy();
+
+      const detail = await request(app)
+        .get(`/api/service-requests/${req.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(detail.body.workflowEvents.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("approvalFlow single: gestor approves; analista with approve perm gets 403 when not in approverRoleIds", async ({
+      skip,
+    }) => {
+      if (!dbAvailable) skip();
+      const catalogItem = await container.prisma.serviceCatalogItemModel.create({
+        data: {
+          name: "Manager-only approval",
+          approvalFlow: "single",
+          approverRoleIds: ["gestor"],
+        },
+      });
+      const req = await container.prisma.serviceRequestModel.create({
+        data: {
+          catalogItemId: catalogItem.id,
+          requesterId: userId,
+          status: "InApproval",
+        },
+      });
+
+      const analistaToken = createTestJwt({
+        sub: "33333333-3333-3333-3333-333333333333",
+        email: "ana@test.com",
+        role: "analista",
+        perms: ["requests:approve:all", "requests:read:all"],
+      });
+      await request(app)
+        .post(`/api/service-requests/${req.id}/approve`)
+        .set("Authorization", `Bearer ${analistaToken}`)
+        .expect(403);
+
+      const gestorToken = createTestJwt({
+        sub: "44444444-4444-4444-4444-444444444444",
+        email: "gest@test.com",
+        role: "gestor",
+        perms: ["requests:approve:all"],
+      });
+      const ok = await request(app)
+        .post(`/api/service-requests/${req.id}/approve`)
+        .set("Authorization", `Bearer ${gestorToken}`)
+        .expect(200);
+      expect(ok.body.status).toBe("Approved");
+    });
+
+    it("reject stores reason on workflow trail", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const catalogItem = await container.prisma.serviceCatalogItemModel.create({
+        data: { name: "Reject cat", approvalFlow: "single", approverRoleIds: [] },
+      });
+      const req = await container.prisma.serviceRequestModel.create({
+        data: {
+          catalogItemId: catalogItem.id,
+          requesterId: userId,
+          status: "InApproval",
+        },
+      });
+      await request(app)
+        .post(`/api/service-requests/${req.id}/reject`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ reason: "  Falta documentação  " })
+        .expect(200);
+
+      const detail = await request(app)
+        .get(`/api/service-requests/${req.id}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(detail.body.status).toBe("Rejected");
+      const rejectEvt = detail.body.workflowEvents.find((e: { toStatus: string }) => e.toStatus === "Rejected");
+      expect(rejectEvt?.reason).toBe("Falta documentação");
     });
   });
 

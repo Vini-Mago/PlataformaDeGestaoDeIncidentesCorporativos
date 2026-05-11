@@ -11,6 +11,11 @@ import { CreateServiceRequestUseCase } from "./application/use-cases/create-serv
 import { ListServiceRequestsUseCase } from "./application/use-cases/list-service-requests.use-case";
 import { GetServiceRequestWithCommentsUseCase } from "./application/use-cases/get-service-request-with-comments.use-case";
 import { SubmitServiceRequestUseCase } from "./application/use-cases/submit-service-request.use-case";
+import { SendForApprovalServiceRequestUseCase } from "./application/use-cases/send-for-approval-service-request.use-case";
+import { ApproveServiceRequestUseCase } from "./application/use-cases/approve-service-request.use-case";
+import { RejectServiceRequestUseCase } from "./application/use-cases/reject-service-request.use-case";
+import { StartServiceRequestUseCase } from "./application/use-cases/start-service-request.use-case";
+import { CompleteServiceRequestUseCase } from "./application/use-cases/complete-service-request.use-case";
 import { AddRequestCommentUseCase } from "./application/use-cases/add-request-comment.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { CatalogItemController } from "./adapters/driving/http/catalog-item.controller";
@@ -40,6 +45,11 @@ interface RequestCradle {
   listServiceRequestsUseCase: ListServiceRequestsUseCase;
   getServiceRequestWithCommentsUseCase: GetServiceRequestWithCommentsUseCase;
   submitServiceRequestUseCase: SubmitServiceRequestUseCase;
+  sendForApprovalServiceRequestUseCase: SendForApprovalServiceRequestUseCase;
+  approveServiceRequestUseCase: ApproveServiceRequestUseCase;
+  rejectServiceRequestUseCase: RejectServiceRequestUseCase;
+  startServiceRequestUseCase: StartServiceRequestUseCase;
+  completeServiceRequestUseCase: CompleteServiceRequestUseCase;
   addRequestCommentUseCase: AddRequestCommentUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
@@ -113,6 +123,29 @@ export function createContainer(config: RequestContainerConfig) {
         new SubmitServiceRequestUseCase(cradle.requestRepository)
     ).singleton(),
 
+    sendForApprovalServiceRequestUseCase: asFunction(
+      (cradle: RequestCradle) =>
+        new SendForApprovalServiceRequestUseCase(cradle.requestRepository, cradle.catalogRepository)
+    ).singleton(),
+
+    approveServiceRequestUseCase: asFunction(
+      (cradle: RequestCradle) =>
+        new ApproveServiceRequestUseCase(cradle.requestRepository, cradle.catalogRepository)
+    ).singleton(),
+
+    rejectServiceRequestUseCase: asFunction(
+      (cradle: RequestCradle) =>
+        new RejectServiceRequestUseCase(cradle.requestRepository, cradle.catalogRepository)
+    ).singleton(),
+
+    startServiceRequestUseCase: asFunction(
+      (cradle: RequestCradle) => new StartServiceRequestUseCase(cradle.requestRepository)
+    ).singleton(),
+
+    completeServiceRequestUseCase: asFunction(
+      (cradle: RequestCradle) => new CompleteServiceRequestUseCase(cradle.requestRepository)
+    ).singleton(),
+
     addRequestCommentUseCase: asFunction(
       (cradle: RequestCradle) =>
         new AddRequestCommentUseCase(cradle.requestRepository)
@@ -151,6 +184,11 @@ export function createContainer(config: RequestContainerConfig) {
           cradle.listServiceRequestsUseCase,
           cradle.getServiceRequestWithCommentsUseCase,
           cradle.submitServiceRequestUseCase,
+          cradle.sendForApprovalServiceRequestUseCase,
+          cradle.approveServiceRequestUseCase,
+          cradle.rejectServiceRequestUseCase,
+          cradle.startServiceRequestUseCase,
+          cradle.completeServiceRequestUseCase,
           cradle.addRequestCommentUseCase
         )
     ).singleton(),

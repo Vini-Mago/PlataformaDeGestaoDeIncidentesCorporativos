@@ -32,3 +32,14 @@ export interface ServiceRequestComment {
   body: string;
   createdAt: Date;
 }
+
+/** Registo de uma transição de workflow (RF-6.2 — auditoria). */
+export interface ServiceRequestWorkflowEvent {
+  id: string;
+  requestId: string;
+  actorId: string;
+  fromStatus: ServiceRequestStatus;
+  toStatus: ServiceRequestStatus;
+  reason: string | null;
+  createdAt: Date;
+}

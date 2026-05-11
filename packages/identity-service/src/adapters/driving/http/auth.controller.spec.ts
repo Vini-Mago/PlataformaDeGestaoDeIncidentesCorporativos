@@ -15,6 +15,7 @@ import type { IAuthSessionRepository } from "../../../application/ports/auth-ses
 import type { IPasswordResetTokenRepository } from "../../../application/ports/password-reset-token-repository.port";
 import type { IPasswordHasher } from "../../../application/ports/password-hasher.port";
 import type { IAccessLogRepository } from "../../../application/ports/access-log-repository.port";
+import type { IAuthorizationRepository } from "../../../application/ports/authorization-repository.port";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
@@ -40,6 +41,7 @@ describe("AuthController", () => {
   let passwordResetTokenRepository: IPasswordResetTokenRepository;
   let passwordHasher: IPasswordHasher;
   let accessLogRepository: IAccessLogRepository;
+  let authorizationRepository: IAuthorizationRepository;
   let res: Response;
   let next: NextFunction;
 
@@ -51,6 +53,7 @@ describe("AuthController", () => {
     id: "user-1",
     email: "u@example.com",
     name: "User",
+    role: "user",
     createdAt: "2025-01-01T00:00:00.000Z",
   };
 
@@ -97,6 +100,11 @@ describe("AuthController", () => {
     passwordResetTokenRepository = { create: vi.fn(), findByTokenHash: vi.fn(), markUsed: vi.fn() } as unknown as IPasswordResetTokenRepository;
     passwordHasher = { hash: vi.fn(), verify: vi.fn() } as unknown as IPasswordHasher;
     accessLogRepository = { create: vi.fn(), list: vi.fn() } as unknown as IAccessLogRepository;
+    authorizationRepository = {
+      getRolePermissions: vi.fn().mockResolvedValue([]),
+      getUserPermissionOverrides: vi.fn().mockResolvedValue([]),
+      getPermissionsByIds: vi.fn().mockResolvedValue([]),
+    } as unknown as IAuthorizationRepository;
     res = createMockResponse();
     next = ((err: unknown) => {
       const { statusCode, message } = mapApplicationErrorToHttp(err);
@@ -123,6 +131,7 @@ describe("AuthController", () => {
       passwordResetTokenRepository,
       passwordHasher,
       accessLogRepository,
+      authorizationRepository,
       false
     );
   }
@@ -288,6 +297,7 @@ describe("AuthController", () => {
         passwordResetTokenRepository,
         passwordHasher,
         accessLogRepository,
+        authorizationRepository,
         false
       );
       vi.mocked(cache.set).mockResolvedValue(undefined);
@@ -351,6 +361,7 @@ describe("AuthController", () => {
         passwordResetTokenRepository,
         passwordHasher,
         accessLogRepository,
+        authorizationRepository,
         false
       );
       const req = createMockRequest({ query: {} });
@@ -390,6 +401,7 @@ describe("AuthController", () => {
         passwordResetTokenRepository,
         passwordHasher,
         accessLogRepository,
+        authorizationRepository,
         false
       );
       const req = createMockRequest({ query: { code: validCode, state: validState } });
@@ -431,6 +443,7 @@ describe("AuthController", () => {
         passwordResetTokenRepository,
         passwordHasher,
         accessLogRepository,
+        authorizationRepository,
         false
       );
       const req = createMockRequest({ query: { code: validCode, state: validState } });

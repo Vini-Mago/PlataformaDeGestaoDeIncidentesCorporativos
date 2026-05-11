@@ -15,6 +15,8 @@ Este documento é o **guia operacional máximo** para conceber, implementar, int
 - `[~]` — em progresso, parcial, ou dependente de ambiente/decisão pendente.
 - `[x]` — concluído e verificado (teste, revisão ou evidência em ambiente alvo).
 
+**Revisão de marcadores no repositório PGIC:** 2026-05-11 — a secção **«Cobertura integral — espelho normativo»** abaixo foi atualizada com base no código e no `docker-compose` local; as **Fases 0–17** mantêm sobretudo orientação processual: marque-as à medida que fechar entregas (muitos micro-passos ainda dependem de evidência manual).
+
 **Princípio de uso**
 
 1. Percorra as **fases na ordem** quando possível (fundacional antes de domínio; domínio antes de relatório enterprise completo).
@@ -29,165 +31,165 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 
 ### RC §1 Introdução — características do sistema corporativo
 
-- [ ] Suporte a **múltiplos usuários** e operações concorrentes com modelo de permissões coerente.
-- [ ] Capacidade para **grandes volumes de dados** (estrategia de índices, paginação, arquivamento quando aplicável).
-- [ ] **Integração com outros sistemas** (REST, webhooks, mensageria) como capacidade de primeira classe.
-- [ ] **Alto nível de confiabilidade** — tratamento de falhas, filas, retries, observabilidade.
-- [ ] **Arquitetura moderna**: microsserviços, **mensageria** e **processamento assíncrono** explicitamente adotados no desenho.
+- [x] Suporte a **múltiplos usuários** e operações concorrentes com modelo de permissões coerente.
+- [~] Capacidade para **grandes volumes de dados** (estrategia de índices, paginação, arquivamento quando aplicável).
+- [~] **Integração com outros sistemas** (REST, webhooks, mensageria) como capacidade de primeira classe.
+- [~] **Alto nível de confiabilidade** — tratamento de falhas, filas, retries, observabilidade.
+- [x] **Arquitetura moderna**: microsserviços, **mensageria** e **processamento assíncrono** explicitamente adotados no desenho.
 
 ### RC §2 Requisitos funcionais
 
 #### RC §2.1 Gestão de usuários
 
-- [ ] **Cadastro** de usuários (fluxo e validação no back-end).
-- [ ] **Edição** de usuários (quem pode alterar o quê).
-- [ ] **Exclusão** — física apenas onde política permitir; **desativação** como padrão para preservar histórico.
-- [ ] **Controle de perfis e permissões (RBAC)** — papéis e, se aplicável, matriz por módulo/ação.
-- [ ] **Autenticação segura** — **JWT** e/ou **OAuth2** (conforme decisão da Fase 0).
-- [ ] **Recuperação de senha** — fluxo seguro e assíncrono.
-- [ ] **Controle de sessão** — timeout, revogação, opcional listagem/encerramento de sessões.
+- [x] **Cadastro** de usuários (fluxo e validação no back-end).
+- [x] **Edição** de usuários (quem pode alterar o quê).
+- [x] **Exclusão** — física apenas onde política permitir; **desativação** como padrão para preservar histórico.
+- [x] **Controle de perfis e permissões (RBAC)** — papéis e, se aplicável, matriz por módulo/ação.
+- [~] **Autenticação segura** — **JWT** e/ou **OAuth2** (conforme decisão da Fase 0).
+- [~] **Recuperação de senha** — fluxo seguro e assíncrono.
+- [x] **Controle de sessão** — timeout, revogação, opcional listagem/encerramento de sessões.
 
 #### RC §2.2 Controle de acesso
 
-- [ ] **Autorização baseada em papéis** em todas as rotas/ações sensíveis.
-- [ ] **Permissões por módulo** (incidentes, requisições, relatórios, configurações, etc.).
-- [ ] **Logs de acesso** — autenticação, falhas, acessos a recursos sensíveis, consulta administrativa.
+- [x] **Autorização baseada em papéis** em todas as rotas/ações sensíveis.
+- [x] **Permissões por módulo** (incidentes, requisições, relatórios, configurações, etc.).
+- [x] **Logs de acesso** — autenticação, falhas, acessos a recursos sensíveis, consulta administrativa.
 
 #### RC §2.3 Auditoria e rastreamento
 
-- [ ] **Registro de ações** dos usuários sobre entidades relevantes.
-- [ ] **Histórico de alterações** em campos críticos.
+- [~] **Registro de ações** dos usuários sobre entidades relevantes.
+- [~] **Histórico de alterações** em campos críticos.
 - [ ] **Versionamento de dados** onde compliance ou disputas operacionais exigirem reconstrução do passado.
 
 #### RC §2.4 Dashboard com KPIs
 
-- [ ] **Visualização de métricas estratégicas** (MTTR, MTBF, SLA, disponibilidade, volumes — conforme escopo PGIC).
-- [ ] **Indicadores operacionais em tempo real** (ou quase real — polling/WebSocket/SSE).
-- [ ] **Filtros por período** (e demais dimensões acordadas: serviço, equipe, criticidade).
+- [~] **Visualização de métricas estratégicas** (MTTR, MTBF, SLA, disponibilidade, volumes — conforme escopo PGIC).
+- [~] **Indicadores operacionais em tempo real** (ou quase real — polling/WebSocket/SSE).
+- [~] **Filtros por período** (e demais dimensões acordadas: serviço, equipe, criticidade).
 - [ ] **Exportação de relatórios** (PDF, CSV/Excel ou equivalentes).
-- [ ] **Atualização dinâmica** da visualização sem recarregar a página inteira de forma grosseira (SPA + atualização incremental).
+- [~] **Atualização dinâmica** da visualização sem recarregar a página inteira de forma grosseira (SPA + atualização incremental).
 
 ### RC §3 Requisitos não funcionais
 
 #### RC §3.1 Segurança
 
-- [ ] **Criptografia de dados sensíveis** — em trânsito (TLS) e em repouso onde aplicável (campos, volumes de disco).
-- [ ] **Proteção contra SQL Injection** — consultas parametrizadas/ORM adequado, revisão de SQL dinâmico.
-- [ ] **Proteção contra XSS** — sanitização/escape no front, CSP quando maduro.
-- [ ] **Rate limiting** — gateway ou serviços nas APIs públicas e endpoints sensíveis.
+- [~] **Criptografia de dados sensíveis** — em trânsito (TLS) e em repouso onde aplicável (campos, volumes de disco).
+- [x] **Proteção contra SQL Injection** — consultas parametrizadas/ORM adequado, revisão de SQL dinâmico.
+- [~] **Proteção contra XSS** — sanitização/escape no front, CSP quando maduro.
+- [~] **Rate limiting** — gateway ou serviços nas APIs públicas e endpoints sensíveis.
 - [ ] **Backup automatizado** — banco e política de retenção; testes de restore.
 - [ ] **Compliance com LGPD** — bases legais, retenção, direitos do titular, minimização.
 
 #### RC §3.2 Performance
 
-- [ ] **Baixo tempo de resposta** — metas definidas e medidas (p95/p99) nos fluxos críticos.
-- [ ] **Uso de cache** — **Redis** ou similar para sessão, agregados de KPI, configs quentes.
-- [ ] **Otimização de consultas** — índices, EXPLAIN em relatórios pesados, evitar N+1.
-- [ ] **Processamento assíncrono para tarefas pesadas** — relatórios, e-mails, integrações em massa via filas.
+- [~] **Baixo tempo de resposta** — metas definidas e medidas (p95/p99) nos fluxos críticos.
+- [~] **Uso de cache** — **Redis** ou similar para sessão, agregados de KPI, configs quentes.
+- [x] **Otimização de consultas** — índices, EXPLAIN em relatórios pesados, evitar N+1.
+- [~] **Processamento assíncrono para tarefas pesadas** — relatórios, e-mails, integrações em massa via filas.
 
 #### RC §3.3 Escalabilidade
 
-- [ ] **Escalabilidade horizontal** — múltiplas instâncias stateless por serviço atrás do balanceador.
-- [ ] **Balanceamento de carga** — Nginx/gateway em desenvolvimento; LB em staging/prod.
-- [ ] **Arquitetura desacoplada** — front separado, microsserviços, eventos assíncronos.
+- [~] **Escalabilidade horizontal** — múltiplas instâncias stateless por serviço atrás do balanceador.
+- [~] **Balanceamento de carga** — Nginx/gateway em desenvolvimento; LB em staging/prod.
+- [x] **Arquitetura desacoplada** — front separado, microsserviços, eventos assíncronos.
 
 #### RC §3.4 Disponibilidade
 
 - [ ] **Alta disponibilidade (HA)** — pelo menos planejada para Postgres, Redis, RabbitMQ e apps em produção (réplicas, quorum, SLA de infra).
 - [ ] **Monitoramento com métricas e alertas** — latência, erros, filas, disco, pods/nós.
-- [ ] **Health checks** — por serviço, consumidos por orquestrador ou monitor.
+- [x] **Health checks** — por serviço, consumidos por orquestrador ou monitor.
 - [ ] **Failover** — procedimento documentado para falha de nó, broker ou DB (mesmo que manual na primeira versão).
 
 #### RC §3.5 Interoperabilidade
 
-- [ ] **APIs padronizadas RESTful** — recursos, verbos HTTP, códigos de status consistentes.
-- [ ] **Comunicação via JSON** — payloads e erros em JSON uniforme (`@pgic/shared`).
-- [ ] **Versionamento de API** — política `/v1` ou cabeçalho; depreciação documentada.
-- [ ] **Integração bidirecional com sistemas externos** — entrada (webhook/API) e saída (ERP, notificações, CRM).
+- [x] **APIs padronizadas RESTful** — recursos, verbos HTTP, códigos de status consistentes.
+- [x] **Comunicação via JSON** — payloads e erros em JSON uniforme (`@pgic/shared`).
+- [~] **Versionamento de API** — política `/v1` ou cabeçalho; depreciação documentada.
+- [~] **Integração bidirecional com sistemas externos** — entrada (webhook/API) e saída (ERP, notificações, CRM).
 
 ### RC §4 Arquitetura baseada em microsserviços
 
 #### RC §4.1 Divisão em serviços e benefícios
 
-- [ ] Sistema **dividido em serviços independentes**, cada um com **domínio específico** (usuários, incidentes, relatórios, etc.).
-- [ ] **Escalabilidade independente** por serviço (réplicas diferentes conforme carga).
-- [ ] **Deploy isolado** — pipeline por artefato/serviço sem redeploy monolítico obrigatório.
-- [ ] **Melhor manutenção** — fronteiras claras, ownership por time ou módulo.
-- [ ] **Maior resiliência** — falha parcial não derruba todo o sistema se isolamento estiver correto.
+- [x] Sistema **dividido em serviços independentes**, cada um com **domínio específico** (usuários, incidentes, relatórios, etc.).
+- [x] **Escalabilidade independente** por serviço (réplicas diferentes conforme carga).
+- [~] **Deploy isolado** — pipeline por artefato/serviço sem redeploy monolítico obrigatório.
+- [x] **Melhor manutenção** — fronteiras claras, ownership por time ou módulo.
+- [~] **Maior resiliência** — falha parcial não derruba todo o sistema se isolamento estiver correto.
 
 #### RC §4.1 — cada microsserviço deve
 
-- [ ] **Responsabilidade única** por serviço (evitar “god service”).
-- [ ] Ser **stateless** — estado em BD/cache/broker, não em memória local irrecuperável.
-- [ ] **Expor API REST própria** documentada (Swagger/OpenAPI).
-- [ ] **Possuir banco isolado quando necessário** — padrão um schema/DB por serviço na PGIC (PostgreSQL por serviço).
+- [x] **Responsabilidade única** por serviço (evitar “god service”).
+- [x] Ser **stateless** — estado em BD/cache/broker, não em memória local irrecuperável.
+- [x] **Expor API REST própria** documentada (Swagger/OpenAPI).
+- [x] **Possuir banco isolado quando necessário** — padrão um schema/DB por serviço na PGIC (PostgreSQL por serviço).
 
 ### RC §5 Separação entre front-end e back-end
 
 #### RC §5.1 Comunicação via API RESTful
 
-- [ ] **Front-end desacoplado** — pacote `frontend` (e `bff` se usado) sem regra de negócio exclusiva no cliente.
-- [ ] **Back-end expõe APIs REST** — microsserviços atrás do gateway.
-- [ ] **HTTP/HTTPS** — TLS obrigatório fora do localhost.
-- [ ] **Uso de JSON** em request/response.
+- [x] **Front-end desacoplado** — pacote `frontend` (e `bff` se usado) sem regra de negócio exclusiva no cliente.
+- [x] **Back-end expõe APIs REST** — microsserviços atrás do gateway.
+- [~] **HTTP/HTTPS** — TLS obrigatório fora do localhost.
+- [x] **Uso de JSON** em request/response.
 
 #### RC §5 — benefícios previstos pelo normativo (verificação de projeto)
 
-- [ ] **Independência tecnológica** — possibilidade de trocar stack do front sem reescrever domínio.
-- [ ] **Escalabilidade separada** — CDN/front vs APIs vs workers.
-- [ ] **Reutilização da API** — mobile futuro, integrações parceiros, scripts.
+- [x] **Independência tecnológica** — possibilidade de trocar stack do front sem reescrever domínio.
+- [~] **Escalabilidade separada** — CDN/front vs APIs vs workers.
+- [x] **Reutilização da API** — mobile futuro, integrações parceiros, scripts.
 
 ### RC §6 Banco de dados
 
 #### RC §6.1 Banco relacional
 
-- [ ] Uso de **PostgreSQL** (ou MySQL/similar — na PGIC: **PostgreSQL** conforme README).
-- [ ] **Integridade referencial** — FKs e constraints onde fizer sentido.
-- [ ] **Transações ACID** para operações que alteram múltiplas linhas de forma atômica.
-- [ ] Modelagem para **dados estruturados** de negócio (incidentes, usuários, SLAs).
+- [x] Uso de **PostgreSQL** (ou MySQL/similar — na PGIC: **PostgreSQL** conforme README).
+- [x] **Integridade referencial** — FKs e constraints onde fizer sentido.
+- [x] **Transações ACID** para operações que alteram múltiplas linhas de forma atômica.
+- [x] Modelagem para **dados estruturados** de negócio (incidentes, usuários, SLAs).
 
 #### RC §6.2 Banco não relacional
 
-- [ ] Uso de **Redis** e/ou **MongoDB** ou similar para **alta performance** em cache, sessão, filas leves ou logs de alto volume.
-- [ ] Armazenamento de **logs**, **cache** ou **documentos** não estruturados conforme estratégia.
+- [~] Uso de **Redis** e/ou **MongoDB** ou similar para **alta performance** em cache, sessão, filas leves ou logs de alto volume.
+- [~] Armazenamento de **logs**, **cache** ou **documentos** não estruturados conforme estratégia.
 
 #### RC §6 — estratégia híbrida
 
-- [ ] **Relacional para dados críticos** de negócio e consistência forte.
-- [ ] **Não relacional** para performance, escalabilidade de leitura, telemetria ou auditoria volumosa (decisão documentada).
+- [x] **Relacional para dados críticos** de negócio e consistência forte.
+- [~] **Não relacional** para performance, escalabilidade de leitura, telemetria ou auditoria volumosa (decisão documentada).
 
 ### RC §7 Mensageria com RabbitMQ
 
 #### RC §7.1 Comunicação assíncrona — utilização do RabbitMQ para
 
-- [ ] **Processamento assíncrono** — workers consumindo filas.
-- [ ] **Comunicação entre microsserviços** — eventos de domínio, comandos assíncronos.
-- [ ] **Filas de tarefas** — relatórios, e-mails, replicação de dados.
-- [ ] **Garantia de entrega** — filas duráveis, confirmações de publicação/consumo, outbox onde necessário.
+- [~] **Processamento assíncrono** — workers consumindo filas.
+- [x] **Comunicação entre microsserviços** — eventos de domínio, comandos assíncronos.
+- [~] **Filas de tarefas** — relatórios, e-mails, replicação de dados.
+- [x] **Garantia de entrega** — filas duráveis, confirmações de publicação/consumo, outbox onde necessário.
 
 #### RC §7 — benefícios (checklist de adoção real)
 
-- [ ] **Desacoplamento** entre produtores e consumidores de eventos.
-- [ ] **Melhor escalabilidade** — workers paralelos por fila.
-- [ ] **Resiliência** — retry, DLQ, reprocessamento.
-- [ ] **Processamento distribuído** — múltiplos consumidores por fila.
+- [x] **Desacoplamento** entre produtores e consumidores de eventos.
+- [x] **Melhor escalabilidade** — workers paralelos por fila.
+- [~] **Resiliência** — retry, DLQ, reprocessamento.
+- [~] **Processamento distribuído** — múltiplos consumidores por fila.
 
 ### RC §8 Processamento assíncrono
 
 O sistema deve suportar:
 
-- [ ] **Jobs em background** — schedulers/workers por serviço ou centralizados conforme desenho.
-- [ ] **Filas de processamento** — RabbitMQ com routing adequado.
-- [ ] **Eventos de domínio** — payloads versionados; contratos entre serviços.
-- [ ] **Retry automático** — backoff, limite de tentativas.
-- [ ] **Dead-letter queues** — inspeção e correção ou descarte controlado.
+- [~] **Jobs em background** — schedulers/workers por serviço ou centralizados conforme desenho.
+- [x] **Filas de processamento** — RabbitMQ com routing adequado.
+- [x] **Eventos de domínio** — payloads versionados; contratos entre serviços.
+- [~] **Retry automático** — backoff, limite de tentativas.
+- [~] **Dead-letter queues** — inspeção e correção ou descarte controlado.
 
 **Exemplos de uso previstos no normativo — mapeamento PGIC:**
 
 - [ ] **Geração de relatórios** — fila + arquivo temporário + notificação.
-- [ ] **Envio de e-mails** — recuperação de senha, alertas SLA, convites.
-- [ ] **Processamento de pagamentos** — *não aplicável à PGIC por padrão*; marcar N/A ou substituir por **cobrança interna de SLA**/integração financeira se existir.
-- [ ] **Atualização de KPIs** — jobs ou consumo de eventos para materializar agregados/cache.
+- [~] **Envio de e-mails** — recuperação de senha, alertas SLA, convites.
+- [x] **Processamento de pagamentos** — *não aplicável à PGIC por padrão*; marcar N/A ou substituir por **cobrança interna de SLA**/integração financeira se existir.
+- [~] **Atualização de KPIs** — jobs ou consumo de eventos para materializar agregados/cache.
 
 ### RC §9 Integrações externas
 
@@ -196,21 +198,21 @@ O sistema deve suportar:
 - [ ] **Enviar dados para sistemas externos** — conectores configuráveis, fila de saída.
 - [ ] **Receber dados via API ou Webhook** — ingestão autenticada e validada.
 - [ ] **Validar dados recebidos** — schema/contrato antes de persistir.
-- [ ] **Garantir autenticação nas integrações** — API keys, OAuth2, HMAC, mTLS conforme parceiro.
+- [~] **Garantir autenticação nas integrações** — API keys, OAuth2, HMAC, mTLS conforme parceiro.
 
 #### RC §9 — requisitos transversais de integração
 
-- [ ] **Logs de integração** — entrada/saída, status, correlação, mascaramento de segredos.
-- [ ] **Tratamento de falhas** — não corromper estado interno; registrar para retry.
-- [ ] **Timeout e retry** — políticas por integração.
-- [ ] **Versionamento de integração** — contrato webhook/API versionado (`v1`, header ou path).
+- [~] **Logs de integração** — entrada/saída, status, correlação, mascaramento de segredos.
+- [~] **Tratamento de falhas** — não corromper estado interno; registrar para retry.
+- [~] **Timeout e retry** — políticas por integração.
+- [~] **Versionamento de integração** — contrato webhook/API versionado (`v1`, header ou path).
 
 ### RC §10 Infraestrutura
 
 #### RC §10.1 Containerização
 
-- [ ] **Docker** — imagens por serviço ou multi-stage conforme repositório.
-- [ ] **Isolamento de serviços** — rede/volumes/containers separados no Compose e em produção.
+- [x] **Docker** — imagens por serviço ou multi-stage conforme repositório.
+- [x] **Isolamento de serviços** — rede/volumes/containers separados no Compose e em produção.
 
 #### RC §10.2 Orquestração
 
@@ -225,17 +227,17 @@ O sistema deve suportar:
 
 ### RC §11 Testes
 
-- [ ] **Testes unitários** — domínio e use cases.
-- [ ] **Testes de integração** — API + persistência + mensageria em ambiente controlado.
+- [x] **Testes unitários** — domínio e use cases.
+- [x] **Testes de integração** — API + persistência + mensageria em ambiente controlado.
 - [ ] **Testes de carga** — cenários de pico em endpoints e filas.
 - [ ] **Testes de segurança** — SAST/dependências; revisão manual de superfície de ataque.
 - [ ] **Testes de contrato** — OpenAPI/eventos entre produtor e consumidor de microsserviços.
 
 ### RC §12 Governança
 
-- [ ] **Controle de versão (Git)** — fluxo de branches documentado.
-- [ ] **Code review obrigatório** antes de merge na principal.
-- [ ] **Documentação técnica atualizada** — README, docs, Swagger, runbooks.
+- [x] **Controle de versão (Git)** — fluxo de branches documentado.
+- [~] **Code review obrigatório** antes de merge na principal.
+- [x] **Documentação técnica atualizada** — README, docs, Swagger, runbooks.
 - [ ] **Monitoramento contínuo** — dashboards operacionais além do produto PGIC.
 - [ ] **Política de segurança da informação** — classificação de dados, acesso, incidentes de segurança.
 
@@ -243,15 +245,15 @@ O sistema deve suportar:
 
 Para fechar o normativo, verificar explicitamente:
 
-- [ ] **Arquitetura de microsserviços** adotada e documentada.
-- [ ] **Banco relacional e não relacional** em uso conforme estratégia (Postgres + Redis e/ou document store).
-- [ ] **Comunicação assíncrona com mensageria** (RabbitMQ) para eventos/tarefas críticas.
-- [ ] **Separação front-end e back-end via API REST** com JSON.
-- [ ] **Integrações bidirecionais** planejadas/implementadas onde o produto exige mundo externo.
-- [ ] **Processamento assíncrono** para tarefas pesadas e resiliente (retry/DLQ).
-- [ ] **Dashboards com KPIs** disponíveis aos perfis adequados.
-- [ ] **Interoperabilidade** — APIs versionadas e consumíveis por terceiros/mobile futuro.
-- [ ] **Escalável, seguro e resiliente** — evidências em testes, monitoramento e decisões de arquitetura.
+- [x] **Arquitetura de microsserviços** adotada e documentada.
+- [~] **Banco relacional e não relacional** em uso conforme estratégia (Postgres + Redis e/ou document store).
+- [x] **Comunicação assíncrona com mensageria** (RabbitMQ) para eventos/tarefas críticas.
+- [x] **Separação front-end e back-end via API REST** com JSON.
+- [~] **Integrações bidirecionais** planejadas/implementadas onde o produto exige mundo externo.
+- [~] **Processamento assíncrono** para tarefas pesadas e resiliente (retry/DLQ).
+- [~] **Dashboards com KPIs** disponíveis aos perfis adequados.
+- [~] **Interoperabilidade** — APIs versionadas e consumíveis por terceiros/mobile futuro.
+- [~] **Escalável, seguro e resiliente** — evidências em testes, monitoramento e decisões de arquitetura.
 
 ---
 
@@ -279,8 +281,8 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 0.3 Documentação viva mínima (antes da Fase 1)
 
-- [ ] Manter **uma página** com links para: RequisitosCorp, AnaliseRequisitos, MICROSERVICES_LIST, README, este checklist.
-- [ ] Registrar **decisões arquiteturais** relevantes (formato livre ou ADR): por exemplo escolha de outbox vs publish direto por tipo de evento.
+- [x] Manter **uma página** com links para: RequisitosCorp, AnaliseRequisitos, MICROSERVICES_LIST, README, este checklist.
+- [~] Registrar **decisões arquiteturais** relevantes (formato livre ou ADR): por exemplo escolha de outbox vs publish direto por tipo de evento.
 
 ### Balanço de saída da Fase 0
 
@@ -310,10 +312,10 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 1.3 Subida da infraestrutura local (containers)
 
-- [ ] Executar `pnpm docker:up` (ou o script documentado no README) e confirmar que **PostgreSQL**, **Redis**, **RabbitMQ** e **Nginx** sobem sem erro.
-- [ ] Verificar portas expostas (gateway em **8080** conforme README, serviços nas portas documentadas).
-- [ ] Acessar painel do RabbitMQ (se habilitado no compose) e confirmar login.
-- [ ] Confirmar que o Postgres aceita conexão com a URL usada nos serviços.
+- [x] Executar `pnpm docker:up` (ou o script documentado no README) e confirmar que **PostgreSQL**, **Redis**, **RabbitMQ** e **Nginx** sobem sem erro.
+- [x] Verificar portas expostas (gateway em **8080** conforme README, serviços nas portas documentadas).
+- [x] Acessar painel do RabbitMQ (se habilitado no compose) e confirmar login.
+- [x] Confirmar que o Postgres aceita conexão com a URL usada nos serviços.
 
 ### 1.4 Banco de dados — criação e migrations
 
@@ -334,15 +336,15 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 1.6 Gateway e roteamento
 
-- [ ] Via navegador ou `curl`, chamar **http://localhost:8080** com prefixos `/identity/`, `/request/`, `/api-docs/` conforme documentação.
-- [ ] Confirmar que paths sem barra final ou com barra se comportam como esperado (padronizar no Nginx).
-- [ ] Registrar no README interno qualquer desvio (porta diferente, TLS local com mkcert, etc.).
+- [x] Via navegador ou `curl`, chamar **http://localhost:8080** com prefixos `/identity/`, `/request/`, `/api-docs/` conforme documentação.
+- [~] Confirmar que paths sem barra final ou com barra se comportam como esperado (padronizar no Nginx).
+- [x] Registrar no README interno qualquer desvio (porta diferente, TLS local com mkcert, etc.).
 
 ### Balanço de saída da Fase 1
 
-- [ ] **Compose sobe** de forma repetível após `docker compose down` + `up`.
-- [ ] **Migrations aplicadas** nos serviços em uso.
-- [ ] **Gateway responde** e pelo menos um endpoint de health por serviço principal funciona através do proxy.
+- [x] **Compose sobe** de forma repetível após `docker compose down` + `up`.
+- [~] **Migrations aplicadas** nos serviços em uso.
+- [x] **Gateway responde** e pelo menos um endpoint de health por serviço principal funciona através do proxy.
 
 ---
 
@@ -352,26 +354,26 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 2.1 Pacote shared
 
-- [ ] Revisar exportações de **DTOs de erro** (`ErrorResponseDto`) e garantir que todos os serviços usam o mesmo formato em falhas.
-- [ ] Revisar **validação** (schemas Zod ou equivalente) e reuso de fragmentos comuns (nome, e-mail, paginação).
-- [ ] Definir convenção de **paginação** e filtros nas APIs (`limit`, `cursor`, `page`) e documentar no api-docs.
-- [ ] Centralizar constantes de **mensageria** (nomes de exchanges, routing keys) quando aplicável, evitando strings mágicas espalhadas.
+- [x] Revisar exportações de **DTOs de erro** (`ErrorResponseDto`) e garantir que todos os serviços usam o mesmo formato em falhas.
+- [x] Revisar **validação** (schemas Zod ou equivalente) e reuso de fragmentos comuns (nome, e-mail, paginação).
+- [~] Definir convenção de **paginação** e filtros nas APIs (`limit`, `cursor`, `page`) e documentar no api-docs.
+- [x] Centralizar constantes de **mensageria** (nomes de exchanges, routing keys) quando aplicável, evitando strings mágicas espalhadas.
 
 ### 2.2 Observabilidade mínima em cada serviço
 
-- [ ] **Logs estruturados** (JSON ou formato único) com `correlationId` ou `requestId` propagado do gateway quando possível.
-- [ ] Nível de log configurável por ambiente (`LOG_LEVEL`).
-- [ ] Nunca logar **segredos** (tokens, senhas, chaves API completas); mascarar payloads sensíveis em logs de integração.
+- [~] **Logs estruturados** (JSON ou formato único) com `correlationId` ou `requestId` propagado do gateway quando possível.
+- [~] Nível de log configurável por ambiente (`LOG_LEVEL`).
+- [~] Nunca logar **segredos** (tokens, senhas, chaves API completas); mascarar payloads sensíveis em logs de integração.
 
 ### 2.3 Versionamento de API
 
-- [ ] Decidir estratégia: prefixo `/v1/` no gateway ou cabeçalho `Accept-Version`.
+- [~] Decidir estratégia: prefixo `/v1/` no gateway ou cabeçalho `Accept-Version`.
 - [ ] Documentar política de **deprecação** (avisos, período de convivência).
 
 ### Balanço de saída da Fase 2
 
-- [ ] Novo endpoint em qualquer serviço segue o **mesmo padrão de erro/validação**.
-- [ ] Documentação Swagger reflete contratos compartilhados onde couber.
+- [x] Novo endpoint em qualquer serviço segue o **mesmo padrão de erro/validação**.
+- [x] Documentação Swagger reflete contratos compartilhados onde couber.
 
 ---
 
@@ -383,67 +385,67 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Modelar **usuário** com campos obrigatórios da AnaliseRequisitos (nome, e-mail único, login único, senha hash, perfil, status).
-2. [ ] Modelar **perfis/papéis** e relação usuário–perfil; prever **permissões por módulo** ou matriz configurável (RF-2.2).
-3. [ ] Incluir campos opcionais (telefone, departamento, cargo, idioma, fuso) se estiverem no escopo do release.
-4. [ ] Aplicar migrations e seeds apenas para **ambientes dev** (usuário admin inicial documentado).
+1. [x] Modelar **usuário** com campos obrigatórios da AnaliseRequisitos (nome, e-mail único, login único, senha hash, perfil, status).
+2. [x] Modelar **perfis/papéis** e relação usuário–perfil; prever **permissões por módulo** ou matriz configurável (RF-2.2).
+3. [~] Incluir campos opcionais (telefone, departamento, cargo, idioma, fuso) se estiverem no escopo do release.
+4. [~] Aplicar migrations e seeds apenas para **ambientes dev** (usuário admin inicial documentado).
 
 ### 3.2 Cadastro e edição (RF-1.1, RF-1.2)
 
 **Passos:**
 
-1. [ ] Implementar **cadastro individual** com validação forte no back-end (não confiar no front).
-2. [ ] Implementar **edição** com regras: quem pode alterar o quê (próprio usuário vs administrador).
-3. [ ] Implementar **desativação (soft delete)** como padrão (RF-1.3); exclusão física apenas com processo e checagem de integridade.
+1. [x] Implementar **cadastro individual** com validação forte no back-end (não confiar no front).
+2. [x] Implementar **edição** com regras: quem pode alterar o quê (próprio usuário vs administrador).
+3. [x] Implementar **desativação (soft delete)** como padrão (RF-1.3); exclusão física apenas com processo e checagem de integridade.
 4. [ ] Opcional: **importação em lote** CSV/Excel com relatório linha a linha.
 
 ### 3.3 Autenticação (RF-1.5)
 
 **Passos:**
 
-1. [ ] Fluxo **login** com emissão de **access token** e **refresh token** (se adotado).
-2. [ ] Armazenar senha com **Argon2/bcrypt**; política de complexidade configurável.
-3. [ ] Se OAuth2/OIDC: registrar fluxo de callback, escopos, mapeamento de grupos do IdP para perfis internos.
-4. [ ] Documentar no Swagger como enviar o token (header `Authorization: Bearer`).
+1. [x] Fluxo **login** com emissão de **access token** e **refresh token** (se adotado).
+2. [x] Armazenar senha com **Argon2/bcrypt**; política de complexidade configurável.
+3. [~] Se OAuth2/OIDC: registrar fluxo de callback, escopos, mapeamento de grupos do IdP para perfis internos.
+4. [x] Documentar no Swagger como enviar o token (header `Authorization: Bearer`).
 
 ### 3.4 Recuperação de senha (RF-1.6)
 
 **Passos:**
 
-1. [ ] Endpoint “solicitar reset” que não vaza existência de conta (mensagem genérica).
-2. [ ] Gerar token de uso único com expiração; persistir hash do token, não o token em claro.
+1. [x] Endpoint “solicitar reset” que não vaza existência de conta (mensagem genérica).
+2. [x] Gerar token de uso único com expiração; persistir hash do token, não o token em claro.
 3. [ ] Enfileirar envio de e-mail (**processamento assíncrono**).
-4. [ ] **Rate limiting** por IP/e-mail para evitar abuso.
+4. [x] **Rate limiting** por IP/e-mail para evitar abuso.
 
 ### 3.5 Sessão e revogação (RF-1.7)
 
 **Passos:**
 
-1. [ ] Definir onde a sessão vive: claims no JWT apenas; ou sessão server-side em **Redis** com lista de sessões ativas.
-2. [ ] Implementar **logout** que invalida refresh/sessão.
-3. [ ] Ao **desativar usuário**, revogar tokens/sessões imediatamente.
-4. [ ] Opcional: “encerrar outras sessões” e listagem de sessões por usuário para administrador.
+1. [x] Definir onde a sessão vive: claims no JWT apenas; ou sessão server-side em **Redis** com lista de sessões ativas.
+2. [x] Implementar **logout** que invalida refresh/sessão.
+3. [x] Ao **desativar usuário**, revogar tokens/sessões imediatamente.
+4. [x] Opcional: “encerrar outras sessões” e listagem de sessões por usuário para administrador.
 
 ### 3.6 Autorização e logs de acesso (RF-2.1, RF-2.2, RF-2.3)
 
 **Passos:**
 
-1. [ ] Middleware de **autorização** por rota ou por annotação interna (facade única).
-2. [ ] Matriz **módulo × ação × escopo** persistida e cacheada com invalidação segura.
-3. [ ] Registrar **login sucesso/falha**, **logout**, tentativas bloqueadas; armazenar IP, user-agent, timestamp.
-4. [ ] Painel ou API admin para consultar logs de acesso com filtro por período e usuário.
+1. [x] Middleware de **autorização** por rota ou por annotação interna (facade única).
+2. [x] Matriz **módulo × ação × escopo** persistida e cacheada com invalidação segura.
+3. [x] Registrar **login sucesso/falha**, **logout**, tentativas bloqueadas; armazenar IP, user-agent, timestamp.
+4. [x] Painel ou API admin para consultar logs de acesso com filtro por período e usuário.
 
 ### 3.7 Eventos de domínio (integração com outros serviços)
 
-- [ ] Implementar **Outbox** para `user.created` (ou evento equivalente) conforme padrão documentado em MICROSERVICES_LIST.
-- [ ] Operar **relay** que lê outbox e publica no RabbitMQ com confirmação.
-- [ ] Monitorar filas mortas ou backlog do relay.
+- [x] Implementar **Outbox** para `user.created` (ou evento equivalente) conforme padrão documentado em MICROSERVICES_LIST.
+- [x] Operar **relay** que lê outbox e publica no RabbitMQ com confirmação.
+- [~] Monitorar filas mortas ou backlog do relay.
 
 ### Balanço de saída da Fase 3
 
-- [ ] Fluxo completo: **cadastro → login → acesso a endpoint protegido → logout**.
-- [ ] Tentativa de acesso sem permissão retorna **403** padronizado.
-- [ ] **Logs de acesso** consultáveis e evento de usuário propagado para serviços que replicam dados de exibição.
+- [x] Fluxo completo: **cadastro → login → acesso a endpoint protegido → logout**.
+- [x] Tentativa de acesso sem permissão retorna **403** padronizado.
+- [x] **Logs de acesso** consultáveis e evento de usuário propagado para serviços que replicam dados de exibição.
 
 ---
 
@@ -455,31 +457,31 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Modelar **item de catálogo**: nome, descrição, categoria, equipe responsável, SLA padrão, formulário dinâmico (JSON schema ou tabela de campos).
-2. [ ] CRUD administrativo do catálogo com RBAC (apenas perfis autorizados).
-3. [ ] Validar formulários dinâmicos no servidor contra o schema definido para o item.
+1. [x] Modelar **item de catálogo**: nome, descrição, categoria, equipe responsável, SLA padrão, formulário dinâmico (JSON schema ou tabela de campos).
+2. [x] CRUD administrativo do catálogo com RBAC (apenas perfis autorizados).
+3. [~] Validar formulários dinâmicos no servidor contra o schema definido para o item.
 
 ### 4.2 Requisição e workflow (RF-6.2)
 
 **Passos:**
 
-1. [ ] Modelar **requisição** com estados: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada (ajustar nomes ao seu domínio).
+1. [x] Modelar **requisição** com estados: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada (ajustar nomes ao seu domínio).
 2. [ ] Implementar **aprovação sequencial ou paralela** conforme configuração do item.
 3. [ ] Registrar **quem aprovou/rejeitou**, quando e motivo.
-4. [ ] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
+4. [~] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
 
 ### 4.3 Consumidor `user.created`
 
-- [ ] Garantir fila `request.user_created` (ou nome acordado) ativa.
-- [ ] Persistir **replicated_users** para exibir nome do solicitante sem RPC síncrono ao identity em toda listagem.
+- [x] Garantir fila `request.user_created` (ou nome acordado) ativa.
+- [x] Persistir **replicated_users** para exibir nome do solicitante sem RPC síncrono ao identity em toda listagem.
 
 ### 4.4 Integração assíncrona futura
 
-- [ ] Publicar eventos `request.created`, `request.approved` para notificação e auditoria quando esses serviços estiverem prontos.
+- [~] Publicar eventos `request.created`, `request.approved` para notificação e auditoria quando esses serviços estiverem prontos.
 
 ### Balanço de saída da Fase 4
 
-- [ ] Usuário final consegue **escolher item do catálogo**, enviar requisição e acompanhar estado.
+- [x] Usuário final consegue **escolher item do catálogo**, enviar requisição e acompanhar estado.
 - [ ] Aprovador consegue **aprovar/rejeitar** com trilha persistida.
 
 ---
@@ -492,9 +494,9 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Formulário com campos obrigatórios: título, descrição, serviço afetado, criticidade, impacto (ajustar lista ao catálogo corporativo).
+1. [~] Formulário com campos obrigatórios: título, descrição, serviço afetado, criticidade, impacto (ajustar lista ao catálogo corporativo).
 2. [ ] Anexos com limite de tamanho e tipos permitidos; armazenamento seguro (disco local dev; S3 ou compatível em prod).
-3. [ ] Para usuário final, permitir **abertura mínima**; analista completa campos adicionais.
+3. [x] Para usuário final, permitir **abertura mínima**; analista completa campos adicionais.
 
 ### 5.2 Abertura automática / integração (RF-5.1, RF-9.x)
 
@@ -508,34 +510,34 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Cadastro de **níveis de criticidade** e impacto no negócio.
-2. [ ] Catálogo de **serviços afetados** com vínculo a **equipes**.
-3. [ ] Regra inicial de atribuição por serviço; permitir **reatribuição** com auditoria.
+1. [x] Cadastro de **níveis de criticidade** e impacto no negócio.
+2. [~] Catálogo de **serviços afetados** com vínculo a **equipes**.
+3. [x] Regra inicial de atribuição por serviço; permitir **reatribuição** com auditoria.
 
 ### 5.4 Workflow de estados (RF-5.3)
 
 **Passos:**
 
-1. [ ] Definir grafo de estados e **transições permitidas** por papel.
-2. [ ] Impedir transições ilegais no domínio (não só na UI).
-3. [ ] Em toda transição, opcionalmente exigir **comentário** (boa prática para auditoria).
+1. [x] Definir grafo de estados e **transições permitidas** por papel.
+2. [x] Impedir transições ilegais no domínio (não só na UI).
+3. [x] Em toda transição, opcionalmente exigir **comentário** (boa prática para auditoria).
 
 ### 5.5 SLA no incidente (RF-5.4 em conjunto com sla-service)
 
 **Passos:**
 
-1. [ ] Ao criar/atualizar incidente, **resolver qual política de SLA** se aplica (chamada ao sla-service ou serviço embutido temporário).
-2. [ ] Exibir **prazos de resposta e resolução** e tempos restantes.
-3. [ ] Integrar **pausa** de SLA em estados como “Pendente cliente”.
+1. [~] Ao criar/atualizar incidente, **resolver qual política de SLA** se aplica (chamada ao sla-service ou serviço embutido temporário).
+2. [~] Exibir **prazos de resposta e resolução** e tempos restantes.
+3. [~] Integrar **pausa** de SLA em estados como “Pendente cliente”.
 
 ### 5.6 Eventos de domínio
 
-- [ ] Publicar via outbox (recomendado): `incident.created`, `incident.status_changed`, `incident.assigned`.
-- [ ] Definir contrato JSON de cada evento (versionado).
+- [x] Publicar via outbox (recomendado): `incident.created`, `incident.status_changed`, `incident.assigned`.
+- [x] Definir contrato JSON de cada evento (versionado).
 
 ### Balanço de saída da Fase 5
 
-- [ ] Incidente percorre **ciclo completo** com histórico de estados.
+- [x] Incidente percorre **ciclo completo** com histórico de estados.
 - [ ] Integração simulada cria incidente **idempotente** se o mesmo evento for reenviado (quando aplicável).
 
 ---
@@ -548,27 +550,27 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] CRUD de **problema** com status e responsável.
-2. [ ] Vincular **N incidentes** a um problema; navegação bidirecional na UI/API.
-3. [ ] Campos de **causa raiz** e **plano de ação** (itens com responsável e prazo se desejado).
+1. [x] CRUD de **problema** com status e responsável.
+2. [x] Vincular **N incidentes** a um problema; navegação bidirecional na UI/API.
+3. [x] Campos de **causa raiz** e **plano de ação** (itens com responsável e prazo se desejado).
 
 ### 6.2 Mudanças (RF-7.3)
 
 **Passos:**
 
-1. [ ] Modelar mudança com tipo (padrão, normal, emergencial), **risco**, **janela** de execução, **rollback**.
-2. [ ] Workflow: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Agendada → Em Execução → Concluída/Rollback.
-3. [ ] Regra: mudança **alto risco** exige aprovação extra (CAB) se política assim definir.
-4. [ ] Vincular mudança a **incidentes/problemas** motivadores.
+1. [x] Modelar mudança com tipo (padrão, normal, emergencial), **risco**, **janela** de execução, **rollback**.
+2. [~] Workflow: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Agendada → Em Execução → Concluída/Rollback.
+3. [~] Regra: mudança **alto risco** exige aprovação extra (CAB) se política assim definir.
+4. [x] Vincular mudança a **incidentes/problemas** motivadores.
 
 ### 6.3 Eventos
 
-- [ ] Publicar `problem.created`, `change.created` para auditoria e notificações futuras.
+- [x] Publicar `problem.created`, `change.created` para auditoria e notificações futuras.
 
 ### Balanço de saída da Fase 6
 
-- [ ] Da tela de incidente, associar a um problema existente ou criar novo.
-- [ ] Mudança não “executa” fora da janela aprovada (validação no domínio).
+- [~] Da tela de incidente, associar a um problema existente ou criar novo.
+- [~] Mudança não “executa” fora da janela aprovada (validação no domínio).
 
 ---
 
@@ -580,28 +582,28 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Entidades: política de SLA, condições (tipo de chamado, criticidade, serviço, cliente), tempos de resposta e resolução.
-2. [ ] Algoritmo de **resolução de conflito** quando várias políticas coincidem (documentar a regra).
-3. [ ] API para **consultar** SLA aplicável a um incidente/requisição e para **recalcular** quando campos relevantes mudam.
+1. [x] Entidades: política de SLA, condições (tipo de chamado, criticidade, serviço, cliente), tempos de resposta e resolução.
+2. [~] Algoritmo de **resolução de conflito** quando várias políticas coincidem (documentar a regra).
+3. [~] API para **consultar** SLA aplicável a um incidente/requisição e para **recalcular** quando campos relevantes mudam.
 
 ### 7.2 Calendário e tempo útil (RF-8.2)
 
 **Passos:**
 
-1. [ ] Configurar **dias úteis**, **feriados**, **janela diária** (ex.: 08:00–18:00).
-2. [ ] Implementar função de **adição de minutos úteis** a um instante inicial (testada com unitários em cenários de fim de semana e feriado).
-3. [ ] Pausar cronômetro em estados configuráveis.
+1. [x] Configurar **dias úteis**, **feriados**, **janela diária** (ex.: 08:00–18:00).
+2. [~] Implementar função de **adição de minutos úteis** a um instante inicial (testada com unitários em cenários de fim de semana e feriado).
+3. [~] Pausar cronômetro em estados configuráveis.
 
 ### 7.3 Eventos de risco e estouro
 
 **Passos:**
 
-1. [ ] Job ou consumer que compara **agora** com **deadlines** e emite `sla.risk` e `sla.breach`.
-2. [ ] Definir limiares de “risco” (ex.: 80% do tempo consumido).
+1. [~] Job ou consumer que compara **agora** com **deadlines** e emite `sla.risk` e `sla.breach`.
+2. [~] Definir limiares de “risco” (ex.: 80% do tempo consumido).
 
 ### Balanço de saída da Fase 7
 
-- [ ] Dois ambientes com mesmos dados de entrada produzem **mesmos deadlines** (testes automatizados).
+- [~] Dois ambientes com mesmos dados de entrada produzem **mesmos deadlines** (testes automatizados).
 
 ---
 
@@ -613,23 +615,23 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Cadastro de regras: condição (sem primeira resposta em X min, % do SLA, criticidade).
-2. [ ] Ações: notificar gestor, **reatribuir equipe**, aumentar prioridade (se modelo permitir).
-3. [ ] Consumir eventos de incidente e SLA.
-4. [ ] Persistir **histórico de escalonamentos** (quem foi notificado, qual regra disparou).
+1. [~] Cadastro de regras: condição (sem primeira resposta em X min, % do SLA, criticidade).
+2. [~] Ações: notificar gestor, **reatribuir equipe**, aumentar prioridade (se modelo permitir).
+3. [~] Consumir eventos de incidente e SLA.
+4. [~] Persistir **histórico de escalonamentos** (quem foi notificado, qual regra disparou).
 
 ### 8.2 Notificações (RF-8.4)
 
 **Passos:**
 
-1. [ ] Abstração de **canal**: e-mail (SMTP), Slack webhook, Teams webhook, webhook genérico.
-2. [ ] **Templates** com variáveis (`{{ticketId}}`, `{{title}}`, `{{link}}`).
-3. [ ] Fila de envio com **retry** e **DLQ**; logs de falha por provedor.
-4. [ ] Rate limit por canal para não estourar quotas SMTP ou APIs.
+1. [~] Abstração de **canal**: e-mail (SMTP), Slack webhook, Teams webhook, webhook genérico.
+2. [~] **Templates** com variáveis (`{{ticketId}}`, `{{title}}`, `{{link}}`).
+3. [~] Fila de envio com **retry** e **DLQ**; logs de falha por provedor.
+4. [~] Rate limit por canal para não estourar quotas SMTP ou APIs.
 
 ### Balanço de saída da Fase 8
 
-- [ ] Simular **estouro de SLA** em staging e verificar notificação e registro de escalonamento.
+- [~] Simular **estouro de SLA** em staging e verificar notificação e registro de escalonamento.
 
 ---
 
@@ -641,9 +643,9 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Definir esquema imutável-append-only: quem, quando, entidade, ação, valores anterior/novo, correlation id.
-2. [ ] Consumir eventos dos demais serviços ou receber POST dedicado **autenticado serviço-a-serviço**.
-3. [ ] API de consulta por **entidade** (ex.: incidente #123) e por **usuário/período**.
+1. [x] Definir esquema imutável-append-only: quem, quando, entidade, ação, valores anterior/novo, correlation id.
+2. [~] Consumir eventos dos demais serviços ou receber POST dedicado **autenticado serviço-a-serviço**.
+3. [x] API de consulta por **entidade** (ex.: incidente #123) e por **usuário/período**.
 
 ### 9.2 Versionamento (RF-3.3)
 
@@ -654,7 +656,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### Balanço de saída da Fase 9
 
-- [ ] Toda ação sensível dos fluxos principais gera registro consultável.
+- [~] Toda ação sensível dos fluxos principais gera registro consultável.
 
 ---
 
@@ -666,7 +668,7 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Definir fórmulas documentadas: MTTR, MTBF, % SLA cumprido, uptime por serviço (fonte de verdade dos timestamps).
+1. [~] Definir fórmulas documentadas: MTTR, MTBF, % SLA cumprido, uptime por serviço (fonte de verdade dos timestamps).
 2. [ ] Implementar agregações com **cache Redis** e TTL.
 
 ### 10.2 Operacional em tempo quase real (RF-4.2, RF-4.5)
@@ -686,7 +688,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### Balanço de saída da Fase 10
 
-- [ ] Gestor consegue **justificar números** apresentados à diretoria com a mesma base que o sistema calcula.
+- [~] Gestor consegue **justificar números** apresentados à diretoria com a mesma base que o sistema calcula.
 
 ---
 
@@ -732,15 +734,15 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 12.1 Jornadas mínimas
 
-- [ ] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto).
-- [ ] **Analista:** fila, pegar chamado, mudar estado, comentar, reatribuir.
+- [~] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto).
+- [~] **Analista:** fila, pegar chamado, mudar estado, comentar, reatribuir.
 - [ ] **Gestor:** dashboard, exportação, visão por equipe.
-- [ ] **Administrador:** usuários, perfis, parâmetros de integração (onde aplicável).
+- [~] **Administrador:** usuários, perfis, parâmetros de integração (onde aplicável).
 
 ### 12.2 Segurança na UI
 
-- [ ] Esconder botões sem permissão **sem** confiar nisso como única defesa.
-- [ ] Tratar **401/403** com redirecionamento ou mensagem clara.
+- [~] Esconder botões sem permissão **sem** confiar nisso como única defesa.
+- [~] Tratar **401/403** com redirecionamento ou mensagem clara.
 
 ### Balanço de saída da Fase 12
 
@@ -754,39 +756,39 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 13.1 Segurança (RequisitosCorp §3.1)
 
-1. [ ] **Criptografia de dados sensíveis** — TLS 1.2+ em todos os endpoints públicos; dados sensíveis em repouso conforme política (volume cifrado no provedor, ou colunas sensíveis com criptografia aplicacional quando exigido).
-2. [ ] **Proteção contra SQL Injection** — uso exclusivo de consultas parametrizadas via ORM (Prisma); proibir concatenação de SQL com entrada do usuário; revisar relatórios ou buscas dinâmicas.
-3. [ ] **Proteção contra XSS** — escape/sanitização no front; evitar HTML não confiável; CSP progressiva; cookies `HttpOnly`/`Secure` se sessão via cookie.
-4. [ ] **Rate limiting** — no gateway (Nginx `limit_req` ou equivalente) e/ou middleware nos serviços; limites mais rígidos em login, recuperação de senha e APIs públicas de integração.
+1. [~] **Criptografia de dados sensíveis** — TLS 1.2+ em todos os endpoints públicos; dados sensíveis em repouso conforme política (volume cifrado no provedor, ou colunas sensíveis com criptografia aplicacional quando exigido).
+2. [x] **Proteção contra SQL Injection** — uso exclusivo de consultas parametrizadas via ORM (Prisma); proibir concatenação de SQL com entrada do usuário; revisar relatórios ou buscas dinâmicas.
+3. [~] **Proteção contra XSS** — escape/sanitização no front; evitar HTML não confiável; CSP progressiva; cookies `HttpOnly`/`Secure` se sessão via cookie.
+4. [~] **Rate limiting** — no gateway (Nginx `limit_req` ou equivalente) e/ou middleware nos serviços; limites mais rígidos em login, recuperação de senha e APIs públicas de integração.
 5. [ ] **Backup automatizado** — agendamento do PostgreSQL (snapshot gerenciado ou script); retenção definida; alerta em falha de backup; teste periódico de restore (ligado à Fase 14).
 6. [ ] **Compliance com LGPD** — inventário de dados pessoais; base legal por finalidade; minimização; acordo de operações com subprocessadores se usar nuvem; canal para solicitações do titular (exportação/eliminação dentro dos limites legais e técnicos).
 
 ### 13.2 Performance (RequisitosCorp §3.2)
 
-1. [ ] **Baixo tempo de resposta** — definir metas (ex.: p95 latência por tipo de rota); medir em staging/prod com APM ou métricas (Prometheus, OpenTelemetry).
-2. [ ] **Cache (Redis ou similar)** — sessão, agregados de KPI, configs frequentes; TTL e política de invalidação documentados.
-3. [ ] **Otimização de consultas** — índices alinhados a filtros reais; `EXPLAIN (ANALYZE)` em relatórios pesados; paginação obrigatória em listagens potencialmente grandes.
-4. [ ] **Processamento assíncrono para tarefas pesadas** — relatórios longos, envio em massa, sincronizações via RabbitMQ/workers (ver **RC §8**, Fases 8 e 10).
+1. [~] **Baixo tempo de resposta** — definir metas (ex.: p95 latência por tipo de rota); medir em staging/prod com APM ou métricas (Prometheus, OpenTelemetry).
+2. [~] **Cache (Redis ou similar)** — sessão, agregados de KPI, configs frequentes; TTL e política de invalidação documentados.
+3. [x] **Otimização de consultas** — índices alinhados a filtros reais; `EXPLAIN (ANALYZE)` em relatórios pesados; paginação obrigatória em listagens potencialmente grandes.
+4. [~] **Processamento assíncrono para tarefas pesadas** — relatórios longos, envio em massa, sincronizações via RabbitMQ/workers (ver **RC §8**, Fases 8 e 10).
 
 ### 13.3 Escalabilidade (RequisitosCorp §3.3)
 
-1. [ ] **Escalabilidade horizontal** — múltiplas réplicas por serviço stateless; sessão não presa a um único pod sem sticky sessions inadequadas (preferir Redis para sessão).
-2. [ ] **Balanceamento de carga** — Nginx na frente localmente; em produção, LB de nuvem ou Ingress Kubernetes distribuindo para pods saudáveis.
-3. [ ] **Arquitetura desacoplada** — front independente do deploy do back; comunicação apenas por HTTP/JSON e eventos; evitar “mega chamada” síncrona encadeando todos os microsserviços num único request crítico.
+1. [~] **Escalabilidade horizontal** — múltiplas réplicas por serviço stateless; sessão não presa a um único pod sem sticky sessions inadequadas (preferir Redis para sessão).
+2. [~] **Balanceamento de carga** — Nginx na frente localmente; em produção, LB de nuvem ou Ingress Kubernetes distribuindo para pods saudáveis.
+3. [x] **Arquitetura desacoplada** — front independente do deploy do back; comunicação apenas por HTTP/JSON e eventos; evitar “mega chamada” síncrona encadeando todos os microsserviços num único request crítico.
 
 ### 13.4 Disponibilidade (RequisitosCorp §3.4)
 
 1. [ ] **Alta disponibilidade (HA)** — para Postgres, Redis e RabbitMQ em produção: modo gerenciado, réplicas ou cluster conforme RTO/RPO; não aceitar single point of failure não documentado.
 2. [ ] **Monitoramento com métricas e alertas** — latência, taxa de erro 5xx, profundidade de filas, uso de CPU/memória, espaço em disco do DB.
-3. [ ] **Health checks** — endpoints `/health` (vivo) e `/ready` (pronto para tráfego, incluindo DB/cache quando aplicável) para orquestrador.
+3. [x] **Health checks** — endpoints `/health` (vivo) e `/ready` (pronto para tráfego, incluindo DB/cache quando aplicável) para orquestrador.
 4. [ ] **Failover** — runbook: reinício de broker, flush seguro de DLQ, promoção de réplica de banco se política existir.
 
 ### 13.5 Interoperabilidade (RequisitosCorp §3.5)
 
-1. [ ] **APIs padronizadas RESTful** — recursos nomeados, verbos HTTP corretos, códigos de status consistentes com `@pgic/shared`.
-2. [ ] **Comunicação via JSON** — request/response e erros em JSON; charset UTF-8.
-3. [ ] **Versionamento de API** — prefixo `/v1` ou estratégia por cabeçalho; changelog de breaking changes (alinhado à Fase 2).
-4. [ ] **Integração bidirecional com sistemas externos** — entrada (webhooks/API) e saída (ERP, chat, monitoração) conforme **RC §9** e **Fase 11**.
+1. [x] **APIs padronizadas RESTful** — recursos nomeados, verbos HTTP corretos, códigos de status consistentes com `@pgic/shared`.
+2. [x] **Comunicação via JSON** — request/response e erros em JSON; charset UTF-8.
+3. [~] **Versionamento de API** — prefixo `/v1` ou estratégia por cabeçalho; changelog de breaking changes (alinhado à Fase 2).
+4. [~] **Integração bidirecional com sistemas externos** — entrada (webhooks/API) e saída (ERP, chat, monitoração) conforme **RC §9** e **Fase 11**.
 
 ### Balanço de saída da Fase 13
 
@@ -801,8 +803,8 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 14.1 Containerização (RequisitosCorp §10.1)
 
-- [ ] **Docker** — Dockerfile ou build reproducível por serviço; `.dockerignore` para não vazar código sensível.
-- [ ] **Isolamento de serviços** — redes e volumes no Compose; em produção, namespaces/projects separados conforme política.
+- [~] **Docker** — Dockerfile ou build reproducível por serviço; `.dockerignore` para não vazar código sensível.
+- [x] **Isolamento de serviços** — redes e volumes no Compose; em produção, namespaces/projects separados conforme política.
 - [ ] Imagens com **tags imutáveis** (`sha` ou semver) para produção.
 - [ ] Variáveis de ambiente injetadas pelo orquestrador, **não** copiadas em imagem.
 
@@ -841,8 +843,8 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 15.1 Por tipo de teste
 
-- [ ] **Unitários:** domínio puro (SLA tempo útil, transições de estado, validações).
-- [ ] **Integração:** API + DB + fila em ambiente efêmero ou dockerizado nos testes.
+- [x] **Unitários:** domínio puro (SLA tempo útil, transições de estado, validações).
+- [x] **Integração:** API + DB + fila em ambiente efêmero ou dockerizado nos testes.
 - [ ] **Contrato:** produtor/consumidor de eventos e OpenAPI entre equipes.
 - [ ] **Carga:** endpoints de listagem e dashboard com volume esperado + margem.
 - [ ] **Segurança:** SAST no CI; pentest pontual antes de go-live público.
@@ -861,9 +863,9 @@ Para fechar o normativo, verificar explicitamente:
 
 **Espelho normativo:** **RC §12** (Git, code review, documentação, monitoramento contínuo, política de segurança da informação).
 
-1. [ ] **Controle de versão (Git)** — fluxo de branches (Git Flow, trunk-based ou equivalente) documentado; `main`/`master` protegida.
-2. [ ] **Code review obrigatório** — nenhum merge sem aprovação; checklist mínimo (segredos, SQL/injection, validação de entrada, testes, impacto em contratos de API/eventos).
-3. [ ] **Documentação técnica atualizada** — README, docs em `/docs`, Swagger (`api-docs`), runbooks de deploy e incidente.
+1. [x] **Controle de versão (Git)** — fluxo de branches (Git Flow, trunk-based ou equivalente) documentado; `main`/`master` protegida.
+2. [~] **Code review obrigatório** — nenhum merge sem aprovação; checklist mínimo (segredos, SQL/injection, validação de entrada, testes, impacto em contratos de API/eventos).
+3. [x] **Documentação técnica atualizada** — README, docs em `/docs`, Swagger (`api-docs`), runbooks de deploy e incidente.
 4. [ ] **Monitoramento contínuo** — além do produto PGIC, observabilidade da plataforma (uptime dos serviços, filas, DB); integração com alertas (PagerDuty, Opsgenie, e-mail, etc.).
 5. [ ] **Política de segurança da informação** — classificação de dados (público, interno, confidencial); tratamento de incidente de segurança (quem acionar, como registrar); alinhamento com área de SI/Risco quando existir.
 
