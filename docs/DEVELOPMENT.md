@@ -107,3 +107,22 @@ pnpm test:integration
 - **`DATABASE_URL` / `*_DATABASE_URL`:** cada serviço Prisma espera a sua URL (ver `.env.example`). O script `ensure-database` usa `DATABASE_URL` temporariamente durante `prisma:migrate:deploy` dentro de cada pacote.
 
 Para contexto de produto e arquitetura, ver [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md), [MICROSERVICES_LIST.md](MICROSERVICES_LIST.md) e o README na raiz.
+
+## Convenções de API (checklist Fase 2)
+
+### Paginação e listagens
+
+Em novos endpoints de listagem, preferir:
+
+- **`limit`** (opcional, inteiro positivo) com tecto por omissão **100** para evitar respostas gigantes.
+- **`offset`** (opcional, ≥ 0) para páginas simples; ou **`cursor`** + **`cursorDirection`** quando a lista for grande e estável por chave de ordenação.
+- Resposta com metadados opcionais: `total` (quando o custo da contagem for aceitável) ou `hasMore`.
+
+Documentar no OpenAPI do serviço os parâmetros escolhidos.
+
+### Versionamento e deprecação
+
+- **Versão na URL:** prefixo global `/v1/` no gateway (recomendado para PGIC quando formalizado) ou por serviço em `nginx.conf`.
+- **Deprecação:** ao alterar contratos, manter a rota antiga durante um período de convivência (ex.: 2 releases ou 90 dias, o que for maior); responder com cabeçalho **`Deprecation`** (RFC 9745) e **`Sunset`** com data ISO8601 quando aplicável; anunciar no changelog interno e no Swagger (`deprecated: true` nas operações).
+
+Constantes de eventos RabbitMQ para pedidos de serviço: ver `@pgic/shared` (`EXCHANGE_REQUEST_EVENTS`, `REQUEST_*_EVENT`).

@@ -12,6 +12,26 @@ export const QUEUE_USER_UPDATED_REQUEST = "request.user_updated";
 /** Dead-letter queue for failed user events. */
 export const QUEUE_USER_CREATED_REQUEST_FAILED = "request.user_created.failed";
 
+/**
+ * Request / service-catalog events (topic). Publicados pelo request-service (evolução: outbox + relay).
+ * Consumidores típicos: notification-service, audit-service.
+ */
+export const EXCHANGE_REQUEST_EVENTS = "request.events";
+export const ROUTING_KEY_REQUEST_CREATED = "request_created";
+export const ROUTING_KEY_REQUEST_SUBMITTED = "request_submitted";
+export const ROUTING_KEY_REQUEST_IN_APPROVAL = "request_in_approval";
+export const ROUTING_KEY_REQUEST_APPROVED = "request_approved";
+export const ROUTING_KEY_REQUEST_REJECTED = "request_rejected";
+export const ROUTING_KEY_REQUEST_STARTED = "request_started";
+export const ROUTING_KEY_REQUEST_COMPLETED = "request_completed";
+export const REQUEST_CREATED_EVENT = "request.created";
+export const REQUEST_SUBMITTED_EVENT = "request.submitted";
+export const REQUEST_IN_APPROVAL_EVENT = "request.in_approval";
+export const REQUEST_APPROVED_EVENT = "request.approved";
+export const REQUEST_REJECTED_EVENT = "request.rejected";
+export const REQUEST_STARTED_EVENT = "request.started";
+export const REQUEST_COMPLETED_EVENT = "request.completed";
+
 /** Incident events (exchange + routing keys). Published by incident-service (Outbox Pattern). */
 export const EXCHANGE_INCIDENT_EVENTS = "incident.events";
 export const ROUTING_KEY_INCIDENT_CREATED = "incident_created";

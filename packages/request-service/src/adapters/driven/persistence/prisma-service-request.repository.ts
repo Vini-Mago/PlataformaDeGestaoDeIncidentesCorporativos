@@ -1,3 +1,13 @@
+import { randomUUID } from "crypto";
+import {
+  REQUEST_APPROVED_EVENT,
+  REQUEST_COMPLETED_EVENT,
+  REQUEST_CREATED_EVENT,
+  REQUEST_IN_APPROVAL_EVENT,
+  REQUEST_REJECTED_EVENT,
+  REQUEST_STARTED_EVENT,
+  REQUEST_SUBMITTED_EVENT,
+} from "@pgic/shared";
 import { PrismaClient } from "../../../../generated/prisma-client/index.js";
 import type {
   ServiceRequest,
@@ -13,19 +23,54 @@ import type {
 } from "../../../application/ports/service-request-repository.port.js";
 import { ServiceRequestNotFoundError, InvalidStatusTransitionError } from "../../../application/errors.js";
 
+function outboxEventNameForToStatus(toStatus: ServiceRequestStatus): string | null {
+  switch (toStatus) {
+    case "Submitted":
+      return REQUEST_SUBMITTED_EVENT;
+    case "InApproval":
+      return REQUEST_IN_APPROVAL_EVENT;
+    case "Approved":
+      return REQUEST_APPROVED_EVENT;
+    case "Rejected":
+      return REQUEST_REJECTED_EVENT;
+    case "InProgress":
+      return REQUEST_STARTED_EVENT;
+    case "Completed":
+      return REQUEST_COMPLETED_EVENT;
+    default:
+      return null;
+  }
+}
+
 export class PrismaServiceRequestRepository implements IServiceRequestRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async create(data: CreateServiceRequestData): Promise<ServiceRequest> {
-    const row = await this.prisma.serviceRequestModel.create({
-      data: {
-        catalogItemId: data.catalogItemId,
-        requesterId: data.requesterId,
-        status: "Draft",
-        formData: (data.formData ?? undefined) as object | undefined,
-      },
+    return await this.prisma.$transaction(async (tx) => {
+      const row = await tx.serviceRequestModel.create({
+        data: {
+          catalogItemId: data.catalogItemId,
+          requesterId: data.requesterId,
+          status: "Draft",
+          formData: (data.formData ?? undefined) as object | undefined,
+        },
+      });
+      await tx.outboxModel.create({
+        data: {
+          id: randomUUID(),
+          eventName: REQUEST_CREATED_EVENT,
+          payload: {
+            serviceRequestId: row.id,
+            catalogItemId: row.catalogItemId,
+            requesterId: row.requesterId,
+            status: row.status,
+            occurredAt: row.createdAt.toISOString(),
+          } as object,
+          createdAt: new Date(),
+        },
+      });
+      return this.toRequestEntity(row);
     });
-    return this.toRequestEntity(row);
   }
 
   async findById(id: string): Promise<ServiceRequest | null> {
@@ -74,6 +119,29 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
           reason: params.reason ?? null,
         },
       });
+      const eventName = outboxEventNameForToStatus(params.toStatus as ServiceRequestStatus);
+      if (eventName) {
+        const trimmedReason =
+          params.reason != null && params.reason.trim().length > 0 ? params.reason.trim() : undefined;
+        await tx.outboxModel.create({
+          data: {
+            id: randomUUID(),
+            eventName,
+            payload: {
+              serviceRequestId: row.id,
+              catalogItemId: row.catalogItemId,
+              requesterId: row.requesterId,
+              status: params.toStatus,
+              actorId: params.actorId,
+              fromStatus: current.status,
+              toStatus: params.toStatus,
+              occurredAt: new Date().toISOString(),
+              ...(trimmedReason ? { reason: trimmedReason } : {}),
+            } as object,
+            createdAt: new Date(),
+          },
+        });
+      }
       return this.toRequestEntity(row);
     });
   }

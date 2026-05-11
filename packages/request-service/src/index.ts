@@ -31,6 +31,40 @@ if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 const rabbitmqUrl = process.env.RABBITMQ_URL;
 const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;
+const rabbitmqConnectRetries = parseInt(process.env.RABBITMQ_CONNECT_RETRIES ?? (isProduction ? "12" : "20"), 10);
+const rabbitmqConnectRetryDelayMs = parseInt(process.env.RABBITMQ_CONNECT_RETRY_DELAY_MS ?? "1500", 10);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectRabbitMQWithRetry(connect: () => Promise<void>): Promise<boolean> {
+  for (let attempt = 1; attempt <= rabbitmqConnectRetries; attempt += 1) {
+    try {
+      await connect();
+      if (attempt > 1) {
+        logger.info({ attempt }, "request-service: RabbitMQ connected after retry");
+      }
+      return true;
+    } catch (err) {
+      const isLastAttempt = attempt >= rabbitmqConnectRetries;
+      if (isLastAttempt) {
+        if (isProduction) throw err;
+        logger.warn(
+          { err, attempts: rabbitmqConnectRetries },
+          "request-service: RabbitMQ unavailable in development; continuing with messaging disabled"
+        );
+        return false;
+      }
+      logger.warn(
+        { err, attempt, retryInMs: rabbitmqConnectRetryDelayMs },
+        "request-service: RabbitMQ connection failed; retrying"
+      );
+      await sleep(rabbitmqConnectRetryDelayMs);
+    }
+  }
+  return false;
+}
 
 async function bootstrap() {
   const container = createContainer({
@@ -49,27 +83,33 @@ async function bootstrap() {
   });
 
   if (rabbitmqUrl) {
-    if (container.userCreatedConsumer) {
-      container.userCreatedConsumer.start().catch((err) => {
-        logger.error({ err }, "Failed to start user.created consumer; replication disabled until restart");
-      });
-    }
-    if (container.userUpdatedConsumer) {
-      container.userUpdatedConsumer.start().catch((err) => {
-        logger.error({ err }, "Failed to start user.updated consumer; replication may be stale until restart");
-      });
-    }
-    const missing: string[] = [];
-    if (!container.userCreatedConsumer) missing.push("userCreatedConsumer");
-    if (!container.userUpdatedConsumer) missing.push("userUpdatedConsumer");
-    if (missing.length > 0) {
-      logger.warn(
-        { missing },
-        "RABBITMQ_URL set but one or more consumers not configured; replication may be incomplete until restart"
-      );
+    const rabbitConnected = await connectRabbitMQWithRetry(async () => container.connectRabbitMQ());
+    if (rabbitConnected) {
+      const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
+      container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+
+      if (container.userCreatedConsumer) {
+        container.userCreatedConsumer.start().catch((err) => {
+          logger.error({ err }, "Failed to start user.created consumer; replication disabled until restart");
+        });
+      }
+      if (container.userUpdatedConsumer) {
+        container.userUpdatedConsumer.start().catch((err) => {
+          logger.error({ err }, "Failed to start user.updated consumer; replication may be stale until restart");
+        });
+      }
+      const missing: string[] = [];
+      if (!container.userCreatedConsumer) missing.push("userCreatedConsumer");
+      if (!container.userUpdatedConsumer) missing.push("userUpdatedConsumer");
+      if (missing.length > 0) {
+        logger.warn(
+          { missing },
+          "RABBITMQ_URL set but one or more consumers not configured; replication may be incomplete until restart"
+        );
+      }
     }
   } else {
-    logger.info("RABBITMQ_URL not set; user replication (user.created/user.updated consumers) disabled");
+    logger.info("RABBITMQ_URL not set; Outbox relay and user replication (user.created/user.updated) disabled");
   }
 
   const shutdownTimeoutMs = 10_000;

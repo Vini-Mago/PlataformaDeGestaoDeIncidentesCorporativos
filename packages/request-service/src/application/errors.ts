@@ -48,3 +48,21 @@ export class ServiceRequestApproverRoleForbiddenError extends AppError {
     Object.setPrototypeOf(this, ServiceRequestApproverRoleForbiddenError.prototype);
   }
 }
+
+/** JSON Schema do catálogo é sintaticamente inválido para o motor de validação. */
+export class InvalidCatalogFormSchemaError extends AppError {
+  override name = "InvalidCatalogFormSchemaError";
+  constructor(message: string) {
+    super(`Invalid catalog formSchema: ${message}`);
+    Object.setPrototypeOf(this, InvalidCatalogFormSchemaError.prototype);
+  }
+}
+
+/** Dados do formulário não cumprem o schema do item de catálogo (RF-6.1). */
+export class FormDataValidationError extends AppError {
+  override name = "FormDataValidationError";
+  constructor(public readonly details: string[]) {
+    super(details.length > 0 ? details.join("; ") : "Form data does not match catalog schema");
+    Object.setPrototypeOf(this, FormDataValidationError.prototype);
+  }
+}

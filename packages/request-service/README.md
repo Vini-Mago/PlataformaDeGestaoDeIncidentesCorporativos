@@ -4,7 +4,7 @@ Microservice for **service catalog** (RF-6.1) and **service requests** (RF-6.2):
 
 ## Features
 
-- **Catalog items:** CRUD of services users can request (name, description, category, team, SLA, form schema, approval flow).
+- **Catalog items:** CRUD of services users can request (name, description, category, team, SLA, **JSON Schema** em `formSchema` para validar `formData` na criação e na submissão, approval flow).
 - **Service requests:** Create from catalog item, list, get (with comments and **workflow event trail**), submit, approval path, fulfilment, comments.
 - **Auth:** JWT validation via `@pgic/shared`; catalog create and request mutations use RBAC (`requests:*` permissions).
 

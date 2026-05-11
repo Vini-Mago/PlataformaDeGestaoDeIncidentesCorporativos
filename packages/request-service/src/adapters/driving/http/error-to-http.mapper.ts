@@ -6,6 +6,8 @@ import {
   InvalidStatusFilterError,
   ServiceRequestForbiddenError,
   ServiceRequestApproverRoleForbiddenError,
+  FormDataValidationError,
+  InvalidCatalogFormSchemaError,
 } from "../../../application/errors";
 
 const map = createErrorToHttpMapper([
@@ -15,6 +17,8 @@ const map = createErrorToHttpMapper([
   [InvalidStatusFilterError, 400],
   [ServiceRequestForbiddenError, 403],
   [ServiceRequestApproverRoleForbiddenError, 403],
+  [FormDataValidationError, 400],
+  [InvalidCatalogFormSchemaError, 500],
 ]);
 
 export function mapApplicationErrorToHttp(error: unknown): { statusCode: number; message: string } {

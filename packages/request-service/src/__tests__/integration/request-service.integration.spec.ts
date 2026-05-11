@@ -1,6 +1,6 @@
 /**
  * Integration tests for the Request Service API.
- * Requires PostgreSQL. RabbitMQ is not required (consumers are null when RABBITMQ_URL is unset).
+ * Requires PostgreSQL with migrations applied (incl. `outbox`). RabbitMQ is not required for these tests.
  * Run with: pnpm test:integration
  */
 import path from "path";
@@ -11,6 +11,7 @@ loadEnv({ path: path.join(packageRoot, ".env"), override: true });
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
+import { REQUEST_CREATED_EVENT, REQUEST_SUBMITTED_EVENT } from "@pgic/shared";
 import { createContainer } from "../../container";
 import { createApp } from "../../app";
 import { createTestJwt, TEST_JWT_SECRET } from "./test-jwt";
@@ -37,6 +38,7 @@ describe("Request Service API integration", () => {
     try {
       await container.prisma.$connect();
       await container.prisma.serviceRequestCommentModel.deleteMany({});
+      await container.prisma.outboxModel.deleteMany({});
       await container.prisma.serviceRequestModel.deleteMany({});
       await container.prisma.serviceCatalogItemModel.deleteMany({});
       await container.prisma.replicatedUserModel.deleteMany({});
@@ -54,7 +56,79 @@ describe("Request Service API integration", () => {
   beforeEach(async () => {
     if (!dbAvailable) return;
     await container.prisma.serviceRequestCommentModel.deleteMany({});
+    await container.prisma.outboxModel.deleteMany({});
     await container.prisma.serviceRequestModel.deleteMany({});
+  });
+
+  describe("Outbox (request domain events)", () => {
+    let catalogItemId: string;
+
+    beforeAll(async () => {
+      if (!dbAvailable) return;
+      const item = await container.prisma.serviceCatalogItemModel.create({
+        data: {
+          name: "Outbox catalog",
+          approvalFlow: "none",
+          approverRoleIds: [],
+        },
+      });
+      catalogItemId = item.id;
+    });
+
+    it("persists request.created when creating a service request via API", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(app)
+        .post("/api/service-requests")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ catalogItemId, formData: null })
+        .expect(201);
+      const id = res.body.id as string;
+      const rows = await container.prisma.outboxModel.findMany({
+        where: { eventName: REQUEST_CREATED_EVENT },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      });
+      const match = rows.find((r) => {
+        const p = r.payload as { serviceRequestId?: string };
+        return p.serviceRequestId === id;
+      });
+      expect(match).toBeTruthy();
+      expect(match?.payload).toMatchObject({
+        serviceRequestId: id,
+        catalogItemId,
+        requesterId: userId,
+        status: "Draft",
+      });
+    });
+
+    it("persists request.submitted after submit", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const res = await request(app)
+        .post("/api/service-requests")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ catalogItemId, formData: {} })
+        .expect(201);
+      const id = res.body.id as string;
+      await request(app)
+        .post(`/api/service-requests/${id}/submit`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      const submittedRows = await container.prisma.outboxModel.findMany({
+        where: { eventName: REQUEST_SUBMITTED_EVENT },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      const submitted = submittedRows.find((r) => {
+        const p = r.payload as { serviceRequestId?: string };
+        return p.serviceRequestId === id;
+      });
+      expect(submitted).toBeTruthy();
+      expect(submitted?.payload).toMatchObject({
+        serviceRequestId: id,
+        toStatus: "Submitted",
+        actorId: userId,
+      });
+    });
   });
 
   describe("GET /api/catalog-items (public)", () => {

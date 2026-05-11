@@ -356,7 +356,7 @@ Para fechar o normativo, verificar explicitamente:
 
 - [x] Revisar exportações de **DTOs de erro** (`ErrorResponseDto`) e garantir que todos os serviços usam o mesmo formato em falhas.
 - [x] Revisar **validação** (schemas Zod ou equivalente) e reuso de fragmentos comuns (nome, e-mail, paginação).
-- [~] Definir convenção de **paginação** e filtros nas APIs (`limit`, `cursor`, `page`) e documentar no api-docs.
+- [~] Definir convenção de **paginação** e filtros nas APIs (`limit`, `cursor`, `page`) e documentar no api-docs. *(Convenção base documentada em `docs/DEVELOPMENT.md`; aplicar por endpoint nos serviços.)*
 - [x] Centralizar constantes de **mensageria** (nomes de exchanges, routing keys) quando aplicável, evitando strings mágicas espalhadas.
 
 ### 2.2 Observabilidade mínima em cada serviço
@@ -368,7 +368,7 @@ Para fechar o normativo, verificar explicitamente:
 ### 2.3 Versionamento de API
 
 - [~] Decidir estratégia: prefixo `/v1/` no gateway ou cabeçalho `Accept-Version`.
-- [ ] Documentar política de **deprecação** (avisos, período de convivência).
+- [x] Documentar política de **deprecação** (avisos, período de convivência). *(Ver `docs/DEVELOPMENT.md` — secção Versionamento e deprecação.)*
 
 ### Balanço de saída da Fase 2
 
@@ -459,7 +459,7 @@ Para fechar o normativo, verificar explicitamente:
 
 1. [x] Modelar **item de catálogo**: nome, descrição, categoria, equipe responsável, SLA padrão, formulário dinâmico (JSON schema ou tabela de campos).
 2. [x] CRUD administrativo do catálogo com RBAC (apenas perfis autorizados).
-3. [~] Validar formulários dinâmicos no servidor contra o schema definido para o item.
+3. [x] Validar formulários dinâmicos no servidor contra o schema definido para o item. *(AJV + JSON Schema em `formSchema`; na criação e ao submeter Draft.)*
 
 ### 4.2 Requisição e workflow (RF-6.2)
 
@@ -467,7 +467,7 @@ Para fechar o normativo, verificar explicitamente:
 
 1. [x] Modelar **requisição** com estados: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada (ajustar nomes ao seu domínio).
 2. [ ] Implementar **aprovação sequencial ou paralela** conforme configuração do item.
-3. [ ] Registrar **quem aprovou/rejeitou**, quando e motivo.
+3. [x] Registrar **quem aprovou/rejeitou**, quando e motivo. *(Tabela `service_request_workflow_events` + endpoints approve/reject.)*
 4. [~] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
 
 ### 4.3 Consumidor `user.created`
@@ -477,12 +477,12 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 4.4 Integração assíncrona futura
 
-- [~] Publicar eventos `request.created`, `request.approved` para notificação e auditoria quando esses serviços estiverem prontos.
+- [~] Publicar eventos `request.created`, `request.approved` para notificação e auditoria quando esses serviços estiverem prontos. *(Contratos em `@pgic/shared` — `EXCHANGE_REQUEST_EVENTS`, `REQUEST_*_EVENT`; publicação outbox a ligar.)*
 
 ### Balanço de saída da Fase 4
 
 - [x] Usuário final consegue **escolher item do catálogo**, enviar requisição e acompanhar estado.
-- [ ] Aprovador consegue **aprovar/rejeitar** com trilha persistida.
+- [x] Aprovador consegue **aprovar/rejeitar** com trilha persistida.
 
 ---
 

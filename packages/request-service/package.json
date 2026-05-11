@@ -17,6 +17,7 @@
     "@asteasolutions/zod-to-openapi": "7.3.4",
     "@pgic/shared": "workspace:*",
     "@prisma/client": "^6.8.2",
+    "ajv": "^8.17.1",
     "amqplib": "^0.10.3",
     "awilix": "^13.0.3",
     "cors": "^2.8.6",

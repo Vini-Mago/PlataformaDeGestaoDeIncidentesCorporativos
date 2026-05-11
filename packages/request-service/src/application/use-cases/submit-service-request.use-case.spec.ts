@@ -1,24 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SubmitServiceRequestUseCase } from "./submit-service-request.use-case";
-import { ServiceRequestNotFoundError, InvalidStatusTransitionError } from "../errors";
+import {
+  ServiceRequestNotFoundError,
+  InvalidStatusTransitionError,
+  CatalogItemNotFoundError,
+  FormDataValidationError,
+} from "../errors";
 import type { IServiceRequestRepository } from "../ports/service-request-repository.port";
+import type { IServiceCatalogRepository } from "../ports/service-catalog-repository.port";
+import type { ServiceCatalogItem } from "../../domain/entities/service-catalog-item.entity";
 
 describe("SubmitServiceRequestUseCase", () => {
   let requestRepository: IServiceRequestRepository;
+  let catalogRepository: IServiceCatalogRepository;
 
   const requestId = "11111111-1111-1111-1111-111111111111";
+  const catalogItemId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
   const actorId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
   const draftRequest = {
     id: requestId,
-    catalogItemId: "catalog-id",
+    catalogItemId,
     requesterId: "user-id",
     status: "Draft" as const,
-    formData: null,
+    formData: null as Record<string, unknown> | null,
     assignedTeamId: null,
     assignedToId: null,
     submittedAt: null,
     completedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockCatalog: ServiceCatalogItem = {
+    id: catalogItemId,
+    name: "Cat",
+    description: null,
+    category: null,
+    responsibleTeamId: null,
+    defaultSlaHours: null,
+    formSchema: null,
+    approvalFlow: "none",
+    approverRoleIds: [],
+    isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -33,21 +57,27 @@ describe("SubmitServiceRequestUseCase", () => {
   beforeEach(() => {
     requestRepository = {
       create: vi.fn(),
-      findById: vi.fn(),
+      findById: vi.fn().mockResolvedValue(draftRequest),
       list: vi.fn(),
       transition: vi.fn().mockResolvedValue(submittedRequest),
       getWorkflowEvents: vi.fn(),
       addComment: vi.fn(),
       getComments: vi.fn(),
     };
+    catalogRepository = {
+      findById: vi.fn().mockResolvedValue(mockCatalog),
+      create: vi.fn(),
+      listActive: vi.fn(),
+    };
   });
 
   it("submits a Draft request successfully", async () => {
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     const result = await useCase.execute(requestId, actorId);
 
     expect(result).toEqual(submittedRequest);
+    expect(catalogRepository.findById).toHaveBeenCalledWith(catalogItemId);
     expect(requestRepository.transition).toHaveBeenCalledWith(
       requestId,
       expect.objectContaining({
@@ -60,30 +90,54 @@ describe("SubmitServiceRequestUseCase", () => {
   });
 
   it("throws ServiceRequestNotFoundError when request does not exist", async () => {
-    vi.mocked(requestRepository.transition).mockRejectedValue(new ServiceRequestNotFoundError(requestId));
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    vi.mocked(requestRepository.findById).mockResolvedValue(null);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute(requestId, actorId)).rejects.toThrow(ServiceRequestNotFoundError);
-    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(`Service request not found: ${requestId}`);
+    expect(requestRepository.transition).not.toHaveBeenCalled();
   });
 
-  it("throws InvalidStatusTransitionError when request is already Submitted", async () => {
+  it("throws CatalogItemNotFoundError when catalog item missing", async () => {
+    vi.mocked(catalogRepository.findById).mockResolvedValue(null);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
+
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(CatalogItemNotFoundError);
+    expect(requestRepository.transition).not.toHaveBeenCalled();
+  });
+
+  it("throws FormDataValidationError before transition when schema not satisfied", async () => {
+    vi.mocked(catalogRepository.findById).mockResolvedValue({
+      ...mockCatalog,
+      formSchema: {
+        type: "object",
+        required: ["reason"],
+        properties: { reason: { type: "string" } },
+      },
+    });
+    vi.mocked(requestRepository.findById).mockResolvedValue({
+      ...draftRequest,
+      formData: {},
+    });
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
+
+    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(FormDataValidationError);
+    expect(requestRepository.transition).not.toHaveBeenCalled();
+  });
+
+  it("throws InvalidStatusTransitionError when transition rejects", async () => {
     vi.mocked(requestRepository.transition).mockRejectedValue(
       new InvalidStatusTransitionError("Submitted", "Submitted")
     );
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
-    await expect(useCase.execute(requestId, actorId)).rejects.toThrow(
-      "Invalid status transition from Submitted to Submitted"
-    );
   });
 
   it("throws InvalidStatusTransitionError when request is InProgress", async () => {
     vi.mocked(requestRepository.transition).mockRejectedValue(
       new InvalidStatusTransitionError("InProgress", "Submitted")
     );
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
@@ -92,7 +146,7 @@ describe("SubmitServiceRequestUseCase", () => {
     vi.mocked(requestRepository.transition).mockRejectedValue(
       new InvalidStatusTransitionError("Completed", "Submitted")
     );
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
@@ -101,14 +155,14 @@ describe("SubmitServiceRequestUseCase", () => {
     vi.mocked(requestRepository.transition).mockRejectedValue(
       new InvalidStatusTransitionError("Cancelled", "Submitted")
     );
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute(requestId, actorId)).rejects.toThrow(InvalidStatusTransitionError);
   });
 
-  it("handles unusual requestId (empty string) — transition throws not found", async () => {
-    vi.mocked(requestRepository.transition).mockRejectedValue(new ServiceRequestNotFoundError(""));
-    const useCase = new SubmitServiceRequestUseCase(requestRepository);
+  it("handles unusual requestId (empty string) — findById returns null", async () => {
+    vi.mocked(requestRepository.findById).mockResolvedValue(null);
+    const useCase = new SubmitServiceRequestUseCase(requestRepository, catalogRepository);
 
     await expect(useCase.execute("", actorId)).rejects.toThrow(ServiceRequestNotFoundError);
   });

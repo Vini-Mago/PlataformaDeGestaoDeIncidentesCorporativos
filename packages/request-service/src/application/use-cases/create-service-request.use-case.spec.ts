@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreateServiceRequestUseCase } from "./create-service-request.use-case";
-import { CatalogItemNotFoundError } from "../errors";
+import { CatalogItemNotFoundError, FormDataValidationError } from "../errors";
 import type { IServiceRequestRepository } from "../ports/service-request-repository.port";
 import type { IServiceCatalogRepository } from "../ports/service-catalog-repository.port";
 import type { ServiceCatalogItem } from "../../domain/entities/service-catalog-item.entity";
@@ -102,6 +102,23 @@ describe("CreateServiceRequestUseCase", () => {
       requesterId,
       formData: null,
     });
+  });
+
+  it("throws FormDataValidationError when formData does not match catalog formSchema", async () => {
+    const withSchema: ServiceCatalogItem = {
+      ...mockCatalogItem,
+      formSchema: {
+        type: "object",
+        required: ["reason"],
+        properties: { reason: { type: "string", minLength: 1 } },
+      },
+    };
+    vi.mocked(catalogRepository.findById).mockResolvedValue(withSchema);
+    const useCase = new CreateServiceRequestUseCase(requestRepository, catalogRepository);
+    const dto = { catalogItemId, formData: {} };
+
+    await expect(useCase.execute(dto, requesterId)).rejects.toThrow(FormDataValidationError);
+    expect(requestRepository.create).not.toHaveBeenCalled();
   });
 
   it("throws CatalogItemNotFoundError when catalog item does not exist", async () => {

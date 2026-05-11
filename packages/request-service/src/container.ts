@@ -22,6 +22,9 @@ import { CatalogItemController } from "./adapters/driving/http/catalog-item.cont
 import { ServiceRequestController } from "./adapters/driving/http/service-request.controller";
 import { RabbitMqUserCreatedConsumer } from "./adapters/driving/messaging/rabbitmq-user-created.consumer";
 import { RabbitMqUserUpdatedConsumer } from "./adapters/driving/messaging/rabbitmq-user-updated.consumer";
+import { RabbitMqRequestEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-request-event-publisher.adapter";
+import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
+import type { IEventPublisher } from "./application/ports/event-publisher.port";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 
@@ -52,6 +55,8 @@ interface RequestCradle {
   completeServiceRequestUseCase: CompleteServiceRequestUseCase;
   addRequestCommentUseCase: AddRequestCommentUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
+  eventPublisher: IEventPublisher & { connect?: () => Promise<void>; disconnect?: () => Promise<void> };
+  outboxRelay: OutboxRelayAdapter;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
   userUpdatedConsumer: RabbitMqUserUpdatedConsumer | null;
   catalogItemController: CatalogItemController;
@@ -83,6 +88,22 @@ export function createContainer(config: RequestContainerConfig) {
 
     replicatedUserStore: asFunction(
       (cradle: RequestCradle) => new PrismaReplicatedUserStore(cradle.prisma)
+    ).singleton(),
+
+    eventPublisher: asFunction(({ config }: { config: RequestContainerConfig }) => {
+      if (!config.rabbitmqUrl) {
+        return {
+          connect: async () => {},
+          publish: async () => {},
+          disconnect: async () => {},
+        };
+      }
+      return new RabbitMqRequestEventPublisherAdapter(config.rabbitmqUrl);
+    }).singleton(),
+
+    outboxRelay: asFunction(
+      (cradle: RequestCradle) =>
+        new OutboxRelayAdapter(cradle.prisma, cradle.eventPublisher as IEventPublisher)
     ).singleton(),
 
     createCatalogItemUseCase: asFunction(
@@ -120,7 +141,7 @@ export function createContainer(config: RequestContainerConfig) {
 
     submitServiceRequestUseCase: asFunction(
       (cradle: RequestCradle) =>
-        new SubmitServiceRequestUseCase(cradle.requestRepository)
+        new SubmitServiceRequestUseCase(cradle.requestRepository, cradle.catalogRepository)
     ).singleton(),
 
     sendForApprovalServiceRequestUseCase: asFunction(
@@ -222,11 +243,25 @@ export function createContainer(config: RequestContainerConfig) {
       return c.routes;
     },
     mapApplicationErrorToHttp,
+    get eventPublisher() {
+      return c.eventPublisher;
+    },
+    get outboxRelay() {
+      return c.outboxRelay;
+    },
     get userCreatedConsumer() {
       return c.userCreatedConsumer;
     },
     get userUpdatedConsumer() {
       return c.userUpdatedConsumer;
+    },
+    async connectRabbitMQ(): Promise<void> {
+      if (c.config.rabbitmqUrl && "connect" in c.eventPublisher && typeof c.eventPublisher.connect === "function") {
+        await c.eventPublisher.connect();
+      }
+    },
+    startOutboxRelay(intervalMs: number = 2_000): void {
+      c.outboxRelay.start(intervalMs);
     },
     async disconnect(): Promise<void> {
       try {
@@ -234,8 +269,23 @@ export function createContainer(config: RequestContainerConfig) {
         if (c.userUpdatedConsumer) await c.userUpdatedConsumer.stop();
       } catch (err) {
         logger.error({ err }, "userCreatedConsumer.stop() failed on disconnect");
-      } finally {
+      }
+      try {
+        if (c.config.rabbitmqUrl && "disconnect" in c.eventPublisher && typeof c.eventPublisher.disconnect === "function") {
+          await c.eventPublisher.disconnect();
+        }
+      } catch (err) {
+        logger.error({ err }, "eventPublisher.disconnect() failed on disconnect");
+      }
+      try {
+        c.outboxRelay.stop();
+      } catch (err) {
+        logger.error({ err }, "outboxRelay.stop() failed on disconnect");
+      }
+      try {
         await c.prisma.$disconnect();
+      } catch (err) {
+        logger.error({ err }, "prisma.$disconnect() failed on disconnect");
       }
     },
   };

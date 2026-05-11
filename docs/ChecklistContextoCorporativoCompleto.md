@@ -130,8 +130,8 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.2 Requisições de serviço (RF-6.x) — *request-service*
 
-- [x] **Catálogo** de itens com categoria, equipe, SLA padrão, formulário dinâmico e fluxo de aprovação (RF-6.1).
-- [~] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2). *(Submit Draft→Submitted implementado; transições de aprovação/atendimento documentadas como TODO no request-service.)*
+- [x] **Catálogo** de itens com categoria, equipe, SLA padrão, formulário dinâmico e fluxo de aprovação (RF-6.1). *(Validação servidor de `formData` vs JSON Schema em `formSchema` na criação e na submissão.)*
+- [~] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2). *(Transições REST + trilha `workflow_events`; aprovação sequencial/paralela multi-nível ainda não diferenciada.)*
 - [x] Réplica de usuários para exibição (`user.created` → `replicated_users`, conforme documentação do serviço).
 
 ### 5.3 Problemas e mudanças (RF-7.x) — *problem-change-service*

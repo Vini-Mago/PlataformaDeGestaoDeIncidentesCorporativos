@@ -81,6 +81,23 @@ model ServiceRequestCommentModel {
   @@map("service_request_comments")
 }
 
+// Outbox for reliable event publishing (Outbox Pattern).
+model OutboxModel {
+  id            String    @id @default(uuid())
+  eventName     String    @map("event_name")
+  payload       Json      @db.JsonB
+  createdAt     DateTime  @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+  processingAt  DateTime? @map("processing_at")
+  failedAt      DateTime? @map("failed_at")
+  terminalError String?   @map("terminal_error") @db.Text
+
+  @@index([publishedAt])
+  @@index([processingAt])
+  @@index([failedAt])
+  @@map("outbox")
+}
+
 // Replicated from identity-service via RabbitMQ user.created (Outbox Pattern).
 // Used for display (e.g. requester name) without calling identity; no FK to avoid cross-DB coupling.
 model ReplicatedUserModel {

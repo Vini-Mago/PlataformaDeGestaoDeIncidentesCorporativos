@@ -7,6 +7,8 @@ import {
   InvalidStatusFilterError,
   ServiceRequestForbiddenError,
   ServiceRequestApproverRoleForbiddenError,
+  FormDataValidationError,
+  InvalidCatalogFormSchemaError,
 } from "../../../application/errors";
 
 describe("mapApplicationErrorToHttp (request-service)", () => {
@@ -50,6 +52,20 @@ describe("mapApplicationErrorToHttp (request-service)", () => {
     const result = mapApplicationErrorToHttp(err);
     expect(result.statusCode).toBe(403);
     expect(result.message).toContain("role");
+  });
+
+  it("maps FormDataValidationError to 400", () => {
+    const err = new FormDataValidationError(["/reason: required"]);
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(400);
+    expect(result.message).toContain("reason");
+  });
+
+  it("maps InvalidCatalogFormSchemaError to 500", () => {
+    const err = new InvalidCatalogFormSchemaError("bad");
+    const result = mapApplicationErrorToHttp(err);
+    expect(result.statusCode).toBe(500);
+    expect(result.message).toContain("formSchema");
   });
 
   it("returns 500 and generic message for unmapped error", () => {

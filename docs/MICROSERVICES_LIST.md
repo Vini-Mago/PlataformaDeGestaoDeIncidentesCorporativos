@@ -93,7 +93,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 ### Integrações
 
 - **Consome:** `user.created` (RabbitMQ, exchange `user.events`, fila `request.user_created`, routing key `user_created`). Eventos publicados pelo identity-service via **Outbox Pattern** (tabela `outbox`, relay publica no RabbitMQ). O request-service replica os dados na tabela `replicated_users` para uso em listagens (ex.: nome do solicitante).
-- **Pode publicar:** eventos de requisição (criada, aprovada, concluída) para notificação e auditoria (futuro).
+- **Pode publicar:** exchange topic `request.events` (`@pgic/shared`: `EXCHANGE_REQUEST_EVENTS`, routing keys `request_created`, `request_submitted`, … e nomes lógicos `request.created`, `request.approved`, etc.). Implementação outbox + relay ainda a ligar; validação de `formData` contra `formSchema` (JSON Schema) já no serviço.
 
 ### Prefixo no gateway
 
