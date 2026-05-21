@@ -28,7 +28,7 @@ Serviços com **Prisma** (migrações próprias): identity, request, incident, p
 
 ## Gateway (Nginx)
 
-Prefixos principais em `nginx/nginx.conf`: `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/api-docs/`. Não há prefixo de versão tipo `/v1/` no path; evolução de API deve ser tratada por convenção nos controladores e na documentação OpenAPI.
+Prefixos principais em `nginx/templates/default.conf.template`: `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/api-docs/`. Não há prefixo de versão tipo `/v1/` no path; evolução de API deve ser tratada por convenção nos controladores e na documentação OpenAPI.
 
 ## Identity / segurança
 

@@ -15,11 +15,10 @@ Opcional: `psql`, `redis-cli`, Make.
 ```bash
 cp .env.example .env
 pnpm install
-pnpm docker:up
-pnpm db:migrate:deploy
+pnpm dev
 ```
 
-O script `db:migrate:deploy` aplica `prisma migrate deploy` em todos os pacotes com Prisma (uma base por serviço no mesmo Postgres). Cada serviço usa `scripts/ensure-database.ts` para criar a base se ainda não existir.
+`pnpm dev` sobe Docker Compose, aplica `prisma migrate deploy` em todos os pacotes com Prisma e inicia os serviços. Cada serviço usa `scripts/ensure-database.ts` para criar a base se ainda não existir.
 
 ## Serviços HTTP e portas (padrão `.env.example`)
 
@@ -42,10 +41,24 @@ Gateway: `http://localhost:8080` (variável `GATEWAY_PORT`). Health do proxy: `G
 
 ### Subir aplicações
 
-Terminais separados ou, na raiz:
+Na raiz, para subir Docker Compose + migrations + todos os serviços:
 
 ```bash
 pnpm dev
+```
+
+O comando usa `scripts/dev-all.ts`: se uma porta padrão estiver ocupada, ele escolhe a próxima porta livre e atualiza as variáveis usadas por BFF, API Docs, frontend e Nginx naquele processo. `pnpm dev:all` e `pnpm dev:all:migrate` executam o mesmo fluxo.
+
+```bash
+pnpm dev:all:no-migrate
+```
+
+Use apenas quando quiser iniciar tudo sem reaplicar migrations.
+
+Para apenas conferir quais portas seriam usadas, sem iniciar nada:
+
+```bash
+pnpm exec tsx scripts/dev-all.ts --dry-run
 ```
 
 Ou, por serviço:
@@ -73,7 +86,9 @@ Para sessão e chamadas à API na mesma política de cookies, prefira aceder à 
 
 ## Migrações
 
-**Todas as bases (recomendado após `docker:up`):**
+O fluxo normal já aplica migrations via `pnpm dev`.
+
+**Todas as bases manualmente:**
 
 ```bash
 pnpm db:migrate:deploy
@@ -102,7 +117,7 @@ pnpm test:integration
 
 ## Problemas frequentes
 
-- **Postgres recusa conexão:** confirme `pnpm docker:up` e que `POSTGRES_PORT` no `.env` coincide com o mapeamento do Compose.
+- **Postgres recusa conexão:** no fluxo normal, reinicie `pnpm dev` e confira a porta impressa no terminal. Ao rodar serviços isolados, confirme `pnpm docker:up` e que `POSTGRES_PORT` no `.env` coincide com o mapeamento do Compose.
 - **Nginx não alcança os serviços:** no Linux, `docker-compose.yml` usa `extra_hosts: host.docker.internal:host-gateway` para os microsserviços corridos no host com `pnpm dev:*`.
 - **`DATABASE_URL` / `*_DATABASE_URL`:** cada serviço Prisma espera a sua URL (ver `.env.example`). O script `ensure-database` usa `DATABASE_URL` temporariamente durante `prisma:migrate:deploy` dentro de cada pacote.
 
@@ -122,7 +137,7 @@ Documentar no OpenAPI do serviço os parâmetros escolhidos.
 
 ### Versionamento e deprecação
 
-- **Versão na URL:** prefixo global `/v1/` no gateway (recomendado para PGIC quando formalizado) ou por serviço em `nginx.conf`.
+- **Versão na URL:** prefixo global `/v1/` no gateway (recomendado para PGIC quando formalizado) ou por serviço em `nginx/templates/default.conf.template`.
 - **Deprecação:** ao alterar contratos, manter a rota antiga durante um período de convivência (ex.: 2 releases ou 90 dias, o que for maior); responder com cabeçalho **`Deprecation`** (RFC 9745) e **`Sunset`** com data ISO8601 quando aplicável; anunciar no changelog interno e no Swagger (`deprecated: true` nas operações).
 
 Constantes de eventos RabbitMQ para pedidos de serviço: ver `@pgic/shared` (`EXCHANGE_REQUEST_EVENTS`, `REQUEST_*_EVENT`).

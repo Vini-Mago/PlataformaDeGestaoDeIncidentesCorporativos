@@ -1,0 +1,169 @@
+upstream identity {
+    server host.docker.internal:${IDENTITY_SERVICE_PORT};
+}
+
+upstream request {
+    server host.docker.internal:${REQUEST_SERVICE_PORT};
+}
+
+upstream incidents {
+    server host.docker.internal:${INCIDENT_SERVICE_PORT};
+}
+
+upstream problem_change {
+    server host.docker.internal:${PROBLEM_CHANGE_SERVICE_PORT};
+}
+
+upstream sla {
+    server host.docker.internal:${SLA_SERVICE_PORT};
+}
+
+upstream escalation {
+    server host.docker.internal:${ESCALATION_SERVICE_PORT};
+}
+
+upstream notification {
+    server host.docker.internal:${NOTIFICATION_SERVICE_PORT};
+}
+
+upstream audit {
+    server host.docker.internal:${AUDIT_SERVICE_PORT};
+}
+
+upstream reporting {
+    server host.docker.internal:${REPORTING_SERVICE_PORT};
+}
+
+upstream integration {
+    server host.docker.internal:${INTEGRATION_SERVICE_PORT};
+}
+
+upstream api_docs {
+    server host.docker.internal:${API_DOCS_PORT};
+}
+
+server {
+    listen 80;
+    server_name localhost;
+
+    location /identity/ {
+        proxy_pass http://identity/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /request/ {
+        proxy_pass http://request/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /incidents/ {
+        proxy_pass http://incidents/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /problem-change/ {
+        proxy_pass http://problem_change/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /sla/ {
+        proxy_pass http://sla/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /escalation/ {
+        proxy_pass http://escalation/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /notifications/ {
+        proxy_pass http://notification/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /audit/ {
+        proxy_pass http://audit/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /reporting/ {
+        proxy_pass http://reporting/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /integration/ {
+        proxy_pass http://integration/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /api-docs/ {
+        proxy_pass http://api_docs/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header X-Gateway "nginx" always;
+    }
+
+    location /health {
+        access_log off;
+        add_header Content-Type application/json;
+        return 200 '{"status":"ok","service":"api-gateway"}';
+    }
+
+    location / {
+        add_header Content-Type application/json;
+        return 404 '{"error":"Not Found","message":"Use /identity/, /request/, /incidents/, /problem-change/, /sla/, /escalation/, /notifications/, /audit/, /reporting/, /integration/ or /api-docs/"}';
+    }
+}

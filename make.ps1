@@ -9,9 +9,9 @@ function Show-Help {
   Write-Host "Uso: ./make.ps1 <alvo>"
   Write-Host ""
   Write-Host "Alvos disponíveis:"
-  Write-Host "  run       npm run docker:up && npm run dev"
-  Write-Host "  frontend  npm run dev:frontend"
-  Write-Host "  bff       npm run dev:bff"
+  Write-Host "  run       pnpm dev"
+  Write-Host "  frontend  pnpm dev:frontend"
+  Write-Host "  bff       pnpm dev:bff"
   Write-Host "  ngrok     carrega .env e inicia ngrok"
   Write-Host "  help      mostra esta ajuda"
 }
@@ -44,18 +44,15 @@ function Load-DotEnv([string]$Path) {
 
 switch ($Target.ToLowerInvariant()) {
   "run" {
-    npm run docker:up
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-    npm run dev
+    pnpm dev
     exit $LASTEXITCODE
   }
   "frontend" {
-    npm run dev:frontend
+    pnpm dev:frontend
     exit $LASTEXITCODE
   }
   "bff" {
-    npm run dev:bff
+    pnpm dev:bff
     exit $LASTEXITCODE
   }
   "ngrok" {

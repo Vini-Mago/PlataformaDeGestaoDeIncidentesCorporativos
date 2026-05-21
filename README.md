@@ -32,7 +32,7 @@ PGIC/
 │   ├── bff/
 │   └── frontend/
 ├── nginx/
-│   └── nginx.conf           # API Gateway (proxy reverso)
+│   └── templates/           # API Gateway (proxy reverso com portas via env)
 ├── scripts/
 │   └── ensure-database.ts     # Cria bases Postgres antes do migrate deploy
 ├── docker-compose.yml       # Postgres, Redis, RabbitMQ, Nginx
@@ -45,6 +45,7 @@ Cada serviço segue **hexagonal + DDD**: `domain/`, `application/`, `infrastruct
 
 | Documento | Conteúdo |
 |-----------|----------|
+| [docs/COMO_RODAR.md](docs/COMO_RODAR.md) | Passo a passo para rodar o projeto completo localmente |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Ambiente local, migrações, portas, troubleshooting |
 | [docs/TECHNICAL_REVIEW.md](docs/TECHNICAL_REVIEW.md) | Pacotes, gateway, Prisma, estado técnico atual |
 | [docs/RequisitosCorp.md](docs/RequisitosCorp.md) | Requisitos corporativos de referência |
@@ -59,31 +60,26 @@ Cada serviço segue **hexagonal + DDD**: `domain/`, `application/`, `infrastruct
 ```bash
 cp .env.example .env
 pnpm install
-pnpm docker:up
-pnpm db:migrate:deploy
+pnpm dev
 ```
 
-`db:migrate:deploy` aplica **todas** as migrações Prisma dos nove serviços com base de dados própria. Para um único serviço:
-
-```bash
-pnpm --filter identity-service run prisma:migrate:deploy
-```
-
-Novas migrations em desenvolvimento:
-
-```bash
-pnpm --filter <nome-do-pacote> exec prisma migrate dev --name <nome>
-```
-
-Detalhes e tabela de portas: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+`pnpm dev` sobe Docker Compose, aplica as migrations de todos os microsserviços e inicia backend, API Docs, frontend e BFF. Se alguma porta estiver ocupada, ele escolhe outra porta livre e ajusta as conexões automaticamente. Detalhes: [docs/COMO_RODAR.md](docs/COMO_RODAR.md).
 
 ### Serviços em desenvolvimento
 
-Na raiz, **todos** os backend + api-docs + frontend + bff:
+Na raiz, **Docker + todos** os backend + api-docs + frontend + bff:
 
 ```bash
 pnpm dev
 ```
+
+Esse comando escolhe automaticamente outra porta quando a porta padrão estiver ocupada e propaga a nova porta para BFF, Swagger e Nginx. `pnpm dev:all` e `pnpm dev:all:migrate` são aliases do mesmo fluxo.
+
+```bash
+pnpm dev:all:no-migrate
+```
+
+Use esse comando apenas quando quiser subir sem reaplicar migrations.
 
 Ou por serviço (exemplos):
 
@@ -95,7 +91,7 @@ pnpm dev:incident          # http://localhost:3004
 pnpm dev:frontend          # Vite — tipicamente http://localhost:5173
 ```
 
-**Gateway:** `http://localhost:8080` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/integration/`, `/api-docs/`. Ver `nginx/nginx.conf`.
+**Gateway:** `http://localhost:8080` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/integration/`, `/api-docs/`. Ver `nginx/templates/default.conf.template`.
 
 ## Testes
 

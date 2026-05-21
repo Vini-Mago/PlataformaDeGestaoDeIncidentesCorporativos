@@ -1,13 +1,13 @@
 .PHONY: run frontend bff ngrok
 
 run:
-	npm run docker:up && npm run dev
+	pnpm dev
 
 frontend:
-	npm run dev:frontend
+	pnpm dev:frontend
 
 bff:
-	npm run dev:bff
+	pnpm dev:bff
 
 ngrok:
 	@set -a; . ./.env; set +a; \
