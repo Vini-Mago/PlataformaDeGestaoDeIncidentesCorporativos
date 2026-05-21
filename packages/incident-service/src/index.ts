@@ -92,6 +92,11 @@ async function bootstrap() {
           logger.error({ err }, "Failed to start user.created consumer; replication disabled until restart");
         });
       }
+      if (container.integrationIngestConsumer) {
+        container.integrationIngestConsumer.start().catch((err) => {
+          logger.error({ err }, "Failed to start integration ingest consumer");
+        });
+      }
     }
   } else {
     logger.info("RABBITMQ_URL not set; Outbox relay and user replication disabled");

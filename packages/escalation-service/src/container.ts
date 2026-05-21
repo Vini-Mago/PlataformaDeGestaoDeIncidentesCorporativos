@@ -8,16 +8,24 @@ import { GetEscalationRuleUseCase } from "./application/use-cases/get-escalation
 import { EscalationController } from "./adapters/driving/http/escalation.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
+import { PrismaEscalationHistoryRepository } from "./adapters/driven/persistence/prisma-escalation-history.repository";
+import { HandleEscalationDomainEventUseCase } from "./application/use-cases/handle-escalation-domain-event.use-case";
+import { RabbitMqEscalationEventsConsumer } from "./adapters/driving/messaging/rabbitmq-escalation-events.consumer";
+import { logger } from "@pgic/shared";
 
 export interface EscalationContainerConfig {
   databaseUrl: string;
   jwtSecret: string;
+  rabbitmqUrl?: string;
 }
 
 interface EscalationCradle {
   config: EscalationContainerConfig;
   prisma: PrismaClient;
   escalationRuleRepository: PrismaEscalationRuleRepository;
+  escalationHistoryRepository: PrismaEscalationHistoryRepository;
+  handleEscalationDomainEventUseCase: HandleEscalationDomainEventUseCase;
+  escalationEventsConsumer: RabbitMqEscalationEventsConsumer | null;
   createEscalationRuleUseCase: CreateEscalationRuleUseCase;
   listEscalationRulesUseCase: ListEscalationRulesUseCase;
   getEscalationRuleUseCase: GetEscalationRuleUseCase;
@@ -42,6 +50,26 @@ export function createContainer(config: EscalationContainerConfig) {
     escalationRuleRepository: asFunction(
       (cradle: EscalationCradle) => new PrismaEscalationRuleRepository(cradle.prisma)
     ).singleton(),
+
+    escalationHistoryRepository: asFunction(
+      (cradle: EscalationCradle) => new PrismaEscalationHistoryRepository(cradle.prisma)
+    ).singleton(),
+
+    handleEscalationDomainEventUseCase: asFunction(
+      (cradle: EscalationCradle) =>
+        new HandleEscalationDomainEventUseCase(
+          cradle.escalationRuleRepository,
+          cradle.escalationHistoryRepository
+        )
+    ).singleton(),
+
+    escalationEventsConsumer: asFunction((cradle: EscalationCradle) => {
+      if (!cradle.config.rabbitmqUrl) return null;
+      return new RabbitMqEscalationEventsConsumer(
+        cradle.config.rabbitmqUrl,
+        cradle.handleEscalationDomainEventUseCase
+      );
+    }).singleton(),
 
     createEscalationRuleUseCase: asFunction(
       (cradle: EscalationCradle) =>
@@ -92,11 +120,19 @@ export function createContainer(config: EscalationContainerConfig) {
       return c.routes;
     },
     mapApplicationErrorToHttp,
+    get escalationEventsConsumer() {
+      return c.escalationEventsConsumer;
+    },
     async disconnect(): Promise<void> {
+      try {
+        if (c.escalationEventsConsumer) await c.escalationEventsConsumer.stop();
+      } catch (err) {
+        logger.error({ err }, "escalationEventsConsumer.stop failed");
+      }
       try {
         await c.prisma.$disconnect();
       } catch (err) {
-        console.error("Error disconnecting Prisma client", err);
+        logger.error({ err }, "Error disconnecting Prisma client");
       }
     },
   };

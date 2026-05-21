@@ -20,6 +20,9 @@ model IncidentModel {
   assignedTeamId    String?  @map("assigned_team_id")
   assignedToId      String?  @map("assigned_to_id")
   problemId         String?  @map("problem_id")
+  source            String   @default("manual") // manual | integration
+  externalId        String?  @map("external_id")
+  externalSource    String?  @map("external_source")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   resolvedAt        DateTime? @map("resolved_at")
@@ -33,6 +36,7 @@ model IncidentModel {
   @@index([assignedToId])
   @@index([assignedTeamId])
   @@index([createdAt])
+  @@unique([externalSource, externalId])
   @@map("incidents")
 }
 

@@ -4,7 +4,7 @@ Este documento consolida o **intuito estratégico** da **Plataforma de Gestão d
 
 **Como usar:** os itens marcados com `[ ]` são verificáveis (implementação, configuração, teste ou evidência em produção). Itens com `[~]` podem significar “parcialmente atendido”, “documentado mas não implantado” ou “depende de ambiente”. Ajuste os marcadores conforme o estado real do seu deployment.
 
-**Última revisão dos marcadores neste ficheiro (inspeção do código e da infra local do monorepo PGIC):** 2026-05-11. `[x]` indica evidência no repositório; `[~]` indica implementação parcial, só em desenvolvimento ou dependente de política/ambiente; `[ ]` mantém-se quando não há suporte no código atual (ex.: CI/CD, HA em produção, integration-service dedicado).
+**Última revisão dos marcadores neste ficheiro (inspeção do código e da infra local do monorepo PGIC):** 2026-05-20. `[x]` indica evidência no repositório; `[~]` indica implementação parcial, só em desenvolvimento ou dependente de política/ambiente; `[ ]` mantém-se quando não há suporte no código atual (ex.: HA em produção, saída ERP).
 
 ---
 
@@ -122,7 +122,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.1 Gestão de incidentes (RF-5.x) — *incident-service*
 
-- [~] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1). *(API + UI manual; ingestão automática dedicada não evidenciada.)*
+- [~] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1). *(API + UI manual; ingestão via **integration-service** + consumer `incident.integration_ingest`.)*
 - [~] **Criticidade, impacto, serviço afetado, equipe** — regras de roteamento e impacto em SLA (RF-5.2). *(Modelo com criticidade e serviço; ligação operacional completa ao sla-service a consolidar na UX.)*
 - [x] **Workflow** com estados e transições permitidas; invalidação de transições ilegais com mensagem clara (RF-5.3).
 - [~] **SLA de resposta e resolução** por tipo/criticidade/serviço; exibição de contadores e estados de pausa (RF-5.4). *(sla-service existe; contadores no incidente/UI a verificar.)*
@@ -142,17 +142,17 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.4 SLA e escalonamento (RF-8.x) — *sla-service*, *escalation-service*, *notification-service*
 
-- [~] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service com calendários e políticas; maturidade operacional a confirmar em testes e UI.)*
-- [~] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2).
-- [~] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Serviço presente; regras e histórico completos a evidenciar.)*
+- [~] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service: CRUD + `resolveBestMatch` + `sla_assignments`.)*
+- [~] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2). *( `business-time.ts`, consumer de status, scheduler de avaliação.)*
+- [~] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Consumers incident/SLA + `escalation_history`; `no_first_response` pendente.)*
 - [~] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(notification-service presente; canais/DLQ documentados operacionalmente — pendente.)*
 
-### 5.5 Integrações externas (RF-9.x) — *integration-service* (planejado)
+### 5.5 Integrações externas (RF-9.x) — *integration-service*
 
-- [ ] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1).
+- [~] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1). *(Webhook monitoring v1 + outbox + incident ingest; mapeamento severidade→criticidade.)*
 - [ ] **Saída** — envio para ERP/CRM/diretório com timeout, retry, não bloqueio do fluxo principal (RF-9.2).
-- [ ] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3).
-- [ ] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*).
+- [~] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` + tabela `integration_dlq`; reprocessamento API pendente.)*
+- [~] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*). *(API key + HMAC opcional + rate limit + limite JSON 256kb; allowlist IP pendente.)*
 
 ### 5.6 Processamento assíncrono (RF-10.x)
 
@@ -236,7 +236,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 - [x] **Docker** para padronizar execução local e CI. *(Docker Compose para Postgres, Redis, RabbitMQ, Nginx; apps em dev via host.)*
 - [ ] **Orquestração** (Kubernetes ou similar) para produção com auto scaling — roadmap infra.
-- [ ] **CI/CD** — build, testes, deploy com gates de qualidade.
+- [~] **CI/CD** — build, testes, deploy com gates de qualidade. *( `.github/workflows/ci.yml`: lint, migrate, test, test:integration; deploy prod pendente.)*
 
 ### 8.3 Testes (§11)
 
@@ -269,7 +269,7 @@ Use esta tabela para planejar evidências de cobertura (testes, métricas, demos
 | **notification-service** | RF-8.4 | Canais de alerta |
 | **audit-service** | RF-3.x | Trilhas e versionamento auditável |
 | **reporting-service** | RF-4.x, RF-10.x (jobs) | KPIs, dashboards, exportação |
-| **integration-service** (planejado) | RF-9.x | Webhooks e sistemas externos |
+| **integration-service** | RF-9.x | Webhooks, logs, ingestão assíncrona de incidentes |
 
 ---
 
@@ -295,7 +295,7 @@ Considere a PGIC alinhada ao **RequisitosCorp** quando, no mínimo:
 - [~] Os fluxos críticos de **autenticação, autorização e auditoria** estão implementados e testados de ponta a ponta.
 - [~] **Incidentes** e/ou **requisições** percorrem ciclo completo com **histórico** consultável. *(Incidente com histórico; requisição com workflow completo ainda parcial.)*
 - [~] **SLA** (mesmo que em versão inicial) aplica regras de forma explicável e testável.
-- [ ] **Integrações** críticas têm logs, retry e caminho de recuperação (DLQ/reprocessamento).
+- [~] **Integrações** críticas têm logs, retry e caminho de recuperação (DLQ/reprocessamento). *(Entrada webhook + DLQ schema; saída ERP e reprocessamento UI pendentes.)*
 - [ ] **Dashboard/relatórios** refletem filtros e exportação com dados consistentes com o back-end.
 - [~] **Infra de desenvolvimento** (Compose, migrations, gateway) está documentada e reproduzível; **roadmap** claro para HA e CI/CD em produção.
 

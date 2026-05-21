@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("INTEGRATION_DATABASE_URL")
+}
+
+// RF-9.3: Logs de integração (entrada/saída, status, correlação)
+model IntegrationLogModel {
+  id             String   @id @default(uuid())
+  direction      String   // inbound | outbound
+  endpoint       String
+  httpStatus     Int?     @map("http_status")
+  correlationId  String?  @map("correlation_id")
+  externalId     String?  @map("external_id")
+  payloadSummary Json?    @map("payload_summary") @db.JsonB
+  errorMessage   String?  @map("error_message") @db.Text
+  durationMs     Int?     @map("duration_ms")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([direction])
+  @@index([externalId])
+  @@index([createdAt])
+  @@map("integration_logs")
+}
+
+// DLQ manual para reprocessamento (RF-9.3 / RF-10.2)
+model IntegrationDlqModel {
+  id            String    @id @default(uuid())
+  eventName     String    @map("event_name")
+  payload       Json      @db.JsonB
+  errorMessage  String    @map("error_message") @db.Text
+  reprocessedAt DateTime? @map("reprocessed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([reprocessedAt])
+  @@map("integration_dlq")
+}
+
+model OutboxModel {
+  id            String    @id @default(uuid())
+  eventName     String    @map("event_name")
+  payload       Json      @db.JsonB
+  createdAt     DateTime  @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+  claimedAt     DateTime? @map("claimed_at")
+  failedAt      DateTime? @map("failed_at")
+  terminalError String?   @map("terminal_error") @db.Text
+
+  @@index([publishedAt])
+  @@index([claimedAt])
+  @@index([failedAt])
+  @@map("outbox")
+}

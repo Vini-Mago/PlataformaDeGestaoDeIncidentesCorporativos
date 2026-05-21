@@ -12,4 +12,5 @@ export interface ICalendarRepository {
   create(input: CreateCalendarInput): Promise<Calendar>;
   findById(id: string): Promise<Calendar | null>;
   list(): Promise<Calendar[]>;
+  listHolidayDates(calendarId: string): Promise<Set<string>>;
 }

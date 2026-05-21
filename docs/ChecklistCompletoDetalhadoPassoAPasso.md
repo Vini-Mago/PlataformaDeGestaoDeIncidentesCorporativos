@@ -15,7 +15,7 @@ Este documento é o **guia operacional máximo** para conceber, implementar, int
 - `[~]` — em progresso, parcial, ou dependente de ambiente/decisão pendente.
 - `[x]` — concluído e verificado (teste, revisão ou evidência em ambiente alvo).
 
-**Revisão de marcadores no repositório PGIC:** 2026-05-11 — a secção **«Cobertura integral — espelho normativo»** abaixo foi atualizada com base no código e no `docker-compose` local; as **Fases 0–17** mantêm sobretudo orientação processual: marque-as à medida que fechar entregas (muitos micro-passos ainda dependem de evidência manual).
+**Revisão de marcadores no repositório PGIC:** 2026-05-20 — a secção **«Cobertura integral — espelho normativo»** abaixo foi atualizada com base no código e no `docker-compose` local; as **Fases 0–17** mantêm sobretudo orientação processual: marque-as à medida que fechar entregas (muitos micro-passos ainda dependem de evidência manual).
 
 **Princípio de uso**
 
@@ -196,16 +196,16 @@ O sistema deve suportar:
 #### RC §9.1 Integração bidirecional — o sistema deve
 
 - [ ] **Enviar dados para sistemas externos** — conectores configuráveis, fila de saída.
-- [ ] **Receber dados via API ou Webhook** — ingestão autenticada e validada.
-- [ ] **Validar dados recebidos** — schema/contrato antes de persistir.
-- [~] **Garantir autenticação nas integrações** — API keys, OAuth2, HMAC, mTLS conforme parceiro.
+- [~] **Receber dados via API ou Webhook** — ingestão autenticada e validada. *(integration-service webhook v1.)*
+- [~] **Validar dados recebidos** — schema/contrato antes de persistir. *(Zod + OpenAPI.)*
+- [~] **Garantir autenticação nas integrações** — API keys, OAuth2, HMAC, mTLS conforme parceiro. *(API key + HMAC.)*
 
 #### RC §9 — requisitos transversais de integração
 
-- [~] **Logs de integração** — entrada/saída, status, correlação, mascaramento de segredos.
-- [~] **Tratamento de falhas** — não corromper estado interno; registrar para retry.
-- [~] **Timeout e retry** — políticas por integração.
-- [~] **Versionamento de integração** — contrato webhook/API versionado (`v1`, header ou path).
+- [~] **Logs de integração** — entrada/saída, status, correlação, mascaramento de segredos. *(integration_logs.)*
+- [~] **Tratamento de falhas** — não corromper estado interno; registrar para retry. *(outbox + integration_dlq.)*
+- [~] **Timeout e retry** — políticas por integração. *(relay outbox; saída ERP pendente.)*
+- [x] **Versionamento de integração** — contrato webhook/API versionado (`v1`, header ou path).
 
 ### RC §10 Infraestrutura
 
@@ -221,8 +221,8 @@ O sistema deve suportar:
 
 #### RC §10.3 CI/CD
 
-- [ ] **Pipeline automatizado** — build, testes, artefatos.
-- [ ] **Testes automatizados** no pipeline (bloqueio de merge quebrado).
+- [x] **Pipeline automatizado** — build, testes, artefatos. *( `.github/workflows/ci.yml`.)*
+- [x] **Testes automatizados** no pipeline (bloqueio de merge quebrado).
 - [ ] **Deploy seguro** — staging, aprovação, rollback documentado.
 
 ### RC §11 Testes
@@ -692,20 +692,22 @@ Para fechar o normativo, verificar explicitamente:
 
 ---
 
-## Fase 11 — Integration-service (planejado) e integrações externas (RF-9.x, RequisitosCorp §9)
+## Fase 11 — Integration-service e integrações externas (RF-9.x, RequisitosCorp §9)
 
 **Objetivo:** mundo externo entra e sai sem corromper consistência interna.
 
 **Espelho normativo:** **RC §9** (integração bidirecional, validação, autenticação, logs, falhas, timeout, retry, **versionamento de integração**).
 
+**Evidência:** `packages/integration-service`, teste E2E `pnpm test:e2e`, script `pnpm e2e:webhook`.
+
 ### 11.1 Ingestão segura (RF-9.1)
 
 **Passos:**
 
-1. [ ] Endpoints com **API key** ou mTLS/OAuth conforme parceiro.
-2. [ ] Verificação de **assinatura HMAC** em webhooks quando aplicável.
-3. [ ] **Payload máximo**, rate limit, allowlist de IP opcional.
-4. [ ] Validar schema; **400/422** para inválidos; log para análise sem persistir lixo.
+1. [x] Endpoints com **API key** ou mTLS/OAuth conforme parceiro. *( `X-API-Key` no webhook v1.)*
+2. [x] Verificação de **assinatura HMAC** em webhooks quando aplicável. *( `INTEGRATION_WEBHOOK_SECRET` + `X-Signature`.)*
+3. [~] **Payload máximo**, rate limit, allowlist de IP opcional. *(256kb + rate limit; allowlist pendente.)*
+4. [x] Validar schema; **400/422** para inválidos; log para análise sem persistir lixo.
 
 ### 11.2 Saída para sistemas externos (RF-9.2)
 

@@ -20,4 +20,5 @@ export interface IEscalationRuleRepository {
   create(input: CreateEscalationRuleInput): Promise<EscalationRule>;
   findById(id: string): Promise<EscalationRule | null>;
   list(filters?: EscalationRuleListFilters): Promise<EscalationRule[]>;
+  listActiveByTicketType(ticketType: "incident" | "request"): Promise<EscalationRule[]>;
 }

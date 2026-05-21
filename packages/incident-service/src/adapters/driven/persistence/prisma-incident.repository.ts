@@ -24,6 +24,9 @@ export class PrismaIncidentRepository implements IIncidentRepository {
           requesterId: input.requesterId,
           assignedTeamId: input.assignedTeamId,
           assignedToId: input.assignedToId,
+          source: input.source ?? "manual",
+          externalId: input.externalId ?? null,
+          externalSource: input.externalSource ?? null,
         },
       });
       if (input.publishCreatedEvent) {
@@ -47,6 +50,13 @@ export class PrismaIncidentRepository implements IIncidentRepository {
       }
       return this.toIncident(row);
     });
+  }
+
+  async findByExternalRef(externalSource: string, externalId: string): Promise<Incident | null> {
+    const row = await this.prisma.incidentModel.findFirst({
+      where: { externalSource, externalId },
+    });
+    return row ? this.toIncident(row) : null;
   }
 
   async findById(id: string): Promise<Incident | null> {
@@ -163,7 +173,7 @@ export class PrismaIncidentRepository implements IIncidentRepository {
         });
       } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
-          throw new Error("Incident not found");
+          throw new Error("Incident not found", { cause: err });
         }
         throw err;
       }
@@ -214,6 +224,9 @@ export class PrismaIncidentRepository implements IIncidentRepository {
     assignedTeamId: string | null;
     assignedToId: string | null;
     problemId: string | null;
+    source: string;
+    externalId: string | null;
+    externalSource: string | null;
     createdAt: Date;
     updatedAt: Date;
     resolvedAt: Date | null;
@@ -230,6 +243,9 @@ export class PrismaIncidentRepository implements IIncidentRepository {
       assignedTeamId: row.assignedTeamId,
       assignedToId: row.assignedToId,
       problemId: row.problemId,
+      source: row.source === "integration" ? "integration" : "manual",
+      externalId: row.externalId,
+      externalSource: row.externalSource,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       resolvedAt: row.resolvedAt,

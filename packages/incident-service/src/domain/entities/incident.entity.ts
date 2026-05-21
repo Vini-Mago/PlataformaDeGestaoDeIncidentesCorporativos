@@ -23,6 +23,9 @@ export interface Incident {
   assignedTeamId: string | null;
   assignedToId: string | null;
   problemId: string | null;
+  source: "manual" | "integration";
+  externalId: string | null;
+  externalSource: string | null;
   createdAt: Date;
   updatedAt: Date;
   resolvedAt: Date | null;

@@ -10,6 +10,9 @@ export interface CreateIncidentInput {
   assignedToId: string | null;
   /** When true, repository writes incident.created to outbox in same transaction (Outbox Pattern). */
   publishCreatedEvent?: boolean;
+  source?: "manual" | "integration";
+  externalId?: string | null;
+  externalSource?: string | null;
 }
 
 export interface IncidentListFilters {
@@ -21,6 +24,7 @@ export interface IncidentListFilters {
 
 export interface IIncidentRepository {
   create(input: CreateIncidentInput): Promise<Incident>;
+  findByExternalRef(externalSource: string, externalId: string): Promise<Incident | null>;
   findById(id: string): Promise<Incident | null>;
   findByIdWithComments(id: string): Promise<(Incident & { comments: Array<{ id: string; authorId: string; body: string; createdAt: Date }> }) | null>;
   list(filters: IncidentListFilters): Promise<Incident[]>;

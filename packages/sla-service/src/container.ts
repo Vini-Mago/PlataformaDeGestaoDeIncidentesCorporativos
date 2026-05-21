@@ -12,6 +12,15 @@ import { GetCalendarUseCase } from "./application/use-cases/get-calendar.use-cas
 import { CreateSlaPolicyUseCase } from "./application/use-cases/create-sla-policy.use-case";
 import { ListSlaPoliciesUseCase } from "./application/use-cases/list-sla-policies.use-case";
 import { GetSlaPolicyUseCase } from "./application/use-cases/get-sla-policy.use-case";
+import {
+  PrismaSlaAssignmentRepository,
+  PrismaSlaOutboxWriter,
+} from "./adapters/driven/persistence/prisma-sla-assignment.repository";
+import { HandleIncidentCreatedForSlaUseCase } from "./application/use-cases/handle-incident-created-for-sla.use-case";
+import { HandleIncidentStatusForSlaUseCase } from "./application/use-cases/handle-incident-status-for-sla.use-case";
+import { EvaluateSlaAssignmentsUseCase } from "./application/use-cases/evaluate-sla-assignments.use-case";
+import { RabbitMqIncidentEventsConsumer } from "./adapters/driving/messaging/rabbitmq-incident-events.consumer";
+import { SlaEvaluationScheduler } from "./adapters/driving/messaging/sla-evaluation.scheduler";
 import { SlaController } from "./adapters/driving/http/sla.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -35,6 +44,13 @@ interface SlaCradle {
   createSlaPolicyUseCase: CreateSlaPolicyUseCase;
   listSlaPoliciesUseCase: ListSlaPoliciesUseCase;
   getSlaPolicyUseCase: GetSlaPolicyUseCase;
+  slaAssignmentRepository: PrismaSlaAssignmentRepository;
+  slaOutboxWriter: PrismaSlaOutboxWriter;
+  handleIncidentCreatedForSlaUseCase: HandleIncidentCreatedForSlaUseCase;
+  handleIncidentStatusForSlaUseCase: HandleIncidentStatusForSlaUseCase;
+  evaluateSlaAssignmentsUseCase: EvaluateSlaAssignmentsUseCase;
+  incidentEventsConsumer: RabbitMqIncidentEventsConsumer | null;
+  slaEvaluationScheduler: SlaEvaluationScheduler;
   slaController: SlaController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -109,6 +125,55 @@ export function createContainer(config: SlaContainerConfig) {
         new GetSlaPolicyUseCase(cradle.slaPolicyRepository)
     ).singleton(),
 
+    slaAssignmentRepository: asFunction(
+      (cradle: SlaCradle) => new PrismaSlaAssignmentRepository(cradle.prisma)
+    ).singleton(),
+
+    slaOutboxWriter: asFunction(
+      (cradle: SlaCradle) => new PrismaSlaOutboxWriter(cradle.prisma)
+    ).singleton(),
+
+    handleIncidentCreatedForSlaUseCase: asFunction(
+      (cradle: SlaCradle) =>
+        new HandleIncidentCreatedForSlaUseCase(
+          cradle.slaPolicyRepository,
+          cradle.calendarRepository,
+          cradle.slaAssignmentRepository
+        )
+    ).singleton(),
+
+    handleIncidentStatusForSlaUseCase: asFunction(
+      (cradle: SlaCradle) =>
+        new HandleIncidentStatusForSlaUseCase(cradle.slaAssignmentRepository)
+    ).singleton(),
+
+    evaluateSlaAssignmentsUseCase: asFunction(
+      (cradle: SlaCradle) =>
+        new EvaluateSlaAssignmentsUseCase(
+          cradle.slaAssignmentRepository,
+          cradle.slaPolicyRepository,
+          cradle.calendarRepository,
+          cradle.slaOutboxWriter
+        )
+    ).singleton(),
+
+    incidentEventsConsumer: asFunction((cradle: SlaCradle) => {
+      if (!cradle.config.rabbitmqUrl) return null;
+      return new RabbitMqIncidentEventsConsumer(
+        cradle.config.rabbitmqUrl,
+        cradle.handleIncidentCreatedForSlaUseCase,
+        cradle.handleIncidentStatusForSlaUseCase
+      );
+    }).singleton(),
+
+    slaEvaluationScheduler: asFunction(
+      (cradle: SlaCradle) =>
+        new SlaEvaluationScheduler(
+          cradle.evaluateSlaAssignmentsUseCase,
+          parseInt(process.env.SLA_EVALUATION_INTERVAL_MS ?? "30000", 10) || 30_000
+        )
+    ).singleton(),
+
     slaController: asFunction(
       (cradle: SlaCradle) =>
         new SlaController(
@@ -152,6 +217,12 @@ export function createContainer(config: SlaContainerConfig) {
     get outboxRelay() {
       return c.outboxRelay;
     },
+    get incidentEventsConsumer() {
+      return c.incidentEventsConsumer;
+    },
+    get slaEvaluationScheduler() {
+      return c.slaEvaluationScheduler;
+    },
     async connectRabbitMQ(): Promise<void> {
       if (c.config.rabbitmqUrl && "connect" in c.eventPublisher && typeof c.eventPublisher.connect === "function") {
         await c.eventPublisher.connect();
@@ -167,6 +238,16 @@ export function createContainer(config: SlaContainerConfig) {
         }
       } catch (err) {
         logger.error({ err }, "eventPublisher.disconnect() failed on disconnect");
+      }
+      try {
+        c.slaEvaluationScheduler.stop();
+      } catch (err) {
+        logger.error({ err }, "slaEvaluationScheduler.stop() failed");
+      }
+      try {
+        if (c.incidentEventsConsumer) await c.incidentEventsConsumer.stop();
+      } catch (err) {
+        logger.error({ err }, "incidentEventsConsumer.stop() failed");
       }
       try {
         c.outboxRelay.stop();

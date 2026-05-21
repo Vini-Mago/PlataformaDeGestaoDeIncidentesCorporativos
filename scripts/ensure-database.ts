@@ -19,7 +19,7 @@ function parseDatabaseUrl(url: string): { database: string; postgresUrl: string 
     const postgresUrl = parsed.toString().replace(/^postgres:/, "postgresql:");
     return { database, postgresUrl };
   } catch (err) {
-    throw new Error(`Invalid DATABASE_URL: ${err}`);
+    throw new Error(`Invalid DATABASE_URL: ${err}`, { cause: err });
   }
 }
 
@@ -38,7 +38,7 @@ async function ensureDatabase(): Promise<void> {
   const client = new Client({ connectionString: postgresUrl });
   try {
     await client.connect();
-  } catch (err) {
+  } catch {
     console.error(
       "Cannot connect to Postgres. Is it running? Use docker-compose up -d postgres."
     );

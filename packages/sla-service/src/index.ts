@@ -86,6 +86,13 @@ async function bootstrap() {
     if (rabbitConnected) {
       const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
       container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
+
+      if (container.incidentEventsConsumer) {
+        container.incidentEventsConsumer.start().catch((err) => {
+          logger.error({ err }, "Failed to start SLA incident consumers");
+        });
+      }
+      container.slaEvaluationScheduler.start();
     }
   } else {
     logger.info("RABBITMQ_URL not set; Outbox relay disabled");

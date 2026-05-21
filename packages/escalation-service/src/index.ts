@@ -29,11 +29,13 @@ if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 
 }
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 const baseUrl = process.env.ESCALATION_SERVICE_URL ?? `http://localhost:${port}`;
+const rabbitmqUrl = process.env.RABBITMQ_URL;
 
 async function bootstrap() {
   const container = createContainer({
     databaseUrl,
     jwtSecret,
+    rabbitmqUrl,
   });
 
   const app = createApp(container, {
@@ -44,6 +46,12 @@ async function bootstrap() {
   const server: Server = app.listen(port, () => {
     logger.info(`Escalation service listening on http://localhost:${port}`);
   });
+
+  if (rabbitmqUrl && container.escalationEventsConsumer) {
+    container.escalationEventsConsumer.start().catch((err) => {
+      logger.error({ err }, "Failed to start escalation event consumers");
+    });
+  }
 
   const shutdownTimeoutMs = 10_000;
   process.on("SIGTERM", () => {

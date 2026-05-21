@@ -18,8 +18,16 @@ export interface SlaPolicyListFilters {
   isActive?: boolean;
 }
 
+export interface ResolvePolicyQuery {
+  ticketType: "incident" | "request";
+  criticality?: string | null;
+  serviceId?: string | null;
+  clientId?: string | null;
+}
+
 export interface ISlaPolicyRepository {
   create(input: CreateSlaPolicyInput): Promise<SlaPolicy>;
   findById(id: string): Promise<SlaPolicy | null>;
   list(filters?: SlaPolicyListFilters): Promise<SlaPolicy[]>;
+  resolveBestMatch(query: ResolvePolicyQuery): Promise<SlaPolicy | null>;
 }

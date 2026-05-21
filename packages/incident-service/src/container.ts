@@ -14,6 +14,8 @@ import { ChangeIncidentStatusUseCase } from "./application/use-cases/change-inci
 import { AssignIncidentUseCase } from "./application/use-cases/assign-incident.use-case";
 import { AddIncidentCommentUseCase } from "./application/use-cases/add-incident-comment.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
+import { HandleIntegrationIncidentIngestUseCase } from "./application/use-cases/handle-integration-incident-ingest.use-case";
+import { RabbitMqIntegrationIngestConsumer } from "./adapters/driving/messaging/rabbitmq-integration-ingest.consumer";
 import { IncidentController } from "./adapters/driving/http/incident.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -39,6 +41,8 @@ interface IncidentCradle {
   addIncidentCommentUseCase: AddIncidentCommentUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
+  handleIntegrationIncidentIngestUseCase: HandleIntegrationIncidentIngestUseCase;
+  integrationIngestConsumer: RabbitMqIntegrationIngestConsumer | null;
   incidentController: IncidentController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -124,6 +128,20 @@ export function createContainer(config: IncidentContainerConfig) {
       return new RabbitMqUserCreatedConsumer(url, cradle.handleUserCreatedUseCase);
     }).singleton(),
 
+    handleIntegrationIncidentIngestUseCase: asFunction(
+      (cradle: IncidentCradle) =>
+        new HandleIntegrationIncidentIngestUseCase(cradle.incidentRepository)
+    ).singleton(),
+
+    integrationIngestConsumer: asFunction((cradle: IncidentCradle) => {
+      const url = cradle.config.rabbitmqUrl;
+      if (!url) return null;
+      return new RabbitMqIntegrationIngestConsumer(
+        url,
+        cradle.handleIntegrationIncidentIngestUseCase
+      );
+    }).singleton(),
+
     incidentController: asFunction(
       (cradle: IncidentCradle) =>
         new IncidentController(
@@ -170,6 +188,9 @@ export function createContainer(config: IncidentContainerConfig) {
     get userCreatedConsumer() {
       return c.userCreatedConsumer;
     },
+    get integrationIngestConsumer() {
+      return c.integrationIngestConsumer;
+    },
     async connectRabbitMQ(): Promise<void> {
       if (c.config.rabbitmqUrl && "connect" in c.eventPublisher && typeof c.eventPublisher.connect === "function") {
         await c.eventPublisher.connect();
@@ -183,6 +204,11 @@ export function createContainer(config: IncidentContainerConfig) {
         if (c.userCreatedConsumer) await c.userCreatedConsumer.stop();
       } catch (err) {
         logger.error({ err }, "userCreatedConsumer.stop() failed on disconnect");
+      }
+      try {
+        if (c.integrationIngestConsumer) await c.integrationIngestConsumer.stop();
+      } catch (err) {
+        logger.error({ err }, "integrationIngestConsumer.stop() failed on disconnect");
       }
       try {
         if (c.config.rabbitmqUrl && "disconnect" in c.eventPublisher && typeof c.eventPublisher.disconnect === "function") {

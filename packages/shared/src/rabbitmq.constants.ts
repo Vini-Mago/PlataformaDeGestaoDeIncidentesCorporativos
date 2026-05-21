@@ -84,3 +84,13 @@ export const QUEUE_INCIDENT_CREATED_ESCALATION = "escalation.incident_created";
 export const QUEUE_INCIDENT_STATUS_CHANGED_ESCALATION = "escalation.incident_status_changed";
 export const QUEUE_SLA_RISK_ESCALATION = "escalation.sla_risk";
 export const QUEUE_SLA_BREACH_ESCALATION = "escalation.sla_breach";
+
+/** Integration events — webhooks and external ingest (RF-9.x). */
+export const EXCHANGE_INTEGRATION_EVENTS = "integration.events";
+export const ROUTING_KEY_INCIDENT_INGEST = "incident_ingest";
+export const INTEGRATION_INCIDENT_INGEST_EVENT = "integration.incident_ingest";
+export const QUEUE_INCIDENT_INTEGRATION_INGEST = "incident.integration_ingest";
+
+/** SLA evaluation — incident-service publishes; sla-service consumes. */
+export const QUEUE_INCIDENT_CREATED_SLA = "sla.incident_created";
+export const QUEUE_INCIDENT_STATUS_CHANGED_SLA = "sla.incident_status_changed";

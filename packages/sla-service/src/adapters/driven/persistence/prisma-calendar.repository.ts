@@ -26,6 +26,14 @@ export class PrismaCalendarRepository implements ICalendarRepository {
     return row ? this.toCalendar(row) : null;
   }
 
+  async listHolidayDates(calendarId: string): Promise<Set<string>> {
+    const rows = await this.prisma.holidayModel.findMany({
+      where: { calendarId },
+      select: { date: true },
+    });
+    return new Set(rows.map((r) => r.date.toISOString().slice(0, 10)));
+  }
+
   async list(): Promise<Calendar[]> {
     const rows = await this.prisma.calendarModel.findMany({
       orderBy: { name: "asc" },

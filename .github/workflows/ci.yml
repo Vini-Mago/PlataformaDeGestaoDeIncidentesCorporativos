@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pgic
+          POSTGRES_PASSWORD: pgic
+          POSTGRES_DB: identity_service
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pgic"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: pgic
+          RABBITMQ_DEFAULT_PASS: pgic
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_USER: pgic
+      POSTGRES_PASSWORD: pgic
+      JWT_SECRET: ci-jwt-secret-minimum-32-characters-long
+      RABBITMQ_URL: amqp://pgic:pgic@localhost:5672
+      REDIS_URL: redis://localhost:6379
+      IDENTITY_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/identity_service
+      REQUEST_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/request_service
+      INCIDENT_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/incident_service
+      PROBLEM_CHANGE_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/problem_change_service
+      SLA_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/sla_service
+      ESCALATION_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/escalation_service
+      NOTIFICATION_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/notification_service
+      AUDIT_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/audit_service
+      REPORTING_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/reporting_service
+      INTEGRATION_DATABASE_URL: postgresql://pgic:pgic@localhost:5432/integration_service
+      INTEGRATION_WEBHOOK_API_KEY: ci-webhook-key
+      INTEGRATION_SYSTEM_USER_ID: 00000000-0000-4000-8000-000000000001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Generate Prisma clients
+        run: pnpm db:prisma:generate
+
+      - name: Create databases and apply migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Integration tests
+        run: pnpm test:integration

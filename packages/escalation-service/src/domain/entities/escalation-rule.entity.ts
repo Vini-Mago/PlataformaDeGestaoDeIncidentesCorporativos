@@ -19,6 +19,7 @@ export interface EscalationRule {
 export type ConditionType =
   | "no_first_response_minutes"
   | "sla_risk_percent"
+  | "sla_breach"
   | "criticality";
 
 export type EscalationAction =
@@ -31,6 +32,7 @@ export const VALID_TICKET_TYPES = ["incident", "request"] as const;
 export const VALID_CONDITION_TYPES: ConditionType[] = [
   "no_first_response_minutes",
   "sla_risk_percent",
+  "sla_breach",
   "criticality",
 ];
 export const VALID_ACTIONS: EscalationAction[] = [

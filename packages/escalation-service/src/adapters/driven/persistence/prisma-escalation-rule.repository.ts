@@ -31,6 +31,10 @@ export class PrismaEscalationRuleRepository implements IEscalationRuleRepository
     return row ? this.toEscalationRule(row) : null;
   }
 
+  async listActiveByTicketType(ticketType: "incident" | "request"): Promise<EscalationRule[]> {
+    return this.list({ ticketType, isActive: true });
+  }
+
   async list(filters: EscalationRuleListFilters = {}): Promise<EscalationRule[]> {
     const rows = await this.prisma.escalationRuleModel.findMany({
       where: {

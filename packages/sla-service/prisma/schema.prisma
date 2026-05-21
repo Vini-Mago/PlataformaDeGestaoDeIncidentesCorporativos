@@ -63,6 +63,29 @@ model HolidayModel {
   @@map("holidays")
 }
 
+// Active SLA tracking per ticket (RF-8.1 / RF-8.2)
+model SlaAssignmentModel {
+  id                      String    @id @default(uuid())
+  ticketId                String    @map("ticket_id")
+  ticketType              String    @map("ticket_type")
+  policyId                String    @map("policy_id")
+  responseDeadline        DateTime  @map("response_deadline")
+  resolutionDeadline      DateTime  @map("resolution_deadline")
+  clockStartedAt          DateTime  @map("clock_started_at")
+  status                  String    @default("active") // active | paused | completed
+  riskEmitted             Boolean   @default(false) @map("risk_emitted")
+  responseBreachEmitted   Boolean   @default(false) @map("response_breach_emitted")
+  resolutionBreachEmitted Boolean   @default(false) @map("resolution_breach_emitted")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  @@unique([ticketId, ticketType])
+  @@index([status])
+  @@index([responseDeadline])
+  @@index([resolutionDeadline])
+  @@map("sla_assignments")
+}
+
 // Outbox for reliable event publishing (sla.risk, sla.breach)
 model OutboxModel {
   id            String    @id @default(uuid())

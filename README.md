@@ -27,6 +27,7 @@ PGIC/
 │   ├── notification-service/
 │   ├── audit-service/
 │   ├── reporting-service/
+│   ├── integration-service/ # Webhooks e integrações externas (RF-9)
 │   ├── api-docs/            # Swagger unificado
 │   ├── bff/
 │   └── frontend/
@@ -94,7 +95,7 @@ pnpm dev:incident          # http://localhost:3004
 pnpm dev:frontend          # Vite — tipicamente http://localhost:5173
 ```
 
-**Gateway:** `http://localhost:8080` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/api-docs/`. Ver `nginx/nginx.conf`.
+**Gateway:** `http://localhost:8080` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/integration/`, `/api-docs/`. Ver `nginx/nginx.conf`.
 
 ## Testes
 

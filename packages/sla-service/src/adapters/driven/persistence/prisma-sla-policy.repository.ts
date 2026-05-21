@@ -5,6 +5,7 @@ import type {
   ISlaPolicyRepository,
   CreateSlaPolicyInput,
   SlaPolicyListFilters,
+  ResolvePolicyQuery,
 } from "../../../application/ports/sla-policy-repository.port";
 
 export class PrismaSlaPolicyRepository implements ISlaPolicyRepository {
@@ -31,6 +32,18 @@ export class PrismaSlaPolicyRepository implements ISlaPolicyRepository {
   async findById(id: string): Promise<SlaPolicy | null> {
     const row = await this.prisma.slaPolicyModel.findUnique({ where: { id } });
     return row ? this.toSlaPolicy(row) : null;
+  }
+
+  async resolveBestMatch(query: ResolvePolicyQuery): Promise<SlaPolicy | null> {
+    const policies = await this.list({ ticketType: query.ticketType, isActive: true });
+    const matches = policies.filter((p) => {
+      if (p.criticality && query.criticality && p.criticality !== query.criticality) return false;
+      if (p.serviceId && query.serviceId && p.serviceId !== query.serviceId) return false;
+      if (p.clientId && query.clientId && p.clientId !== query.clientId) return false;
+      return true;
+    });
+    if (matches.length === 0) return null;
+    return matches.sort((a, b) => b.priority - a.priority)[0] ?? null;
   }
 
   async list(filters: SlaPolicyListFilters = {}): Promise<SlaPolicy[]> {
