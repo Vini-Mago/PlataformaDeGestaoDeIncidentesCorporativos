@@ -56,7 +56,11 @@ const IntegrationLogSchema = z
     direction: z.string(),
     endpoint: z.string(),
     httpStatus: z.number().nullable(),
+    correlationId: z.string().nullable(),
     externalId: z.string().nullable(),
+    payloadSummary: z.record(z.unknown()).nullable(),
+    errorMessage: z.string().nullable(),
+    durationMs: z.number().nullable(),
     createdAt: z.string().datetime(),
   })
   .openapi("IntegrationLog");
@@ -77,6 +81,69 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+const IntegrationDlqSchema = z
+  .object({
+    id: z.string().uuid(),
+    eventName: z.string(),
+    payload: z.record(z.unknown()),
+    errorMessage: z.string(),
+    reprocessedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+  })
+  .openapi("IntegrationDlqItem");
+
+const IntegrationDlqReprocessSchema = z
+  .object({
+    id: z.string().uuid(),
+    eventName: z.string(),
+    reprocessedAt: z.string().datetime(),
+  })
+  .openapi("IntegrationDlqReprocessAccepted");
+
+registry.registerPath({
+  method: "get",
+  path: "/api/integration-dlq",
+  summary: "List integration DLQ items",
+  tags: ["Integration DLQ"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    query: z.object({
+      status: z.enum(["pending", "reprocessed", "all"]).optional(),
+      limit: z.coerce.number().int().positive().max(200).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "DLQ items",
+      content: {
+        "application/json": {
+          schema: z.object({ items: z.array(IntegrationDlqSchema) }),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/integration-dlq/{id}/reprocess",
+  summary: "Re-enqueue a DLQ item into the integration outbox",
+  tags: ["Integration DLQ"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    202: {
+      description: "Reprocess accepted",
+      content: { "application/json": { schema: IntegrationDlqReprocessSchema } },
+    },
+    404: { description: "DLQ item not found", content: { "application/json": { schema: ErrorSchema } } },
+    409: { description: "DLQ item already reprocessed", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
 

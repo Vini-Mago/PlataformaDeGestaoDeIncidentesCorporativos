@@ -55,6 +55,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/api/report-definitions/export.csv",
+  summary: "Export report definitions as CSV",
+  tags: ["Report Definitions"],
+  security: [{ bearerAuth: [] }],
+  request: { query: ReportDefinitionsQuerySchema },
+  responses: {
+    200: {
+      description: "CSV export",
+      content: { "text/csv": { schema: z.string() } },
+    },
+    400: { description: "Invalid filter", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/api/report-definitions/{id}",
   summary: "Get report definition by id",
   tags: ["Report Definitions"],

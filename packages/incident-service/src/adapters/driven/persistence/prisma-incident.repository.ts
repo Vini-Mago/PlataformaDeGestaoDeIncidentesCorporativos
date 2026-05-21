@@ -5,6 +5,8 @@ import type { Incident } from "../../../domain/entities/incident.entity";
 import type {
   IIncidentRepository,
   CreateIncidentInput,
+  AddIncidentAttachmentInput,
+  IncidentAttachment,
   IncidentListFilters,
 } from "../../../application/ports/incident-repository.port";
 import { INCIDENT_CREATED_EVENT, INCIDENT_STATUS_CHANGED_EVENT, INCIDENT_ASSIGNED_EVENT } from "@pgic/shared";
@@ -209,6 +211,48 @@ export class PrismaIncidentRepository implements IIncidentRepository {
       incidentId: row.incidentId,
       authorId: row.authorId,
       body: row.body,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async addAttachment(input: AddIncidentAttachmentInput): Promise<IncidentAttachment> {
+    const row = await this.prisma.incidentAttachmentModel.create({
+      data: {
+        incidentId: input.incidentId,
+        uploadedById: input.uploadedById,
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        sizeBytes: input.content.byteLength,
+        content: input.content,
+      },
+    });
+    return this.toAttachment(row);
+  }
+
+  async listAttachments(incidentId: string): Promise<IncidentAttachment[]> {
+    const rows = await this.prisma.incidentAttachmentModel.findMany({
+      where: { incidentId },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((row) => this.toAttachment(row));
+  }
+
+  private toAttachment(row: {
+    id: string;
+    incidentId: string;
+    uploadedById: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: Date;
+  }): IncidentAttachment {
+    return {
+      id: row.id,
+      incidentId: row.incidentId,
+      uploadedById: row.uploadedById,
+      fileName: row.fileName,
+      mimeType: row.mimeType,
+      sizeBytes: row.sizeBytes,
       createdAt: row.createdAt,
     };
   }

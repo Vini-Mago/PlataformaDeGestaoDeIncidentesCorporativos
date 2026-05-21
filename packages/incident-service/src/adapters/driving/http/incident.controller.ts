@@ -10,12 +10,15 @@ import type { CreateIncidentDto } from "../../../application/dtos/create-inciden
 import type { ChangeIncidentStatusDto } from "../../../application/dtos/change-incident-status.dto";
 import type { AssignIncidentDto } from "../../../application/dtos/assign-incident.dto";
 import type { AddIncidentCommentDto } from "../../../application/dtos/add-incident-comment.dto";
+import type { AddIncidentAttachmentDto } from "../../../application/dtos/add-incident-attachment.dto";
 import type { CreateIncidentUseCase } from "../../../application/use-cases/create-incident.use-case";
 import type { ListIncidentsUseCase } from "../../../application/use-cases/list-incidents.use-case";
 import type { GetIncidentUseCase } from "../../../application/use-cases/get-incident.use-case";
 import type { ChangeIncidentStatusUseCase } from "../../../application/use-cases/change-incident-status.use-case";
 import type { AssignIncidentUseCase } from "../../../application/use-cases/assign-incident.use-case";
 import type { AddIncidentCommentUseCase } from "../../../application/use-cases/add-incident-comment.use-case";
+import type { AddIncidentAttachmentUseCase } from "../../../application/use-cases/add-incident-attachment.use-case";
+import type { ListIncidentAttachmentsUseCase } from "../../../application/use-cases/list-incident-attachments.use-case";
 import { InvalidStatusFilterError } from "../../../application/errors";
 import { asyncHandler } from "@pgic/shared";
 import type { IncidentStatus } from "../../../domain/entities/incident.entity";
@@ -44,7 +47,9 @@ export class IncidentController {
     private readonly getIncident: GetIncidentUseCase,
     private readonly changeIncidentStatus: ChangeIncidentStatusUseCase,
     private readonly assignIncident: AssignIncidentUseCase,
-    private readonly addIncidentComment: AddIncidentCommentUseCase
+    private readonly addIncidentComment: AddIncidentCommentUseCase,
+    private readonly addIncidentAttachment: AddIncidentAttachmentUseCase,
+    private readonly listIncidentAttachments: ListIncidentAttachmentsUseCase
   ) {}
 
   create = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -140,5 +145,42 @@ export class IncidentController {
       (req.body as AddIncidentCommentDto).body
     );
     res.status(201).json(comment);
+  });
+
+  listAttachments = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    if (!canReadAllIncidents(req)) {
+      const uid = req.userId;
+      const current = await this.getIncident.execute(id);
+      if (!uid || !isIncidentParticipant(current, uid)) {
+        throw new IncidentForbiddenError();
+      }
+    }
+    const attachments = await this.listIncidentAttachments.execute(id);
+    res.json(attachments);
+  });
+
+  addAttachment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized: missing userId" });
+      return;
+    }
+    const { id } = req.params;
+    if (!canUpdateAllIncidents(req)) {
+      const current = await this.getIncident.execute(id);
+      if (!isIncidentParticipant(current, userId)) {
+        throw new IncidentForbiddenError();
+      }
+    }
+    const body = req.body as AddIncidentAttachmentDto;
+    const attachment = await this.addIncidentAttachment.execute({
+      incidentId: id,
+      uploadedById: userId,
+      fileName: body.fileName,
+      mimeType: body.mimeType,
+      content: Buffer.from(body.contentBase64, "base64"),
+    });
+    res.status(201).json(attachment);
   });
 }

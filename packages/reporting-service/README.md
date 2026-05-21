@@ -1,6 +1,6 @@
 # reporting-service
 
-KPIs, dashboards, report definitions and export (RF-4.x). CRUD for saved report configs; future: aggregation from other services, PDF/CSV export, background jobs.
+KPIs, dashboards, report definitions and export (RF-4.x). CRUD for saved report configs and CSV export of definitions; future: aggregation from other services, PDF export, background jobs.
 
 ## Setup
 

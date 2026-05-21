@@ -5,6 +5,7 @@ import { createIncidentSchema } from "../../../application/dtos/create-incident.
 import { changeIncidentStatusSchema } from "../../../application/dtos/change-incident-status.dto";
 import { assignIncidentSchema } from "../../../application/dtos/assign-incident.dto";
 import { addIncidentCommentSchema } from "../../../application/dtos/add-incident-comment.dto";
+import { addIncidentAttachmentSchema } from "../../../application/dtos/add-incident-attachment.dto";
 
 const uuidSchema = z.string().uuid("Invalid incident ID format");
 
@@ -21,3 +22,4 @@ export const validateCreateIncident = createValidateBody(createIncidentSchema);
 export const validateChangeIncidentStatus = createValidateBody(changeIncidentStatusSchema);
 export const validateAssignIncident = createValidateBody(assignIncidentSchema);
 export const validateAddIncidentComment = createValidateBody(addIncidentCommentSchema);
+export const validateAddIncidentAttachment = createValidateBody(addIncidentAttachmentSchema);

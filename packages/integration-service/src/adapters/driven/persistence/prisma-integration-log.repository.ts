@@ -5,7 +5,18 @@ import type {
   IIntegrationLogRepository,
   IntegrationLogRecord,
 } from "../../../application/ports/integration-log-repository.port";
+import type {
+  IIntegrationDlqRepository,
+  IntegrationDlqRecord,
+  IntegrationDlqStatus,
+  ListIntegrationDlqInput,
+} from "../../../application/ports/integration-dlq-repository.port";
 import type { IOutboxWriter } from "../../../application/ports/outbox-writer.port";
+
+function toPlainObject(raw: unknown): object {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as object;
+}
 
 export class PrismaIntegrationLogRepository implements IIntegrationLogRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -41,6 +52,9 @@ export class PrismaIntegrationLogRepository implements IIntegrationLogRepository
     httpStatus: number | null;
     correlationId: string | null;
     externalId: string | null;
+    payloadSummary?: unknown;
+    errorMessage?: string | null;
+    durationMs?: number | null;
     createdAt: Date;
   }): IntegrationLogRecord {
     return {
@@ -50,6 +64,57 @@ export class PrismaIntegrationLogRepository implements IIntegrationLogRepository
       httpStatus: row.httpStatus,
       correlationId: row.correlationId,
       externalId: row.externalId,
+      payloadSummary: row.payloadSummary == null ? null : toPlainObject(row.payloadSummary),
+      errorMessage: row.errorMessage ?? null,
+      durationMs: row.durationMs ?? null,
+      createdAt: row.createdAt,
+    };
+  }
+}
+
+export class PrismaIntegrationDlqRepository implements IIntegrationDlqRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async list(input: ListIntegrationDlqInput = {}): Promise<IntegrationDlqRecord[]> {
+    const status: IntegrationDlqStatus = input.status ?? "pending";
+    const rows = await this.prisma.integrationDlqModel.findMany({
+      where:
+        status === "all"
+          ? undefined
+          : { reprocessedAt: status === "pending" ? null : { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(input.limit ?? 50, 200),
+    });
+    return rows.map((row) => this.toRecord(row));
+  }
+
+  async findById(id: string): Promise<IntegrationDlqRecord | null> {
+    const row = await this.prisma.integrationDlqModel.findUnique({ where: { id } });
+    return row ? this.toRecord(row) : null;
+  }
+
+  async markReprocessed(id: string, reprocessedAt: Date): Promise<IntegrationDlqRecord> {
+    const row = await this.prisma.integrationDlqModel.update({
+      where: { id },
+      data: { reprocessedAt },
+    });
+    return this.toRecord(row);
+  }
+
+  private toRecord(row: {
+    id: string;
+    eventName: string;
+    payload: unknown;
+    errorMessage: string;
+    reprocessedAt: Date | null;
+    createdAt: Date;
+  }): IntegrationDlqRecord {
+    return {
+      id: row.id,
+      eventName: row.eventName,
+      payload: toPlainObject(row.payload),
+      errorMessage: row.errorMessage,
+      reprocessedAt: row.reprocessedAt,
       createdAt: row.createdAt,
     };
   }

@@ -102,7 +102,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 4.3 Auditoria e rastreamento (RequisitosCorp §2.3 ↔ RF-3.x)
 
-- [~] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Histórico de estado/comentários em incidentes; audit-service com API dedicada; cobertura transversal e anexos a consolidar.)*
+- [~] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Histórico de estado/comentários em incidentes; anexos persistidos; audit-service com API dedicada; cobertura transversal a consolidar.)*
 - [~] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2). *(Histórico de status em incident-service; demais entidades parcial.)*
 - [ ] **Versionamento** onde compliance exigir — recuperação de versões anteriores, política de retenção (RF-3.3).
 - [~] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*). *(Serviço e API existentes; consumo automático de todos os eventos de domínio a verificar.)*
@@ -112,7 +112,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [~] **Métricas estratégicas** — MTTR, MTBF, % SLA cumprido, disponibilidade/uptime por serviço, volume por período (RF-4.1). *(reporting-service com CRUD de definições; agregações MTTR/MTBF em produto ainda não evidenciadas.)*
 - [~] **Indicadores operacionais** — abertos por criticidade, em risco de SLA, filas por equipe, recém-abertos (RF-4.2).
 - [~] **Filtros** por período, serviço, equipe, criticidade, unidade (RF-4.3).
-- [ ] **Exportação** PDF/CSV/Excel; relatórios pesados em background com notificação (RF-4.4).
+- [~] **Exportação** PDF/CSV/Excel; relatórios pesados em background com notificação (RF-4.4). *(CSV de definições implementado; exportação pesada assíncrona pendente.)*
 - [~] **Atualização dinâmica** — polling curto ou WebSocket/SSE; “última atualização” visível (RF-4.5). *(SPA no frontend; dashboards executivos completos pendentes.)*
 - [~] **Cache de agregados** (Redis) com TTL definido para não sobrecarregar consultas. *(Redis no Compose; uso para KPIs agregados ainda não generalizado.)*
 
@@ -122,7 +122,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.1 Gestão de incidentes (RF-5.x) — *incident-service*
 
-- [~] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1). *(API + UI manual; ingestão via **integration-service** + consumer `incident.integration_ingest`.)*
+- [~] Abertura **manual** (formulário completo ou mínimo para usuário final) e **automática** (webhook/fila de monitoramento com mapeamento) (RF-5.1). *(API + UI manual com anexos; ingestão via **integration-service** + consumer `incident.integration_ingest`.)*
 - [~] **Criticidade, impacto, serviço afetado, equipe** — regras de roteamento e impacto em SLA (RF-5.2). *(Modelo com criticidade e serviço; ligação operacional completa ao sla-service a consolidar na UX.)*
 - [x] **Workflow** com estados e transições permitidas; invalidação de transições ilegais com mensagem clara (RF-5.3).
 - [~] **SLA de resposta e resolução** por tipo/criticidade/serviço; exibição de contadores e estados de pausa (RF-5.4). *(sla-service existe; contadores no incidente/UI a verificar.)*
@@ -151,8 +151,8 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 - [~] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1). *(Webhook monitoring v1 + outbox + incident ingest; mapeamento severidade→criticidade.)*
 - [ ] **Saída** — envio para ERP/CRM/diretório com timeout, retry, não bloqueio do fluxo principal (RF-9.2).
-- [~] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` + tabela `integration_dlq`; reprocessamento API pendente.)*
-- [~] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*). *(API key + HMAC opcional + rate limit + limite JSON 256kb; allowlist IP pendente.)*
+- [~] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` expõe metadados; `integration_dlq` tem listagem e reprocessamento via API; mascaramento segue responsabilidade do payload summary.)*
+- [x] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*). *(API key + HMAC opcional + rate limit + limite JSON 256kb + allowlist IP por env.)*
 
 ### 5.6 Processamento assíncrono (RF-10.x)
 

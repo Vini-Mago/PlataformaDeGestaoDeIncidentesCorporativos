@@ -13,6 +13,8 @@ import { GetIncidentUseCase } from "./application/use-cases/get-incident.use-cas
 import { ChangeIncidentStatusUseCase } from "./application/use-cases/change-incident-status.use-case";
 import { AssignIncidentUseCase } from "./application/use-cases/assign-incident.use-case";
 import { AddIncidentCommentUseCase } from "./application/use-cases/add-incident-comment.use-case";
+import { AddIncidentAttachmentUseCase } from "./application/use-cases/add-incident-attachment.use-case";
+import { ListIncidentAttachmentsUseCase } from "./application/use-cases/list-incident-attachments.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { HandleIntegrationIncidentIngestUseCase } from "./application/use-cases/handle-integration-incident-ingest.use-case";
 import { RabbitMqIntegrationIngestConsumer } from "./adapters/driving/messaging/rabbitmq-integration-ingest.consumer";
@@ -39,6 +41,8 @@ interface IncidentCradle {
   changeIncidentStatusUseCase: ChangeIncidentStatusUseCase;
   assignIncidentUseCase: AssignIncidentUseCase;
   addIncidentCommentUseCase: AddIncidentCommentUseCase;
+  addIncidentAttachmentUseCase: AddIncidentAttachmentUseCase;
+  listIncidentAttachmentsUseCase: ListIncidentAttachmentsUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
   handleIntegrationIncidentIngestUseCase: HandleIntegrationIncidentIngestUseCase;
@@ -117,6 +121,16 @@ export function createContainer(config: IncidentContainerConfig) {
         new AddIncidentCommentUseCase(cradle.incidentRepository)
     ).singleton(),
 
+    addIncidentAttachmentUseCase: asFunction(
+      (cradle: IncidentCradle) =>
+        new AddIncidentAttachmentUseCase(cradle.incidentRepository)
+    ).singleton(),
+
+    listIncidentAttachmentsUseCase: asFunction(
+      (cradle: IncidentCradle) =>
+        new ListIncidentAttachmentsUseCase(cradle.incidentRepository)
+    ).singleton(),
+
     handleUserCreatedUseCase: asFunction(
       (cradle: IncidentCradle) =>
         new HandleUserCreatedUseCase(cradle.replicatedUserStore)
@@ -150,7 +164,9 @@ export function createContainer(config: IncidentContainerConfig) {
           cradle.getIncidentUseCase,
           cradle.changeIncidentStatusUseCase,
           cradle.assignIncidentUseCase,
-          cradle.addIncidentCommentUseCase
+          cradle.addIncidentCommentUseCase,
+          cradle.addIncidentAttachmentUseCase,
+          cradle.listIncidentAttachmentsUseCase
         )
     ).singleton(),
 

@@ -24,6 +24,12 @@ export function createRoutes(
   );
   router.get("/report-definitions", authMiddleware, readReporting, controller.listReportDefinitionsHandler as RequestHandler);
   router.get(
+    "/report-definitions/export.csv",
+    authMiddleware,
+    requireJwtPermission("reporting", "export", "all"),
+    controller.exportReportDefinitionsCsvHandler as RequestHandler
+  );
+  router.get(
     "/report-definitions/:id",
     authMiddleware,
     readReporting,

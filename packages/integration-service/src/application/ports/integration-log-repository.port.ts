@@ -16,6 +16,9 @@ export interface IntegrationLogRecord {
   httpStatus: number | null;
   correlationId: string | null;
   externalId: string | null;
+  payloadSummary: object | null;
+  errorMessage: string | null;
+  durationMs: number | null;
   createdAt: Date;
 }
 

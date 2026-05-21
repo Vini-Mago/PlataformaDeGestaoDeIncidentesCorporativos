@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "./auth";
 import {
+  addIncidentAttachment,
   createIncident,
+  fetchIncidentAttachments,
   fetchIncidents,
+  type AddIncidentAttachmentPayload,
   type CreateIncidentPayload,
+  type IncidentAttachment,
   type IncidentCriticality,
   type IncidentListItem,
 } from "./api/incidents";
@@ -17,6 +21,29 @@ import {
 } from "./api/problem-change";
 
 const CRITICALITIES: IncidentCriticality[] = ["Low", "Medium", "High", "Critical"];
+const MAX_ATTACHMENT_BYTES = 1_048_576;
+const ALLOWED_ATTACHMENT_TYPES: AddIncidentAttachmentPayload["mimeType"][] = [
+  "image/png",
+  "image/jpeg",
+  "application/pdf",
+  "text/plain",
+];
+
+function isAllowedAttachmentType(type: string): type is AddIncidentAttachmentPayload["mimeType"] {
+  return ALLOWED_ATTACHMENT_TYPES.includes(type as AddIncidentAttachmentPayload["mimeType"]);
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Não foi possível ler o ficheiro."));
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      resolve(result.includes(",") ? result.split(",").pop() ?? "" : result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function mapLoadError(err: unknown): string {
   if (err instanceof ApiError) {
@@ -41,9 +68,12 @@ export function IncidentSection() {
 
   const [incidentLinks, setIncidentLinks] = useState<IncidentProblemLink[]>([]);
   const [linksHint, setLinksHint] = useState<string | null>(null);
+  const [attachmentsByIncident, setAttachmentsByIncident] = useState<Record<string, IncidentAttachment[]>>({});
+  const [attachmentsHint, setAttachmentsHint] = useState<string | null>(null);
 
   const [selectedProblemByIncident, setSelectedProblemByIncident] = useState<Record<string, string>>({});
   const [rowBusy, setRowBusy] = useState<Record<string, boolean>>({});
+  const [attachmentBusy, setAttachmentBusy] = useState<Record<string, boolean>>({});
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -98,6 +128,27 @@ export function IncidentSection() {
     }
   }, []);
 
+  const refreshAttachments = useCallback(async (rows: IncidentListItem[]) => {
+    setAttachmentsHint(null);
+    if (rows.length === 0) {
+      setAttachmentsByIncident({});
+      return;
+    }
+    try {
+      const pairs = await Promise.all(
+        rows.map(async (row) => [row.id, await fetchIncidentAttachments(row.id)] as const)
+      );
+      setAttachmentsByIncident(Object.fromEntries(pairs));
+    } catch (err) {
+      setAttachmentsByIncident({});
+      if (err instanceof ApiError && err.status === 403) {
+        setAttachmentsHint("Sem permissão para listar anexos dos incidentes.");
+      } else if (!(err instanceof ApiError && err.status === 401)) {
+        setAttachmentsHint("Não foi possível carregar anexos.");
+      }
+    }
+  }, []);
+
   const loadIncidents = useCallback(async () => {
     setListLoading(true);
     setListError(null);
@@ -106,13 +157,14 @@ export function IncidentSection() {
       const rows = await fetchIncidents();
       setIncidents(rows);
       await refreshProblemOps(rows);
+      await refreshAttachments(rows);
     } catch (err) {
       setIncidents(null);
       setListError(mapLoadError(err));
     } finally {
       setListLoading(false);
     }
-  }, [refreshProblemOps]);
+  }, [refreshAttachments, refreshProblemOps]);
 
   useEffect(() => {
     void loadIncidents();
@@ -207,6 +259,39 @@ export function IncidentSection() {
       setOpError(err instanceof ApiError ? err.message : "Falha ao remover ligação.");
     } finally {
       setBusy(incidentId, false);
+    }
+  };
+
+  const setAttachmentRowBusy = (incidentId: string, v: boolean) => {
+    setAttachmentBusy((prev) => ({ ...prev, [incidentId]: v }));
+  };
+
+  const handleAttachmentSelected = async (incidentId: string, file: File | null) => {
+    if (!file) return;
+    setOpError(null);
+    if (!isAllowedAttachmentType(file.type)) {
+      setOpError("Tipo de anexo não permitido. Use PNG, JPG, PDF ou TXT.");
+      return;
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setOpError("Anexo excede 1 MiB.");
+      return;
+    }
+    setAttachmentRowBusy(incidentId, true);
+    try {
+      const contentBase64 = await readFileAsBase64(file);
+      await addIncidentAttachment(incidentId, {
+        fileName: file.name,
+        mimeType: file.type,
+        contentBase64,
+      });
+      if (incidents) {
+        await refreshAttachments(incidents);
+      }
+    } catch (err) {
+      setOpError(err instanceof ApiError ? err.message : "Falha ao anexar ficheiro.");
+    } finally {
+      setAttachmentRowBusy(incidentId, false);
     }
   };
 
@@ -312,6 +397,7 @@ export function IncidentSection() {
         </p>
         {catalogHint ? <p className="hint">{catalogHint}</p> : null}
         {linksHint ? <p className="hint">{linksHint}</p> : null}
+        {attachmentsHint ? <p className="hint">{attachmentsHint}</p> : null}
         {opError ? <div className="banner-error">{opError}</div> : null}
         {listError ? <div className="banner-error">{listError}</div> : null}
         {listLoading ? <p>A carregar incidentes…</p> : null}
@@ -328,6 +414,7 @@ export function IncidentSection() {
                   <th>Criticidade</th>
                   <th>Serviço</th>
                   <th>Problema (RF-7.1)</th>
+                  <th>Anexos</th>
                   <th>Ligar</th>
                 </tr>
               </thead>
@@ -335,6 +422,7 @@ export function IncidentSection() {
                 {incidents.map((row) => {
                   const link = linkByIncidentId.get(row.id);
                   const busy = rowBusy[row.id];
+                  const attachmentCount = attachmentsByIncident[row.id]?.length ?? 0;
                   return (
                     <tr key={row.id}>
                       <td>{row.title}</td>
@@ -342,6 +430,24 @@ export function IncidentSection() {
                       <td>{row.criticality}</td>
                       <td>{row.serviceAffected ?? "—"}</td>
                       <td>{link ? link.problemTitle : "—"}</td>
+                      <td>
+                        <div className="attachment-cell">
+                          <span>{attachmentCount}</span>
+                          <label className="btn-secondary file-button">
+                            {attachmentBusy[row.id] ? "A anexar…" : "Anexar"}
+                            <input
+                              type="file"
+                              accept=".png,.jpg,.jpeg,.pdf,.txt,image/png,image/jpeg,application/pdf,text/plain"
+                              disabled={attachmentBusy[row.id]}
+                              onChange={(ev) => {
+                                const file = ev.target.files?.[0] ?? null;
+                                ev.currentTarget.value = "";
+                                void handleAttachmentSelected(row.id, file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </td>
                       <td className="table-actions">
                         <select
                           value={selectedProblemByIncident[row.id] ?? ""}

@@ -8,6 +8,8 @@ Microsserviço de **integrações externas** (RF-9.x): webhooks de monitoramento
 |--------|------|------|-----------|
 | POST | `/api/webhooks/v1/monitoring` | `X-API-Key` (+ HMAC opcional) | Ingestão de alertas → `integration.incident_ingest` |
 | GET | `/api/integration-logs` | JWT | Consulta logs de integração |
+| GET | `/api/integration-dlq` | JWT | Lista itens pendentes/reprocessados da DLQ |
+| POST | `/api/integration-dlq/:id/reprocess` | JWT | Recoloca item da DLQ na outbox |
 | GET | `/health` | — | Health check |
 
 ## Variáveis
@@ -15,6 +17,7 @@ Microsserviço de **integrações externas** (RF-9.x): webhooks de monitoramento
 - `INTEGRATION_DATABASE_URL`
 - `INTEGRATION_WEBHOOK_API_KEY` — obrigatória para webhooks
 - `INTEGRATION_WEBHOOK_SECRET` — se definida, exige `X-Signature` HMAC-SHA256
+- `INTEGRATION_WEBHOOK_ALLOWED_IPS` — opcional; lista separada por vírgula para restringir IPs de origem
 - `INTEGRATION_SYSTEM_USER_ID` — `requesterId` dos incidentes automáticos
 - `RABBITMQ_URL` — outbox → exchange `integration.events`
 

@@ -6,6 +6,30 @@ import type { GetReportDefinitionUseCase } from "../../../application/use-cases/
 import { parseReportTypeFilterOrThrow } from "../../../application/use-cases/list-report-definitions.use-case";
 import { asyncHandler } from "@pgic/shared";
 import { createReportDefinitionSchema } from "../../../application/dtos/create-report-definition.dto";
+import type { ReportDefinition } from "../../../domain/entities/report-definition.entity";
+
+function csvEscape(value: unknown): string {
+  const text = value instanceof Date ? value.toISOString() : String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function reportDefinitionsToCsv(items: ReportDefinition[]): string {
+  const header = ["id", "name", "description", "reportType", "filters", "createdAt", "updatedAt"];
+  const rows = items.map((item) =>
+    [
+      item.id,
+      item.name,
+      item.description,
+      item.reportType,
+      JSON.stringify(item.filters),
+      item.createdAt,
+      item.updatedAt,
+    ]
+      .map(csvEscape)
+      .join(",")
+  );
+  return [header.join(","), ...rows].join("\n");
+}
 
 export class ReportingController {
   constructor(
@@ -31,6 +55,16 @@ export class ReportingController {
     const reportType = parseReportTypeFilterOrThrow(req.query.reportType);
     const list = await this.listReportDefinitions.execute({ reportType });
     res.json(list);
+  });
+
+  exportReportDefinitionsCsvHandler = asyncHandler(async (req: Request, res: Response) => {
+    const reportType = parseReportTypeFilterOrThrow(req.query.reportType);
+    const list = await this.listReportDefinitions.execute({ reportType });
+    res
+      .status(200)
+      .setHeader("Content-Type", "text/csv; charset=utf-8")
+      .setHeader("Content-Disposition", 'attachment; filename="report-definitions.csv"')
+      .send(reportDefinitionsToCsv(list));
   });
 
   getReportDefinitionHandler = asyncHandler(async (req: Request, res: Response) => {

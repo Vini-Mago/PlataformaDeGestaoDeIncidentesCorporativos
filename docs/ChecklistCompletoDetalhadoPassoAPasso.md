@@ -66,7 +66,7 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 - [~] **Visualização de métricas estratégicas** (MTTR, MTBF, SLA, disponibilidade, volumes — conforme escopo PGIC).
 - [~] **Indicadores operacionais em tempo real** (ou quase real — polling/WebSocket/SSE).
 - [~] **Filtros por período** (e demais dimensões acordadas: serviço, equipe, criticidade).
-- [ ] **Exportação de relatórios** (PDF, CSV/Excel ou equivalentes).
+- [~] **Exportação de relatórios** (PDF, CSV/Excel ou equivalentes). *(CSV de definições em reporting-service; exportação assíncrona de dashboards/listas ainda pendente.)*
 - [~] **Atualização dinâmica** da visualização sem recarregar a página inteira de forma grosseira (SPA + atualização incremental).
 
 ### RC §3 Requisitos não funcionais
@@ -186,7 +186,7 @@ O sistema deve suportar:
 
 **Exemplos de uso previstos no normativo — mapeamento PGIC:**
 
-- [ ] **Geração de relatórios** — fila + arquivo temporário + notificação.
+- [~] **Geração de relatórios** — fila + arquivo temporário + notificação. *(Export CSV síncrono parcial; geração assíncrona com notificação pendente.)*
 - [~] **Envio de e-mails** — recuperação de senha, alertas SLA, convites.
 - [x] **Processamento de pagamentos** — *não aplicável à PGIC por padrão*; marcar N/A ou substituir por **cobrança interna de SLA**/integração financeira se existir.
 - [~] **Atualização de KPIs** — jobs ou consumo de eventos para materializar agregados/cache.
@@ -495,7 +495,7 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [~] Formulário com campos obrigatórios: título, descrição, serviço afetado, criticidade, impacto (ajustar lista ao catálogo corporativo).
-2. [ ] Anexos com limite de tamanho e tipos permitidos; armazenamento seguro (disco local dev; S3 ou compatível em prod).
+2. [x] Anexos com limite de tamanho e tipos permitidos; armazenamento seguro (disco local dev; S3 ou compatível em prod). *(API com conteúdo base64 até 1 MiB, tipos permitidos e persistência `BYTEA`; UI de anexo no frontend.)*
 3. [x] Para usuário final, permitir **abertura mínima**; analista completa campos adicionais.
 
 ### 5.2 Abertura automática / integração (RF-5.1, RF-9.x)
@@ -684,7 +684,7 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [ ] Filtros globais por período, serviço, equipe, criticidade.
-2. [ ] Exportação PDF/CSV assíncrona com **notificação** ao concluir; expiração de arquivo temporário.
+2. [~] Exportação PDF/CSV assíncrona com **notificação** ao concluir; expiração de arquivo temporário. *(CSV síncrono de definições implementado; exportação pesada assíncrona pendente.)*
 
 ### Balanço de saída da Fase 10
 
@@ -706,7 +706,7 @@ Para fechar o normativo, verificar explicitamente:
 
 1. [x] Endpoints com **API key** ou mTLS/OAuth conforme parceiro. *( `X-API-Key` no webhook v1.)*
 2. [x] Verificação de **assinatura HMAC** em webhooks quando aplicável. *( `INTEGRATION_WEBHOOK_SECRET` + `X-Signature`.)*
-3. [~] **Payload máximo**, rate limit, allowlist de IP opcional. *(256kb + rate limit; allowlist pendente.)*
+3. [x] **Payload máximo**, rate limit, allowlist de IP opcional. *(256kb + rate limit + `INTEGRATION_WEBHOOK_ALLOWED_IPS`.)*
 4. [x] Validar schema; **400/422** para inválidos; log para análise sem persistir lixo.
 
 ### 11.2 Saída para sistemas externos (RF-9.2)
@@ -721,7 +721,7 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [ ] Log estruturado: direção, endpoint, status HTTP, duração, id de correlação, payload mascarado.
-2. [ ] DLQ com **reprocessamento** manual seguro.
+2. [x] DLQ com **reprocessamento** manual seguro. *(GET `/api/integration-dlq`; POST `/api/integration-dlq/:id/reprocess` recoloca na outbox.)*
 3. [ ] **Versionamento de integração** — contratos de webhook/API com versão explícita (`/v1/webhook`, header `X-API-Version`, ou payload `schemaVersion`); changelog quando quebrar compatibilidade.
 
 ### Balanço de saída da Fase 11
@@ -736,7 +736,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 12.1 Jornadas mínimas
 
-- [~] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto).
+- [~] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto). *(Anexos em incidente disponíveis; e-mail real pendente.)*
 - [~] **Analista:** fila, pegar chamado, mudar estado, comentar, reatribuir.
 - [ ] **Gestor:** dashboard, exportação, visão por equipe.
 - [~] **Administrador:** usuários, perfis, parâmetros de integração (onde aplicável).

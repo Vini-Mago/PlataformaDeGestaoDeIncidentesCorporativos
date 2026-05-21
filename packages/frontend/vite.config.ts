@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const bffTarget = "http://localhost:3100";
+const bffTarget = process.env.BFF_TARGET ?? "http://localhost:3100";
 const proxiedPaths = [
   "/auth",
   "/identity",
@@ -13,6 +13,7 @@ const proxiedPaths = [
   "/notifications",
   "/audit",
   "/reporting",
+  "/integration",
 ] as const;
 
 const proxy = Object.fromEntries(
@@ -28,6 +29,11 @@ const proxy = Object.fromEntries(
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    globals: true,
+  },
   server: {
     port: 5173,
     proxy,

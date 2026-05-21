@@ -22,6 +22,24 @@ export interface IncidentListFilters {
   assignedTeamId?: string;
 }
 
+export interface IncidentAttachment {
+  id: string;
+  incidentId: string;
+  uploadedById: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: Date;
+}
+
+export interface AddIncidentAttachmentInput {
+  incidentId: string;
+  uploadedById: string;
+  fileName: string;
+  mimeType: string;
+  content: Buffer;
+}
+
 export interface IIncidentRepository {
   create(input: CreateIncidentInput): Promise<Incident>;
   findByExternalRef(externalSource: string, externalId: string): Promise<Incident | null>;
@@ -48,4 +66,6 @@ export interface IIncidentRepository {
     body: string;
     createdAt: Date;
   }>;
+  addAttachment(input: AddIncidentAttachmentInput): Promise<IncidentAttachment>;
+  listAttachments(incidentId: string): Promise<IncidentAttachment[]>;
 }

@@ -25,6 +25,11 @@ const webhookApiKey =
 const systemUserId =
   process.env.INTEGRATION_SYSTEM_USER_ID ?? "00000000-0000-4000-8000-000000000001";
 
+const webhookAllowedIps = (process.env.INTEGRATION_WEBHOOK_ALLOWED_IPS ?? "")
+  .split(",")
+  .map((ip) => ip.trim())
+  .filter(Boolean);
+
 async function bootstrap() {
   const container = createContainer({
     databaseUrl,
@@ -32,6 +37,7 @@ async function bootstrap() {
     rabbitmqUrl: process.env.RABBITMQ_URL,
     webhookApiKey,
     webhookSecret: process.env.INTEGRATION_WEBHOOK_SECRET,
+    webhookAllowedIps,
     systemUserId,
   });
 

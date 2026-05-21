@@ -195,6 +195,30 @@ describe("Reporting Service API integration", () => {
     });
   });
 
+  describe("GET /api/report-definitions/export.csv (auth required)", () => {
+    it("exports report definitions as CSV", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      await container.prisma.reportDefinitionModel.create({
+        data: {
+          name: 'KPI "Diretoria"',
+          description: "Indicadores mensais",
+          reportType: "kpi_dashboard",
+          filters: { period: "month", team: "support" },
+        },
+      });
+
+      const res = await request(app)
+        .get("/api/report-definitions/export.csv?reportType=kpi_dashboard")
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.headers["content-type"]).toContain("text/csv");
+      expect(res.text).toContain("id,name,description,reportType,filters,createdAt,updatedAt");
+      expect(res.text).toContain('"KPI ""Diretoria"""');
+      expect(res.text).toContain('"{""period"":""month"",""team"":""support""}"');
+    });
+  });
+
   describe("GET /health", () => {
     it("returns 200 with service name", async () => {
       const res = await request(app).get("/health").expect(200);

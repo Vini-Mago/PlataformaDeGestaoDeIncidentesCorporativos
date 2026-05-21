@@ -11,3 +11,17 @@ export class UnauthorizedIntegrationError extends Error {
     this.name = "UnauthorizedIntegrationError";
   }
 }
+
+export class IntegrationDlqNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Integration DLQ item not found: ${id}`);
+    this.name = "IntegrationDlqNotFoundError";
+  }
+}
+
+export class IntegrationDlqAlreadyReprocessedError extends Error {
+  constructor(id: string) {
+    super(`Integration DLQ item already reprocessed: ${id}`);
+    this.name = "IntegrationDlqAlreadyReprocessedError";
+  }
+}

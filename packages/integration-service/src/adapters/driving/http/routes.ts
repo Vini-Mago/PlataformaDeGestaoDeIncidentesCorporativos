@@ -6,7 +6,7 @@ import { createWebhookAuthMiddleware } from "./webhook-auth.middleware";
 export function createRoutes(
   controller: IntegrationController,
   authMiddleware: ReturnType<typeof import("@pgic/shared").createAuthMiddleware>,
-  webhookConfig: { apiKey: string; webhookSecret?: string }
+  webhookConfig: { apiKey: string; webhookSecret?: string; allowedIps?: string[] }
 ) {
   const router = Router();
 
@@ -28,6 +28,18 @@ export function createRoutes(
     "/integration-logs",
     authMiddleware,
     controller.listLogs
+  );
+
+  router.get(
+    "/integration-dlq",
+    authMiddleware,
+    controller.listDlq
+  );
+
+  router.post(
+    "/integration-dlq/:id/reprocess",
+    authMiddleware,
+    controller.reprocessDlq
   );
 
   return router;

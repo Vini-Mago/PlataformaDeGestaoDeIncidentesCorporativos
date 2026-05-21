@@ -57,6 +57,27 @@ export async function getMe(): Promise<AuthUser> {
   });
 }
 
+export async function login(payload: { identifier: string; password: string }): Promise<AuthUser> {
+  return request<AuthUser>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function register(payload: {
+  name: string;
+  email: string;
+  login?: string;
+  password: string;
+  department?: string;
+  jobTitle?: string;
+}): Promise<AuthUser> {
+  return request<AuthUser>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function logout(): Promise<void> {
   await requestVoid("/auth/logout", {
     method: "POST",

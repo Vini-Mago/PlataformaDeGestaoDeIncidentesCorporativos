@@ -7,6 +7,7 @@ import {
   validateChangeIncidentStatus,
   validateAssignIncident,
   validateAddIncidentComment,
+  validateAddIncidentAttachment,
 } from "./validation";
 
 export function createRoutes(
@@ -56,6 +57,21 @@ export function createRoutes(
     validateIdParam,
     validateAddIncidentComment,
     controller.addComment as RequestHandler
+  );
+  router.get(
+    "/incidents/:id/attachments",
+    authMiddleware,
+    readIncident,
+    validateIdParam,
+    controller.listAttachments as RequestHandler
+  );
+  router.post(
+    "/incidents/:id/attachments",
+    authMiddleware,
+    updateIncident,
+    validateIdParam,
+    validateAddIncidentAttachment,
+    controller.addAttachment as RequestHandler
   );
 
   return router;

@@ -19,6 +19,7 @@ const escalationServiceBaseUrl = process.env.ESCALATION_SERVICE_BASE_URL ?? `htt
 const notificationServiceBaseUrl = process.env.NOTIFICATION_SERVICE_BASE_URL ?? `http://localhost:${process.env.NOTIFICATION_SERVICE_PORT ?? "3008"}`;
 const auditServiceBaseUrl = process.env.AUDIT_SERVICE_BASE_URL ?? `http://localhost:${process.env.AUDIT_SERVICE_PORT ?? "3009"}`;
 const reportingServiceBaseUrl = process.env.REPORTING_SERVICE_BASE_URL ?? `http://localhost:${process.env.REPORTING_SERVICE_PORT ?? "3010"}`;
+const integrationServiceBaseUrl = process.env.INTEGRATION_SERVICE_BASE_URL ?? `http://localhost:${process.env.INTEGRATION_SERVICE_PORT ?? "3011"}`;
 const frontendDevUrl = process.env.FRONTEND_DEV_URL ?? "http://localhost:5173";
 const cookieSecureMode = process.env.BFF_COOKIE_SECURE?.trim().toLowerCase();
 const publicOriginOverride = process.env.PUBLIC_ORIGIN_OVERRIDE?.trim() || "";
@@ -47,6 +48,7 @@ const serviceProxyConfigs: ServiceProxyConfig[] = [
   { routePrefix: "/notifications", upstreamBaseUrl: notificationServiceBaseUrl },
   { routePrefix: "/audit", upstreamBaseUrl: auditServiceBaseUrl },
   { routePrefix: "/reporting", upstreamBaseUrl: reportingServiceBaseUrl },
+  { routePrefix: "/integration", upstreamBaseUrl: integrationServiceBaseUrl },
 ];
 
 const hopByHopHeaders = new Set([
@@ -135,6 +137,46 @@ async function identityRequest(pathname: string, init: RequestInit = {}): Promis
       ...(init.headers ?? {}),
     },
   });
+}
+
+function parseJsonBody<T>(req: Request): T {
+  if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    return JSON.parse(req.body.toString("utf8")) as T;
+  }
+  if (req.body && typeof req.body === "object") {
+    return req.body as T;
+  }
+  return {} as T;
+}
+
+async function forwardAuthBody(req: Request, res: ExpressResponse, pathname: "/api/auth/login" | "/api/auth/register"): Promise<void> {
+  let requestBody: unknown;
+  try {
+    requestBody = parseJsonBody<unknown>(req);
+  } catch {
+    res.status(400).json({ message: "Invalid JSON body" });
+    return;
+  }
+
+  const upstream = await identityRequest(pathname, {
+    method: "POST",
+    body: JSON.stringify(requestBody),
+  });
+  const payload = await upstream.json().catch(() => null) as {
+    user?: unknown;
+    accessToken?: string;
+    refreshToken?: string;
+    message?: string;
+    error?: string;
+  } | null;
+
+  if (!upstream.ok || !payload?.accessToken) {
+    res.status(upstream.status).json(payload ?? { message: "Authentication failed" });
+    return;
+  }
+
+  setAuthCookies(req, res, payload.accessToken, payload.refreshToken);
+  res.status(upstream.status).json(payload.user ?? {});
 }
 
 function isAllowedPublicHost(hostWithPort: string): boolean {
@@ -428,6 +470,22 @@ app.get("/auth/me", async (req, res) => {
   res.status(200).json(me);
 });
 
+app.post("/auth/login", async (req, res) => {
+  try {
+    await forwardAuthBody(req, res, "/api/auth/login");
+  } catch {
+    res.status(502).json({ message: "Failed to login" });
+  }
+});
+
+app.post("/auth/register", async (req, res) => {
+  try {
+    await forwardAuthBody(req, res, "/api/auth/register");
+  } catch {
+    res.status(502).json({ message: "Failed to register" });
+  }
+});
+
 app.post("/auth/logout", async (req, res) => {
   const accessToken = req.cookies[ACCESS_COOKIE] as string | undefined;
 
@@ -477,6 +535,5 @@ app.use(
 );
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
   console.log(`BFF listening on http://localhost:${port}`);
 });

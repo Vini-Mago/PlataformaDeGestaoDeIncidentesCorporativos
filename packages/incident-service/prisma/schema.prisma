@@ -30,6 +30,7 @@ model IncidentModel {
 
   statusHistory     IncidentStatusHistoryModel[]
   comments          IncidentCommentModel[]
+  attachments       IncidentAttachmentModel[]
 
   @@index([requesterId])
   @@index([status])
@@ -38,6 +39,22 @@ model IncidentModel {
   @@index([createdAt])
   @@unique([externalSource, externalId])
   @@map("incidents")
+}
+
+model IncidentAttachmentModel {
+  id            String   @id @default(uuid())
+  incidentId    String   @map("incident_id")
+  uploadedById  String   @map("uploaded_by_id")
+  fileName      String   @map("file_name")
+  mimeType      String   @map("mime_type")
+  sizeBytes     Int      @map("size_bytes")
+  content       Bytes
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  incident      IncidentModel @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("incident_attachments")
 }
 
 model IncidentStatusHistoryModel {

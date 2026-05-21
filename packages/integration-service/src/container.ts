@@ -3,6 +3,7 @@ import { createContainer as createAwilixContainer, asValue, asFunction } from "a
 import { PrismaClient } from "../generated/prisma-client/index";
 import { createAuthMiddleware, JwtTokenVerifier } from "@pgic/shared";
 import {
+  PrismaIntegrationDlqRepository,
   PrismaIntegrationLogRepository,
   PrismaOutboxWriter,
 } from "./adapters/driven/persistence/prisma-integration-log.repository";
@@ -10,6 +11,8 @@ import { RabbitMqIntegrationEventPublisherAdapter } from "./adapters/driven/mess
 import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import { ProcessMonitoringWebhookUseCase } from "./application/use-cases/process-monitoring-webhook.use-case";
 import { ListIntegrationLogsUseCase } from "./application/use-cases/list-integration-logs.use-case";
+import { ListIntegrationDlqUseCase } from "./application/use-cases/list-integration-dlq.use-case";
+import { ReprocessIntegrationDlqUseCase } from "./application/use-cases/reprocess-integration-dlq.use-case";
 import { IntegrationController } from "./adapters/driving/http/integration.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -20,6 +23,7 @@ export interface IntegrationContainerConfig {
   rabbitmqUrl?: string;
   webhookApiKey: string;
   webhookSecret?: string;
+  webhookAllowedIps?: string[];
   systemUserId: string;
 }
 
@@ -27,11 +31,14 @@ interface IntegrationCradle {
   config: IntegrationContainerConfig;
   prisma: PrismaClient;
   integrationLogRepository: PrismaIntegrationLogRepository;
+  integrationDlqRepository: PrismaIntegrationDlqRepository;
   outboxWriter: PrismaOutboxWriter;
   eventPublisher: RabbitMqIntegrationEventPublisherAdapter | { connect: () => Promise<void>; publish: () => Promise<void>; disconnect: () => Promise<void> };
   outboxRelay: OutboxRelayAdapter;
   processMonitoringWebhookUseCase: ProcessMonitoringWebhookUseCase;
   listIntegrationLogsUseCase: ListIntegrationLogsUseCase;
+  listIntegrationDlqUseCase: ListIntegrationDlqUseCase;
+  reprocessIntegrationDlqUseCase: ReprocessIntegrationDlqUseCase;
   integrationController: IntegrationController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -50,6 +57,10 @@ export function createContainer(config: IntegrationContainerConfig) {
 
     integrationLogRepository: asFunction(
       (cradle: IntegrationCradle) => new PrismaIntegrationLogRepository(cradle.prisma)
+    ).singleton(),
+
+    integrationDlqRepository: asFunction(
+      (cradle: IntegrationCradle) => new PrismaIntegrationDlqRepository(cradle.prisma)
     ).singleton(),
 
     outboxWriter: asFunction(
@@ -82,11 +93,23 @@ export function createContainer(config: IntegrationContainerConfig) {
         new ListIntegrationLogsUseCase(cradle.integrationLogRepository)
     ).singleton(),
 
+    listIntegrationDlqUseCase: asFunction(
+      (cradle: IntegrationCradle) =>
+        new ListIntegrationDlqUseCase(cradle.integrationDlqRepository)
+    ).singleton(),
+
+    reprocessIntegrationDlqUseCase: asFunction(
+      (cradle: IntegrationCradle) =>
+        new ReprocessIntegrationDlqUseCase(cradle.integrationDlqRepository, cradle.outboxWriter)
+    ).singleton(),
+
     integrationController: asFunction(
       (cradle: IntegrationCradle) =>
         new IntegrationController(
           cradle.processMonitoringWebhookUseCase,
           cradle.listIntegrationLogsUseCase,
+          cradle.listIntegrationDlqUseCase,
+          cradle.reprocessIntegrationDlqUseCase,
           cradle.config.systemUserId
         )
     ).singleton(),
@@ -103,6 +126,7 @@ export function createContainer(config: IntegrationContainerConfig) {
       createRoutes(cradle.integrationController, cradle.authMiddleware, {
         apiKey: cradle.config.webhookApiKey,
         webhookSecret: cradle.config.webhookSecret,
+        allowedIps: cradle.config.webhookAllowedIps,
       })
     ).singleton(),
   });
@@ -110,6 +134,9 @@ export function createContainer(config: IntegrationContainerConfig) {
   const c = awilix.cradle;
 
   return {
+    get prisma() {
+      return c.prisma;
+    },
     get routes() {
       return c.routes;
     },

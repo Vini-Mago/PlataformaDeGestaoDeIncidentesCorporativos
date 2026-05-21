@@ -24,7 +24,7 @@ export class OutboxRelayAdapter {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly eventPublisher: IEventPublisher,
+    private readonly eventPublisher: Pick<IEventPublisher, "publish">,
     private readonly batchSize: number = DEFAULT_BATCH_SIZE
   ) {}
 

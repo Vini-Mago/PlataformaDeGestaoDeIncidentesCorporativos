@@ -1,10 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getMe, logout, type AuthUser } from "./auth";
+import { getMe, login, logout, register, type AuthUser } from "./auth";
 
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   status: "loading" | "authenticated" | "unauthenticated";
+  signInWithPassword: (payload: { identifier: string; password: string }) => Promise<void>;
+  registerWithPassword: (payload: {
+    name: string;
+    email: string;
+    login?: string;
+    password: string;
+    department?: string;
+    jobTitle?: string;
+  }) => Promise<void>;
   signInWithGoogle: () => void;
   signOut: () => Promise<void>;
 };
@@ -34,6 +43,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.assign("/auth/google");
   }, []);
 
+  const signInWithPassword = useCallback(async (payload: { identifier: string; password: string }) => {
+    const me = await login(payload);
+    setUser(me);
+    setStatus("authenticated");
+  }, []);
+
+  const registerWithPassword = useCallback(async (payload: {
+    name: string;
+    email: string;
+    login?: string;
+    password: string;
+    department?: string;
+    jobTitle?: string;
+  }) => {
+    const me = await register(payload);
+    setUser(me);
+    setStatus("authenticated");
+  }, []);
+
   const signOut = useCallback(async () => {
     try {
       await logout();
@@ -47,9 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isAuthenticated: Boolean(user),
     status,
+    signInWithPassword,
+    registerWithPassword,
     signInWithGoogle,
     signOut,
-  }), [signInWithGoogle, signOut, status, user]);
+  }), [registerWithPassword, signInWithGoogle, signInWithPassword, signOut, status, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

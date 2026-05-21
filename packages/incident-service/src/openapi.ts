@@ -8,6 +8,7 @@ import { createIncidentSchema } from "./application/dtos/create-incident.dto";
 import { changeIncidentStatusSchema } from "./application/dtos/change-incident-status.dto";
 import { assignIncidentSchema } from "./application/dtos/assign-incident.dto";
 import { addIncidentCommentSchema } from "./application/dtos/add-incident-comment.dto";
+import { addIncidentAttachmentSchema } from "./application/dtos/add-incident-attachment.dto";
 
 extendZodWithOpenApi(z);
 
@@ -39,6 +40,16 @@ const CommentSchema = z.object({
   createdAt: z.string().datetime(),
 }).openapi("IncidentComment");
 
+const AttachmentSchema = z.object({
+  id: z.string().uuid(),
+  incidentId: z.string().uuid(),
+  uploadedById: z.string(),
+  fileName: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int(),
+  createdAt: z.string().datetime(),
+}).openapi("IncidentAttachment");
+
 const IncidentWithCommentsSchema = IncidentSchema.extend({
   comments: z.array(CommentSchema),
 }).openapi("IncidentWithComments");
@@ -54,6 +65,38 @@ registry.registerPath({
     201: { description: "Created", content: { "application/json": { schema: IncidentSchema } } },
     400: { description: "Validation error", content: { "application/json": { schema: ErrorSchema } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/incidents/{id}/attachments",
+  summary: "List incident attachments",
+  tags: ["Incidents"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Attachment metadata", content: { "application/json": { schema: z.array(AttachmentSchema) } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/incidents/{id}/attachments",
+  summary: "Attach file to incident",
+  tags: ["Incidents"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: addIncidentAttachmentSchema.openapi("AddAttachmentBody") } } },
+  },
+  responses: {
+    201: { description: "Attachment added", content: { "application/json": { schema: AttachmentSchema } } },
+    400: { description: "Validation error", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
 
@@ -142,7 +185,7 @@ export function createIncidentOpenApi(serverUrl: string): object {
     info: {
       title: "Incident Service API",
       version: "1.0.0",
-      description: "Incident lifecycle (RF-5.x): CRUD, workflow states, assignment, comments.",
+      description: "Incident lifecycle (RF-5.x): CRUD, workflow states, assignment, comments, attachments.",
     },
     servers: [{ url: serverUrl }],
   });

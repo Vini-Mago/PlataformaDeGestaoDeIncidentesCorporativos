@@ -36,6 +36,7 @@ describe("Incident Service API integration", () => {
   beforeAll(async () => {
     try {
       await container.prisma.$connect();
+      await container.prisma.incidentAttachmentModel.deleteMany({});
       await container.prisma.incidentCommentModel.deleteMany({});
       await container.prisma.incidentStatusHistoryModel.deleteMany({});
       await container.prisma.incidentModel.deleteMany({});
@@ -54,6 +55,7 @@ describe("Incident Service API integration", () => {
 
   beforeEach(async () => {
     if (!dbAvailable) return;
+    await container.prisma.incidentAttachmentModel.deleteMany({});
     await container.prisma.incidentCommentModel.deleteMany({});
     await container.prisma.incidentStatusHistoryModel.deleteMany({});
     await container.prisma.incidentModel.deleteMany({});
@@ -420,6 +422,82 @@ describe("Incident Service API integration", () => {
         .post(`/api/incidents/${incident.id}/comments`)
         .set("Authorization", `Bearer ${authToken}`)
         .send({ body: "" })
+        .expect(400);
+    });
+  });
+
+  describe("Incident attachments (auth required)", () => {
+    it("returns 201 when adding an allowed attachment and lists metadata", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const incident = await container.prisma.incidentModel.create({
+        data: {
+          title: "Attachment Test",
+          description: "Desc",
+          status: "Open",
+          criticality: "Medium",
+          requesterId: userId,
+        },
+      });
+
+      const contentBase64 = Buffer.from("hello attachment").toString("base64");
+      const created = await request(app)
+        .post(`/api/incidents/${incident.id}/attachments`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          fileName: "evidence.txt",
+          mimeType: "text/plain",
+          contentBase64,
+        })
+        .expect(201);
+
+      expect(created.body).toMatchObject({
+        incidentId: incident.id,
+        uploadedById: userId,
+        fileName: "evidence.txt",
+        mimeType: "text/plain",
+        sizeBytes: "hello attachment".length,
+      });
+      expect(created.body).toHaveProperty("id");
+
+      const stored = await container.prisma.incidentAttachmentModel.findUniqueOrThrow({
+        where: { id: created.body.id },
+      });
+      expect(Buffer.from(stored.content).toString("utf8")).toBe("hello attachment");
+
+      const list = await request(app)
+        .get(`/api/incidents/${incident.id}/attachments`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+      expect(list.body).toEqual([
+        expect.objectContaining({
+          id: created.body.id,
+          fileName: "evidence.txt",
+          sizeBytes: "hello attachment".length,
+        }),
+      ]);
+      expect(list.body[0]).not.toHaveProperty("content");
+    });
+
+    it("returns 400 when attachment mime type is not allowed", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const incident = await container.prisma.incidentModel.create({
+        data: {
+          title: "Bad Attachment",
+          description: "Desc",
+          status: "Open",
+          criticality: "Low",
+          requesterId: userId,
+        },
+      });
+
+      await request(app)
+        .post(`/api/incidents/${incident.id}/attachments`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          fileName: "script.js",
+          mimeType: "application/javascript",
+          contentBase64: Buffer.from("alert(1)").toString("base64"),
+        })
         .expect(400);
     });
   });
