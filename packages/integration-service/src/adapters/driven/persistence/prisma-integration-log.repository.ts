@@ -12,10 +12,11 @@ import type {
   ListIntegrationDlqInput,
 } from "../../../application/ports/integration-dlq-repository.port";
 import type { IOutboxWriter } from "../../../application/ports/outbox-writer.port";
+import { maskSensitivePayload } from "../../../infrastructure/mask-sensitive-payload";
 
 function toPlainObject(raw: unknown): object {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return raw as object;
+  return maskSensitivePayload(raw) as object;
 }
 
 export class PrismaIntegrationLogRepository implements IIntegrationLogRepository {
@@ -29,7 +30,10 @@ export class PrismaIntegrationLogRepository implements IIntegrationLogRepository
         httpStatus: input.httpStatus ?? null,
         correlationId: input.correlationId ?? null,
         externalId: input.externalId ?? null,
-        payloadSummary: (input.payloadSummary ?? undefined) as object | undefined,
+        payloadSummary:
+          input.payloadSummary == null
+            ? undefined
+            : (maskSensitivePayload(input.payloadSummary) as object),
         errorMessage: input.errorMessage ?? null,
         durationMs: input.durationMs ?? null,
       },

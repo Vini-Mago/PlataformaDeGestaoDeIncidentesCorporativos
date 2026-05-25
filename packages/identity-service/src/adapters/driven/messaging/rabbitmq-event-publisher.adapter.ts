@@ -6,6 +6,7 @@ import {
   ROUTING_KEY_USER_UPDATED,
   USER_CREATED_EVENT,
   USER_UPDATED_EVENT,
+  userDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -37,13 +38,18 @@ export class RabbitMqEventPublisherAdapter implements IEventPublisher {
     if (!this.channel) {
       throw new Error("RabbitMqEventPublisherAdapter not connected; call connect() before publishing.");
     }
+    const parsedEnvelope = userDomainEventEnvelopeSchema.safeParse({ type: eventName, payload });
+    if (!parsedEnvelope.success) {
+      throw new Error(`Invalid user domain event envelope: ${parsedEnvelope.error.message}`);
+    }
+
     const routingKey =
       eventName === USER_CREATED_EVENT
         ? ROUTING_KEY_USER_CREATED
         : eventName === USER_UPDATED_EVENT
           ? ROUTING_KEY_USER_UPDATED
           : eventName.replace(/\./g, "_");
-    const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
+    const message = Buffer.from(JSON.stringify(parsedEnvelope.data));
     this.channel.publish(this.exchange, routingKey, message, { persistent: true });
   }
 

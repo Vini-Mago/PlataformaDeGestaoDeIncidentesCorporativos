@@ -21,6 +21,8 @@ import type { LinkIncidentToChangeUseCase } from "../../../application/use-cases
 import type { UnlinkIncidentFromChangeUseCase } from "../../../application/use-cases/unlink-incident-from-change.use-case";
 import type { LinkProblemToChangeUseCase } from "../../../application/use-cases/link-problem-to-change.use-case";
 import type { UnlinkProblemFromChangeUseCase } from "../../../application/use-cases/unlink-problem-from-change.use-case";
+import type { ListProblemVersionsUseCase } from "../../../application/use-cases/list-problem-versions.use-case";
+import type { ListChangeVersionsUseCase } from "../../../application/use-cases/list-change-versions.use-case";
 import {
   parseProblemStatusFilter,
   type ListProblemsInput,
@@ -55,7 +57,9 @@ export class ProblemChangeController {
     private readonly linkIncidentToChange: LinkIncidentToChangeUseCase,
     private readonly unlinkIncidentFromChange: UnlinkIncidentFromChangeUseCase,
     private readonly linkProblemToChange: LinkProblemToChangeUseCase,
-    private readonly unlinkProblemFromChange: UnlinkProblemFromChangeUseCase
+    private readonly unlinkProblemFromChange: UnlinkProblemFromChangeUseCase,
+    private readonly listProblemVersionsUseCase: ListProblemVersionsUseCase,
+    private readonly listChangeVersionsUseCase: ListChangeVersionsUseCase
   ) {}
 
   createProblemHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -93,7 +97,7 @@ export class ProblemChangeController {
 
   patchProblemHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const detail = await this.updateProblem.execute(id, req.body as UpdateProblemDto);
+    const detail = await this.updateProblem.execute(id, req.body as UpdateProblemDto, req.userId);
     res.json(detail);
   });
 
@@ -107,6 +111,13 @@ export class ProblemChangeController {
       }
     }
     res.json(problem);
+  });
+
+  listProblemVersionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const items = await this.listProblemVersionsUseCase.execute(id, Number.isFinite(limit) ? limit : 50);
+    res.json({ items });
   });
 
   linkIncidentHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -148,7 +159,7 @@ export class ProblemChangeController {
 
   patchChangeHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const detail = await this.updateChange.execute(id, req.body as UpdateChangeDto);
+    const detail = await this.updateChange.execute(id, req.body as UpdateChangeDto, req.userId);
     res.json(detail);
   });
 
@@ -188,5 +199,12 @@ export class ProblemChangeController {
       }
     }
     res.json(change);
+  });
+
+  listChangeVersionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const items = await this.listChangeVersionsUseCase.execute(id, Number.isFinite(limit) ? limit : 50);
+    res.json({ items });
   });
 }

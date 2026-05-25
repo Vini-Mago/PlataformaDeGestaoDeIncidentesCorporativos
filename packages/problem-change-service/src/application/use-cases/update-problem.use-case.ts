@@ -7,7 +7,7 @@ import type { ProblemDetail } from "./get-problem.use-case";
 export class UpdateProblemUseCase {
   constructor(private readonly problemRepository: IProblemRepository) {}
 
-  async execute(id: string, dto: UpdateProblemDto): Promise<ProblemDetail> {
+  async execute(id: string, dto: UpdateProblemDto, changedById?: string): Promise<ProblemDetail> {
     const current = await this.problemRepository.findById(id);
     if (!current) {
       throw new ProblemNotFoundError(id);
@@ -21,6 +21,7 @@ export class UpdateProblemUseCase {
       status: dto.status,
       rootCause: dto.rootCause,
       actionPlan: dto.actionPlan,
+      changedById,
     });
     if (!updated) {
       throw new ProblemNotFoundError(id);

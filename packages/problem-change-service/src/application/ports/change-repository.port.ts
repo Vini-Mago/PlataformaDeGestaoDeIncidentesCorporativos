@@ -29,6 +29,7 @@ export interface UpdateChangePatch {
   windowStart?: Date | null;
   windowEnd?: Date | null;
   rollbackPlan?: string | null;
+  changedById?: string;
 }
 
 export interface IChangeRepository {

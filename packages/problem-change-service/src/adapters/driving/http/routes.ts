@@ -12,6 +12,7 @@ import {
   validateUpdateChange,
   validateLinkProblemToChangeBody,
   validateChangeProblemParams,
+  validateListVersionsQuery,
 } from "./validation";
 
 export function createRoutes(
@@ -64,6 +65,14 @@ export function createRoutes(
     validateIdParam,
     validateUpdateProblem,
     controller.patchProblemHandler as RequestHandler
+  );
+  router.get(
+    "/problems/:id/versions",
+    authMiddleware,
+    requireJwtPermission("problems", "read", "all"),
+    validateIdParam,
+    validateListVersionsQuery,
+    controller.listProblemVersionsHandler as RequestHandler
   );
 
   router.post(
@@ -118,6 +127,14 @@ export function createRoutes(
     requireJwtPermission("changes", "read", "all"),
     validateIdParam,
     controller.getChangeHandler as RequestHandler
+  );
+  router.get(
+    "/changes/:id/versions",
+    authMiddleware,
+    requireJwtPermission("changes", "read", "all"),
+    validateIdParam,
+    validateListVersionsQuery,
+    controller.listChangeVersionsHandler as RequestHandler
   );
 
   return router;

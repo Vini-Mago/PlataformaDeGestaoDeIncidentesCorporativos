@@ -7,6 +7,7 @@ import {
   ROUTING_KEY_CHANGE_CREATED,
   PROBLEM_CREATED_EVENT,
   CHANGE_CREATED_EVENT,
+  problemChangeEventEnvelopeSchema,
 } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -65,6 +66,11 @@ export class RabbitMqProblemChangeEventPublisherAdapter implements IEventPublish
     if (!this.channel) {
       throw new Error("RabbitMqProblemChangeEventPublisherAdapter not connected; call connect() before publishing.");
     }
+    const parsedEnvelope = problemChangeEventEnvelopeSchema.safeParse({ type: eventName, payload });
+    if (!parsedEnvelope.success) {
+      throw new Error(`Invalid problem/change domain event envelope: ${parsedEnvelope.error.message}`);
+    }
+
     const exchange = eventName.startsWith("problem.") ? EXCHANGE_PROBLEM_EVENTS : EXCHANGE_CHANGE_EVENTS;
     const routingKey =
       eventName === PROBLEM_CREATED_EVENT
@@ -72,7 +78,7 @@ export class RabbitMqProblemChangeEventPublisherAdapter implements IEventPublish
         : eventName === CHANGE_CREATED_EVENT
           ? ROUTING_KEY_CHANGE_CREATED
           : eventName.replace(/\./g, "_");
-    const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
+    const message = Buffer.from(JSON.stringify(parsedEnvelope.data));
     const ok = this.channel.publish(exchange, routingKey, message, { persistent: true });
     if (!ok) {
       await new Promise<void>((resolve) => this.channel!.once("drain", resolve));

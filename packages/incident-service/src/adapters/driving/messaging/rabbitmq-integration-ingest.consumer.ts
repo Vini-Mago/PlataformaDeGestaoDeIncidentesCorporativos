@@ -5,6 +5,7 @@ import {
   INTEGRATION_INCIDENT_INGEST_EVENT,
   QUEUE_INCIDENT_INTEGRATION_INGEST,
   ROUTING_KEY_INCIDENT_INGEST,
+  integrationIncidentIngestEnvelopeSchema,
 } from "@pgic/shared";
 import type {
   HandleIntegrationIncidentIngestUseCase,
@@ -39,15 +40,19 @@ export class RabbitMqIntegrationIngestConsumer {
       async (msg) => {
         if (!msg) return;
         try {
-          const envelope = JSON.parse(msg.content.toString()) as {
-            type?: string;
-            payload?: IntegrationIncidentIngestPayload;
-          };
-          if (envelope.type !== INTEGRATION_INCIDENT_INGEST_EVENT || !envelope.payload) {
+          const parsedEnvelope = integrationIncidentIngestEnvelopeSchema.safeParse(
+            JSON.parse(msg.content.toString())
+          );
+          if (!parsedEnvelope.success) {
+            logger.warn({ issues: parsedEnvelope.error.issues }, "integration ingest consumer: invalid envelope");
             this.channel?.nack(msg, false, false);
             return;
           }
-          await this.handleIngest.execute(envelope.payload);
+          if (parsedEnvelope.data.type !== INTEGRATION_INCIDENT_INGEST_EVENT) {
+            this.channel?.nack(msg, false, false);
+            return;
+          }
+          await this.handleIngest.execute(parsedEnvelope.data.payload as IntegrationIncidentIngestPayload);
           this.channel?.ack(msg);
         } catch (err) {
           logger.error({ err }, "integration ingest consumer failed");

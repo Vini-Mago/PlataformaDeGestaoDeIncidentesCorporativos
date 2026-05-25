@@ -5,6 +5,7 @@ import {
 } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import { monitoringWebhookBodySchema } from "./application/dtos/monitoring-webhook.dto";
+import { createOutboundDeliveryBodySchema } from "./application/dtos/create-outbound-delivery.dto";
 
 extendZodWithOpenApi(z);
 
@@ -47,6 +48,40 @@ registry.registerPath({
       description: "Validation error",
       content: { "application/json": { schema: ErrorSchema } },
     },
+  },
+});
+
+const OutboundDeliveryAcceptedSchema = z
+  .object({
+    accepted: z.literal(true),
+    deliveryId: z.string().uuid(),
+    endpoint: z.string().url(),
+    eventName: z.literal("integration.outbound_dispatch"),
+  })
+  .openapi("OutboundDeliveryAccepted");
+
+registry.registerPath({
+  method: "post",
+  path: "/api/outbound/v1/deliver",
+  summary: "Queue outbound integration call for async delivery (timeout/retry/DLQ)",
+  tags: ["Outbound Integrations"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: createOutboundDeliveryBodySchema.openapi("CreateOutboundDeliveryBody"),
+        },
+      },
+    },
+  },
+  responses: {
+    202: {
+      description: "Accepted for async processing",
+      content: { "application/json": { schema: OutboundDeliveryAcceptedSchema } },
+    },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    422: { description: "Validation error", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
 

@@ -16,6 +16,7 @@ import {
   REQUEST_REJECTED_EVENT,
   REQUEST_STARTED_EVENT,
   REQUEST_SUBMITTED_EVENT,
+  requestDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -76,6 +77,11 @@ export class RabbitMqRequestEventPublisherAdapter implements IEventPublisher {
     if (!this.channel) {
       throw new Error("RabbitMqRequestEventPublisherAdapter not connected; call connect() before publishing.");
     }
+    const parsedEnvelope = requestDomainEventEnvelopeSchema.safeParse({ type: eventName, payload });
+    if (!parsedEnvelope.success) {
+      throw new Error(`Invalid request domain event envelope: ${parsedEnvelope.error.message}`);
+    }
+
     const routingKey =
       eventName === REQUEST_CREATED_EVENT
         ? ROUTING_KEY_REQUEST_CREATED
@@ -92,7 +98,7 @@ export class RabbitMqRequestEventPublisherAdapter implements IEventPublisher {
                   : eventName === REQUEST_COMPLETED_EVENT
                     ? ROUTING_KEY_REQUEST_COMPLETED
                     : eventName.replace(/\./g, "_");
-    const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
+    const message = Buffer.from(JSON.stringify(parsedEnvelope.data));
     this.channel.publish(this.exchange, routingKey, message, { persistent: true });
   }
 

@@ -104,7 +104,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 - [~] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Histórico de estado/comentários em incidentes; anexos persistidos; audit-service com API dedicada; cobertura transversal a consolidar.)*
 - [~] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2). *(Histórico de status em incident-service; demais entidades parcial.)*
-- [ ] **Versionamento** onde compliance exigir — recuperação de versões anteriores, política de retenção (RF-3.3).
+- [x] **Versionamento** onde compliance exigir — recuperação de versões anteriores, política de retenção (RF-3.3). *(Implementado em `problem-change-service` com snapshots `before/after` e endpoints `GET /api/problems/:id/versions` e `GET /api/changes/:id/versions`.)*
 - [~] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*). *(Serviço e API existentes; consumo automático de todos os eventos de domínio a verificar.)*
 
 ### 4.4 Dashboard com KPIs (RequisitosCorp §2.4 ↔ RF-4.x)
@@ -150,14 +150,14 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 ### 5.5 Integrações externas (RF-9.x) — *integration-service*
 
 - [~] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1). *(Webhook monitoring v1 + outbox + incident ingest; mapeamento severidade→criticidade.)*
-- [ ] **Saída** — envio para ERP/CRM/diretório com timeout, retry, não bloqueio do fluxo principal (RF-9.2).
+- [x] **Saída** — envio para ERP/CRM/diretório com timeout, retry, não bloqueio do fluxo principal (RF-9.2). *(Implementado em `integration-service`: `POST /api/outbound/v1/deliver` + processamento assíncrono com timeout, retry e DLQ no relay.)*
 - [~] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` expõe metadados; `integration_dlq` tem listagem e reprocessamento via API; mascaramento segue responsabilidade do payload summary.)*
 - [x] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*). *(API key + HMAC opcional + rate limit + limite JSON 256kb + allowlist IP por env.)*
 
 ### 5.6 Processamento assíncrono (RF-10.x)
 
 - [~] **Jobs em background** para relatórios, KPIs, e-mails em massa, sincronizações (RF-10.1). *(Relays outbox e workers parciais; jobs de relatório pesado não generalizados.)*
-- [~] **Retry** com backoff e **DLQ** após N falhas; ferramenta ou API para reprocessar (RF-10.2).
+- [x] **Retry** com backoff e **DLQ** após N falhas; ferramenta ou API para reprocessar (RF-10.2). *(No `integration-service`, relay outbound com `maxAttempts`, backoff exponencial (`backoffMs`) e fallback para `integration_dlq`; reprocessamento via `POST /api/integration-dlq/:id/reprocess`.)*
 - [x] **Outbox pattern** onde eventos devem ser consistentes com o estado transacional (recomendação em *MICROSERVICES_LIST.md*).
 
 ---
@@ -169,8 +169,8 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [~] Criptografia em trânsito (HTTPS) e proteção de dados sensíveis em repouso conforme modelo de ameaças. *(TLS típico em produção; stack local HTTP.)*
 - [~] Defesas contra **SQL injection** (Prisma parametrizado + revisão), **XSS** no front, validação de entrada nos DTOs. *(Prisma + Zod; CSP/monitorização XSS em maturação.)*
 - [~] **Rate limiting** em APIs expostas (gateway ou serviço). *(Express rate-limit em rotas sensíveis do identity; sem `limit_req` no Nginx.)*
-- [ ] **Backup** automatizado do PostgreSQL e política de retenção.
-- [ ] **LGPD** — base legal, minimização, retenção, anonimização em desativação quando exigido, registro de operações sobre dados pessoais.
+- [~] **Backup** automatizado do PostgreSQL e política de retenção. *(Scripts `pnpm db:backup`, `pnpm db:backup:run`, `pnpm db:backup:check`, `pnpm db:restore`, `pnpm db:restore:test`, template cron em `infra/cron/pgic-backup.cron` e runbook; falta operacionalizar no ambiente produtivo com monitoramento central.)*
+- [~] **LGPD** — base legal, minimização, retenção, anonimização em desativação quando exigido, registro de operações sobre dados pessoais. *(Runbook `docs/LGPD_OPERACIONAL_RUNBOOK.md` + scripts `pnpm privacy:anonymize-user` e `pnpm privacy:prune-identity` no `identity-service`; formalização jurídica/DPO e cobertura cross-service ainda pendentes.)*
 
 ### 6.2 Performance
 
@@ -188,14 +188,14 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 ### 6.4 Disponibilidade
 
 - [x] **Health checks** por serviço.
-- [ ] Monitoramento e alertas (métricas, logs centralizados).
-- [ ] Estratégia de failover para banco e broker em ambientes produtivos.
+- [~] Monitoramento e alertas (métricas, logs centralizados). *(Healthcheck operacional automatizado `pnpm ops:healthcheck` com verificação HTTP/infra/backlog e webhook de alerta; centralização de métricas/logs/APM em produção ainda pendente.)*
+- [x] Estratégia de failover para banco e broker em ambientes produtivos. *(Runbook operacional definido em `docs/ops/FAILOVER_RUNBOOK.md`, com validação pós-recuperação via `pnpm ops:healthcheck`.)*
 
 ### 6.5 Interoperabilidade
 
 - [x] APIs **REST** padronizadas, JSON, erros consistentes (`ErrorResponseDto` no shared).
-- [~] **Versionamento** de API documentado (caminho ou cabeçalho). *(OpenAPI por serviço e api-docs; política `/v1` global a formalizar.)*
-- [~] Contratos estáveis para integradores e para **testes de contrato** entre serviços. *(OpenAPI e testes de integração; pact/contrato formal opcional.)*
+- [x] **Versionamento** de API documentado (caminho ou cabeçalho). *(Política formal em `docs/API_VERSIONING_POLICY.md` + OpenAPI por serviço.)*
+- [~] Contratos estáveis para integradores e para **testes de contrato** entre serviços. *(OpenAPI e testes de integração presentes; cobertura automatizada em CI com `pnpm test:contract` inclui OpenAPI + eventos `request.*` (RabbitMQ) entre `request-service` e `notification-service`; expansão para demais domínios ainda pendente.)*
 
 ---
 
@@ -244,7 +244,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [x] Testes de integração (API + banco + fila em ambiente controlado).
 - [ ] Testes de carga em endpoints críticos (opcional por estágio).
 - [ ] Testes de segurança (SAST/DAST conforme política).
-- [ ] Testes de contrato entre produtores/consumidores de APIs e eventos.
+- [~] Testes de contrato entre produtores/consumidores de APIs e eventos. *(CI com `pnpm test:contract` valida contratos OpenAPI e contratos de eventos RabbitMQ para `user.*`, `request.*`, `incident.*`, `integration.incident_ingest`, `sla.*` e `problem/change`; falta ampliar para demais fluxos/eventos.)*
 
 ### 8.4 Governança (§12)
 

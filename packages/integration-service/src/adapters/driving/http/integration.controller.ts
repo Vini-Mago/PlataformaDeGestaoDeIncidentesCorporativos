@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { monitoringWebhookBodySchema } from "../../../application/dtos/monitoring-webhook.dto";
+import { createOutboundDeliveryBodySchema } from "../../../application/dtos/create-outbound-delivery.dto";
 import type { ProcessMonitoringWebhookUseCase } from "../../../application/use-cases/process-monitoring-webhook.use-case";
 import type { ListIntegrationLogsUseCase } from "../../../application/use-cases/list-integration-logs.use-case";
+import type { CreateOutboundDeliveryUseCase } from "../../../application/use-cases/create-outbound-delivery.use-case";
 import {
   parseIntegrationDlqStatus,
   type ListIntegrationDlqUseCase,
@@ -11,6 +13,7 @@ import type { ReprocessIntegrationDlqUseCase } from "../../../application/use-ca
 export class IntegrationController {
   constructor(
     private readonly processMonitoringWebhook: ProcessMonitoringWebhookUseCase,
+    private readonly createOutboundDelivery: CreateOutboundDeliveryUseCase,
     private readonly listIntegrationLogs: ListIntegrationLogsUseCase,
     private readonly listIntegrationDlq: ListIntegrationDlqUseCase,
     private readonly reprocessIntegrationDlq: ReprocessIntegrationDlqUseCase,
@@ -29,6 +32,24 @@ export class IntegrationController {
         body: parsed.data,
         correlationId,
         systemUserId: this.systemUserId,
+      });
+      res.status(202).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createOutbound = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = createOutboundDeliveryBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({ error: "Validation failed", details: parsed.error.flatten() });
+        return;
+      }
+      const correlationId = req.header("x-correlation-id") ?? req.header("X-Correlation-Id") ?? undefined;
+      const result = await this.createOutboundDelivery.execute({
+        body: parsed.data,
+        correlationId,
       });
       res.status(202).json(result);
     } catch (err) {

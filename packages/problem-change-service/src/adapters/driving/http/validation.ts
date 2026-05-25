@@ -9,6 +9,9 @@ import { updateChangeSchema } from "../../../application/dtos/update-change.dto"
 import { linkProblemToChangeSchema } from "../../../application/dtos/link-problem-to-change.dto";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
+const listVersionsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
 
 export const validateIdParam: (req: Request, res: Response, next: NextFunction) => void = (
   req,
@@ -86,6 +89,21 @@ export const validateChangeProblemParams: (req: Request, res: Response, next: Ne
   }
   if (!problemParsed.success) {
     res.status(400).json({ error: "Invalid problem ID format", message: problemParsed.error.message });
+    return;
+  }
+  next();
+};
+
+export const validateListVersionsQuery: (req: Request, res: Response, next: NextFunction) => void = (
+  req,
+  res,
+  next
+) => {
+  const parsed = listVersionsQuerySchema.safeParse({
+    limit: req.query.limit,
+  });
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid query", message: parsed.error.message });
     return;
   }
   next();

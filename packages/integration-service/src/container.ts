@@ -10,6 +10,7 @@ import {
 import { RabbitMqIntegrationEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-integration-event-publisher.adapter";
 import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import { ProcessMonitoringWebhookUseCase } from "./application/use-cases/process-monitoring-webhook.use-case";
+import { CreateOutboundDeliveryUseCase } from "./application/use-cases/create-outbound-delivery.use-case";
 import { ListIntegrationLogsUseCase } from "./application/use-cases/list-integration-logs.use-case";
 import { ListIntegrationDlqUseCase } from "./application/use-cases/list-integration-dlq.use-case";
 import { ReprocessIntegrationDlqUseCase } from "./application/use-cases/reprocess-integration-dlq.use-case";
@@ -36,6 +37,7 @@ interface IntegrationCradle {
   eventPublisher: RabbitMqIntegrationEventPublisherAdapter | { connect: () => Promise<void>; publish: () => Promise<void>; disconnect: () => Promise<void> };
   outboxRelay: OutboxRelayAdapter;
   processMonitoringWebhookUseCase: ProcessMonitoringWebhookUseCase;
+  createOutboundDeliveryUseCase: CreateOutboundDeliveryUseCase;
   listIntegrationLogsUseCase: ListIntegrationLogsUseCase;
   listIntegrationDlqUseCase: ListIntegrationDlqUseCase;
   reprocessIntegrationDlqUseCase: ReprocessIntegrationDlqUseCase;
@@ -88,6 +90,11 @@ export function createContainer(config: IntegrationContainerConfig) {
         new ProcessMonitoringWebhookUseCase(cradle.integrationLogRepository, cradle.outboxWriter)
     ).singleton(),
 
+    createOutboundDeliveryUseCase: asFunction(
+      (cradle: IntegrationCradle) =>
+        new CreateOutboundDeliveryUseCase(cradle.outboxWriter)
+    ).singleton(),
+
     listIntegrationLogsUseCase: asFunction(
       (cradle: IntegrationCradle) =>
         new ListIntegrationLogsUseCase(cradle.integrationLogRepository)
@@ -107,6 +114,7 @@ export function createContainer(config: IntegrationContainerConfig) {
       (cradle: IntegrationCradle) =>
         new IntegrationController(
           cradle.processMonitoringWebhookUseCase,
+          cradle.createOutboundDeliveryUseCase,
           cradle.listIntegrationLogsUseCase,
           cradle.listIntegrationDlqUseCase,
           cradle.reprocessIntegrationDlqUseCase,

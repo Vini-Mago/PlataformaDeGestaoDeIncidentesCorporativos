@@ -11,3 +11,5 @@ coverage
 .vscode
 *.tsbuildinfo
 .playwright-mcp
+backups/
+out/ops-evidence/

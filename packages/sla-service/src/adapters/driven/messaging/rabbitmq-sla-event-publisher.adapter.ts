@@ -6,6 +6,7 @@ import {
   ROUTING_KEY_SLA_BREACH,
   SLA_RISK_EVENT,
   SLA_BREACH_EVENT,
+  slaDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -63,13 +64,18 @@ export class RabbitMqSlaEventPublisherAdapter implements IEventPublisher {
     if (!this.channel) {
       throw new Error("RabbitMqSlaEventPublisherAdapter not connected; call connect() before publishing.");
     }
+    const parsedEnvelope = slaDomainEventEnvelopeSchema.safeParse({ type: eventName, payload });
+    if (!parsedEnvelope.success) {
+      throw new Error(`Invalid SLA domain event envelope: ${parsedEnvelope.error.message}`);
+    }
+
     const routingKey =
       eventName === SLA_RISK_EVENT
         ? ROUTING_KEY_SLA_RISK
         : eventName === SLA_BREACH_EVENT
           ? ROUTING_KEY_SLA_BREACH
           : eventName.replace(/\./g, "_");
-    const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
+    const message = Buffer.from(JSON.stringify(parsedEnvelope.data));
     const ok = this.channel.publish(EXCHANGE_SLA_EVENTS, routingKey, message, { persistent: true });
     if (!ok) {
       await new Promise<void>((resolve) => this.channel!.once("drain", resolve));

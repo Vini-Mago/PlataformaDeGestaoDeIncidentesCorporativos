@@ -59,7 +59,7 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 
 - [~] **Registro de ações** dos usuários sobre entidades relevantes.
 - [~] **Histórico de alterações** em campos críticos.
-- [ ] **Versionamento de dados** onde compliance ou disputas operacionais exigirem reconstrução do passado.
+- [~] **Versionamento de dados** onde compliance ou disputas operacionais exigirem reconstrução do passado. *(Implementado no `problem-change-service` para problemas/mudanças com `problem_versions`/`change_versions` e APIs de consulta; falta expandir para demais contextos e formalizar retenção.)*
 
 #### RC §2.4 Dashboard com KPIs
 
@@ -77,8 +77,8 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 - [x] **Proteção contra SQL Injection** — consultas parametrizadas/ORM adequado, revisão de SQL dinâmico.
 - [~] **Proteção contra XSS** — sanitização/escape no front, CSP quando maduro.
 - [~] **Rate limiting** — gateway ou serviços nas APIs públicas e endpoints sensíveis.
-- [ ] **Backup automatizado** — banco e política de retenção; testes de restore.
-- [ ] **Compliance com LGPD** — bases legais, retenção, direitos do titular, minimização.
+- [~] **Backup automatizado** — banco e política de retenção; testes de restore. *(Scripts e runbook adicionados: `pnpm db:backup`, `pnpm db:backup:run`, `pnpm db:backup:check`, `pnpm db:restore`, `pnpm db:restore:test`, com template cron em `infra/cron/pgic-backup.cron`; falta operacionalizar no ambiente produtivo.)*
+- [~] **Compliance com LGPD** — bases legais, retenção, direitos do titular, minimização. *(Runbook técnico `docs/LGPD_OPERACIONAL_RUNBOOK.md` e utilitários de anonimização/expurgo no identity-service implementados; falta institucionalização jurídica e ampliação para todos os domínios.)*
 
 #### RC §3.2 Performance
 
@@ -95,16 +95,16 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 
 #### RC §3.4 Disponibilidade
 
-- [ ] **Alta disponibilidade (HA)** — pelo menos planejada para Postgres, Redis, RabbitMQ e apps em produção (réplicas, quorum, SLA de infra).
-- [ ] **Monitoramento com métricas e alertas** — latência, erros, filas, disco, pods/nós.
+- [~] **Alta disponibilidade (HA)** — pelo menos planejada para Postgres, Redis, RabbitMQ e apps em produção (réplicas, quorum, SLA de infra). *(Planejamento operacional e metas em `docs/ops/RTO_RPO_TARGETS.md`; implantação HA de produção ainda pendente.)*
+- [~] **Monitoramento com métricas e alertas** — latência, erros, filas, disco, pods/nós. *(`pnpm ops:healthcheck` implementado para health HTTP + infra + profundidade de filas + alerta webhook; stack completa de métricas/APM/log centralizado ainda pendente.)*
 - [x] **Health checks** — por serviço, consumidos por orquestrador ou monitor.
-- [ ] **Failover** — procedimento documentado para falha de nó, broker ou DB (mesmo que manual na primeira versão).
+- [x] **Failover** — procedimento documentado para falha de nó, broker ou DB (mesmo que manual na primeira versão). *(Runbook `docs/ops/FAILOVER_RUNBOOK.md`.)*
 
 #### RC §3.5 Interoperabilidade
 
 - [x] **APIs padronizadas RESTful** — recursos, verbos HTTP, códigos de status consistentes.
 - [x] **Comunicação via JSON** — payloads e erros em JSON uniforme (`@pgic/shared`).
-- [~] **Versionamento de API** — política `/v1` ou cabeçalho; depreciação documentada.
+- [x] **Versionamento de API** — política `/v1` ou cabeçalho; depreciação documentada. *(Ver `docs/API_VERSIONING_POLICY.md`.)*
 - [~] **Integração bidirecional com sistemas externos** — entrada (webhook/API) e saída (ERP, notificações, CRM).
 
 ### RC §4 Arquitetura baseada em microsserviços
@@ -181,7 +181,7 @@ O sistema deve suportar:
 - [~] **Jobs em background** — schedulers/workers por serviço ou centralizados conforme desenho.
 - [x] **Filas de processamento** — RabbitMQ com routing adequado.
 - [x] **Eventos de domínio** — payloads versionados; contratos entre serviços.
-- [~] **Retry automático** — backoff, limite de tentativas.
+- [x] **Retry automático** — backoff, limite de tentativas. *(Implementado no fluxo outbound do `integration-service` com `maxAttempts` e backoff exponencial.)*
 - [~] **Dead-letter queues** — inspeção e correção ou descarte controlado.
 
 **Exemplos de uso previstos no normativo — mapeamento PGIC:**
@@ -231,7 +231,7 @@ O sistema deve suportar:
 - [x] **Testes de integração** — API + persistência + mensageria em ambiente controlado.
 - [ ] **Testes de carga** — cenários de pico em endpoints e filas.
 - [ ] **Testes de segurança** — SAST/dependências; revisão manual de superfície de ataque.
-- [ ] **Testes de contrato** — OpenAPI/eventos entre produtor e consumidor de microsserviços.
+- [~] **Testes de contrato** — OpenAPI/eventos entre produtor e consumidor de microsserviços. *(OpenAPI crítico validado automaticamente por `pnpm test:contract` no CI; contratos de eventos RabbitMQ cobertos para `user.*`, `request.*`, `incident.*`, `integration.incident_ingest`, `sla.*` e `problem/change`; falta ampliar cobertura para demais domínios.)*
 
 ### RC §12 Governança
 
@@ -266,7 +266,7 @@ Para fechar o normativo, verificar explicitamente:
 - [ ] **Definir ambientes** — ao menos: desenvolvimento local, homologação/staging, produção. Para cada um: URL do gateway, URLs dos serviços (internas/externas), política de dados (staging anonimizado ou sintético).
 - [ ] **Definir provedor de e-mail** para recuperação de senha e notificações (SMTP corporativo, SendGrid, etc.) e responsável pela configuração de SPF/DKIM se aplicável.
 - [ ] **Definir política de identidade** — apenas usuário/senha local com JWT; ou SSO (OAuth2/OIDC) com qual IdP (Azure AD, Okta, Keycloak).
-- [ ] **Definir política de dados pessoais (LGPD)** — quais campos são pessoais, bases legais, tempo de retenção, procedimento de exclusão/anonimização e titular de solicitações (DPO ou equivalente).
+- [~] **Definir política de dados pessoais (LGPD)** — quais campos são pessoais, bases legais, tempo de retenção, procedimento de exclusão/anonimização e titular de solicitações (DPO ou equivalente). *(Runbook técnico `docs/LGPD_OPERACIONAL_RUNBOOK.md` criado; validação jurídica/DPO e política corporativa final ainda pendentes.)*
 - [ ] **Definir SLAs de negócio iniciais** — mesmo que depois mudem: tempos de primeira resposta e resolução por criticidade ou por tipo de incidente (documento único “política de SLA v0”).
 - [ ] **Definir calendário operacional** — fuso horário oficial, horário comercial, feriados corporativos (impacta sla-service).
 - [ ] **Definir integrações obrigatórias na primeira versão** — por exemplo: apenas webhook de monitoramento; ou também ERP; ou também Slack/Teams.
@@ -276,7 +276,7 @@ Para fechar o normativo, verificar explicitamente:
 - [ ] **Product owner / gestor de backlog** — prioriza RF por valor e risco.
 - [ ] **Arquiteto ou referência técnica** — mantém fronteiras de serviço, contratos de API e eventos.
 - [ ] **DevOps / SRE** — Compose local, pipeline, observabilidade, backups.
-- [ ] **Segurança / compliance** — revisão de RBAC, logs, LGPD, integrações externas.
+- [~] **Segurança / compliance** — revisão de RBAC, logs, LGPD, integrações externas. *(RBAC/logs/LGPD operacional e integração outbound avançaram; revisão formal completa permanece em andamento.)*
 - [ ] **QA / testes** — plano de testes por RF crítico e regressão.
 
 ### 0.3 Documentação viva mínima (antes da Fase 1)
@@ -651,8 +651,8 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Para campos críticos, persistir snapshots ou event sourcing parcial.
-2. [ ] UI/API para **comparar** duas versões.
+1. [x] Para campos críticos, persistir snapshots ou event sourcing parcial. *(Snapshots `before/after` persistidos em `problem_versions` e `change_versions` no `problem-change-service`.)*
+2. [~] UI/API para **comparar** duas versões. *(APIs de histórico implementadas: `GET /api/problems/:id/versions` e `GET /api/changes/:id/versions`; comparação dedicada entre duas versões ainda pendente na UI/API.)*
 
 ### Balanço de saída da Fase 9
 
@@ -713,16 +713,16 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [ ] Fila de envio com timeout, retry, backoff.
-2. [ ] Falha não bloqueia commit do incidente no banco (eventual consistency aceita com compensação).
+1. [x] Fila de envio com timeout, retry, backoff. *(Implementado em `integration-service` com `integration.outbound_dispatch` + relay HTTP outbound com `timeoutMs`, `maxAttempts`, retry e DLQ.)*
+2. [x] Falha não bloqueia commit do incidente no banco (eventual consistency aceita com compensação). *(Saída outbound assíncrona via outbox/relay no `integration-service`; falhas seguem retry e DLQ.)*
 
 ### 11.3 Observabilidade de integração (RF-9.3, RequisitosCorp §9 — requisitos transversais)
 
 **Passos:**
 
-1. [ ] Log estruturado: direção, endpoint, status HTTP, duração, id de correlação, payload mascarado.
+1. [x] Log estruturado: direção, endpoint, status HTTP, duração, id de correlação, payload mascarado. *(`integration_logs` cobre direção, endpoint, status, duração, correlação e metadados de payload.)*
 2. [x] DLQ com **reprocessamento** manual seguro. *(GET `/api/integration-dlq`; POST `/api/integration-dlq/:id/reprocess` recoloca na outbox.)*
-3. [ ] **Versionamento de integração** — contratos de webhook/API com versão explícita (`/v1/webhook`, header `X-API-Version`, ou payload `schemaVersion`); changelog quando quebrar compatibilidade.
+3. [x] **Versionamento de integração** — contratos de webhook/API com versão explícita (`/v1/webhook`, header `X-API-Version`, ou payload `schemaVersion`); changelog quando quebrar compatibilidade. *(Endpoints versionados em path: `/api/webhooks/v1/monitoring` e `/api/outbound/v1/deliver`.)*
 
 ### Balanço de saída da Fase 11
 
@@ -762,8 +762,8 @@ Para fechar o normativo, verificar explicitamente:
 2. [x] **Proteção contra SQL Injection** — uso exclusivo de consultas parametrizadas via ORM (Prisma); proibir concatenação de SQL com entrada do usuário; revisar relatórios ou buscas dinâmicas.
 3. [~] **Proteção contra XSS** — escape/sanitização no front; evitar HTML não confiável; CSP progressiva; cookies `HttpOnly`/`Secure` se sessão via cookie.
 4. [~] **Rate limiting** — no gateway (Nginx `limit_req` ou equivalente) e/ou middleware nos serviços; limites mais rígidos em login, recuperação de senha e APIs públicas de integração.
-5. [ ] **Backup automatizado** — agendamento do PostgreSQL (snapshot gerenciado ou script); retenção definida; alerta em falha de backup; teste periódico de restore (ligado à Fase 14).
-6. [ ] **Compliance com LGPD** — inventário de dados pessoais; base legal por finalidade; minimização; acordo de operações com subprocessadores se usar nuvem; canal para solicitações do titular (exportação/eliminação dentro dos limites legais e técnicos).
+5. [x] **Backup automatizado** — agendamento do PostgreSQL (snapshot gerenciado ou script); retenção definida; alerta em falha de backup; teste periódico de restore (ligado à Fase 14). *(Scripts `db:backup*`, `db:restore:test`, templates cron e manutenção consolidada implementados.)*
+6. [~] **Compliance com LGPD** — inventário de dados pessoais; base legal por finalidade; minimização; acordo de operações com subprocessadores se usar nuvem; canal para solicitações do titular (exportação/eliminação dentro dos limites legais e técnicos). *(Runbook e scripts técnicos implementados; institucionalização jurídica e cobertura total cross-service pendentes.)*
 
 ### 13.2 Performance (RequisitosCorp §3.2)
 
@@ -781,15 +781,15 @@ Para fechar o normativo, verificar explicitamente:
 ### 13.4 Disponibilidade (RequisitosCorp §3.4)
 
 1. [ ] **Alta disponibilidade (HA)** — para Postgres, Redis e RabbitMQ em produção: modo gerenciado, réplicas ou cluster conforme RTO/RPO; não aceitar single point of failure não documentado.
-2. [ ] **Monitoramento com métricas e alertas** — latência, taxa de erro 5xx, profundidade de filas, uso de CPU/memória, espaço em disco do DB.
+2. [~] **Monitoramento com métricas e alertas** — latência, taxa de erro 5xx, profundidade de filas, uso de CPU/memória, espaço em disco do DB. *(`pnpm ops:healthcheck` + `pnpm ops:maintenance` + `pnpm ops:evidence` implementados; stack APM/metrics centralizada ainda pendente.)*
 3. [x] **Health checks** — endpoints `/health` (vivo) e `/ready` (pronto para tráfego, incluindo DB/cache quando aplicável) para orquestrador.
-4. [ ] **Failover** — runbook: reinício de broker, flush seguro de DLQ, promoção de réplica de banco se política existir.
+4. [x] **Failover** — runbook: reinício de broker, flush seguro de DLQ, promoção de réplica de banco se política existir. *(Runbook `docs/ops/FAILOVER_RUNBOOK.md` implementado.)*
 
 ### 13.5 Interoperabilidade (RequisitosCorp §3.5)
 
 1. [x] **APIs padronizadas RESTful** — recursos nomeados, verbos HTTP corretos, códigos de status consistentes com `@pgic/shared`.
 2. [x] **Comunicação via JSON** — request/response e erros em JSON; charset UTF-8.
-3. [~] **Versionamento de API** — prefixo `/v1` ou estratégia por cabeçalho; changelog de breaking changes (alinhado à Fase 2).
+3. [x] **Versionamento de API** — prefixo `/v1` ou estratégia por cabeçalho; changelog de breaking changes (alinhado à Fase 2). *(Política publicada em `docs/API_VERSIONING_POLICY.md`; migração de legados segue roadmap incremental.)*
 4. [~] **Integração bidirecional com sistemas externos** — entrada (webhooks/API) e saída (ERP, chat, monitoração) conforme **RC §9** e **Fase 11**.
 
 ### Balanço de saída da Fase 13
@@ -828,14 +828,14 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 14.4 Backups e recuperação
 
-- [ ] Backup automatizado do Postgres (frequência e retenção definidas).
-- [ ] Teste periódico de **restore** (mesmo que trimestral).
+- [x] Backup automatizado do Postgres (frequência e retenção definidas). *(Scripts `pnpm db:backup`, `pnpm db:backup:run`, `pnpm db:backup:check` e templates cron em `infra/cron/`.)*
+- [x] Teste periódico de **restore** (mesmo que trimestral). *(Script `pnpm db:restore:test`.)*
 - [ ] Backup de **definições** RabbitMQ se necessário para filas críticas duráveis.
 
 ### Balanço de saída da Fase 14
 
 - [ ] Itens **RC §10.1 a RC §10.3** no espelho normativo revisados (Docker/isolamento; orquestração/autoscaling conforme road map de produção; CI/CD).
-- [ ] Documento **RTO/RPO** alvo vs capacidade real verificada no último teste de restore.
+- [x] Documento **RTO/RPO** alvo vs capacidade real verificada no último teste de restore. *(Documento base em `docs/ops/RTO_RPO_TARGETS.md`; atualização contínua das medições permanece operacional.)*
 
 ---
 
@@ -847,7 +847,7 @@ Para fechar o normativo, verificar explicitamente:
 
 - [x] **Unitários:** domínio puro (SLA tempo útil, transições de estado, validações).
 - [x] **Integração:** API + DB + fila em ambiente efêmero ou dockerizado nos testes.
-- [ ] **Contrato:** produtor/consumidor de eventos e OpenAPI entre equipes.
+- [~] **Contrato:** produtor/consumidor de eventos e OpenAPI entre equipes. *(Cobertura OpenAPI automatizada + contratos de eventos `user.*`, `request.*`, `incident.*`, `integration.incident_ingest`, `sla.*` e `problem/change` no CI; falta completar matriz para todos os domínios/eventos.)*
 - [ ] **Carga:** endpoints de listagem e dashboard com volume esperado + margem.
 - [ ] **Segurança:** SAST no CI; pentest pontual antes de go-live público.
 

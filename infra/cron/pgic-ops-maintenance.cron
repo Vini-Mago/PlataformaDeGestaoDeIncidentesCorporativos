@@ -1,0 +1,12 @@
+# PGIC consolidated ops maintenance template
+# Adjust paths and env vars before install.
+
+# Nightly maintenance: backup + LGPD prune + platform healthcheck
+35 2 * * * cd /opt/pgic && /usr/bin/env \
+  BACKUP_RETENTION_DAYS=14 \
+  BACKUP_KEEP_MIN=10 \
+  BACKUP_MAX_AGE_HOURS=26 \
+  LGPD_ACCESS_LOG_RETENTION_DAYS=180 \
+  LGPD_PASSWORD_RESET_RETENTION_DAYS=30 \
+  LGPD_REVOKED_SESSION_RETENTION_DAYS=90 \
+  pnpm ops:maintenance >> /var/log/pgic-ops-maintenance.log 2>&1

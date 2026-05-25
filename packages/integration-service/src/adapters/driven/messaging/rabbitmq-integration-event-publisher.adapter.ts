@@ -4,6 +4,7 @@ import {
   EXCHANGE_INTEGRATION_EVENTS,
   INTEGRATION_INCIDENT_INGEST_EVENT,
   ROUTING_KEY_INCIDENT_INGEST,
+  integrationIncidentIngestEnvelopeSchema,
 } from "@pgic/shared";
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -47,11 +48,16 @@ export class RabbitMqIntegrationEventPublisherAdapter implements IEventPublisher
     if (!this.channel) {
       throw new Error("RabbitMqIntegrationEventPublisherAdapter not connected");
     }
+    const parsedEnvelope = integrationIncidentIngestEnvelopeSchema.safeParse({ type: eventName, payload });
+    if (!parsedEnvelope.success) {
+      throw new Error(`Invalid integration ingest event envelope: ${parsedEnvelope.error.message}`);
+    }
+
     const routingKey =
       eventName === INTEGRATION_INCIDENT_INGEST_EVENT
         ? ROUTING_KEY_INCIDENT_INGEST
         : eventName.replace(/\./g, "_");
-    const message = Buffer.from(JSON.stringify({ type: eventName, payload }));
+    const message = Buffer.from(JSON.stringify(parsedEnvelope.data));
     const ok = this.channel.publish(EXCHANGE_INTEGRATION_EVENTS, routingKey, message, {
       persistent: true,
     });

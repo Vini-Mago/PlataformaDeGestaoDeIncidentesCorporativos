@@ -24,11 +24,27 @@ model ProblemModel {
 
   linkedIncidents ProblemLinkedIncidentModel[]
   linkedChanges   ChangeLinkedProblemModel[]
+  versions        ProblemVersionModel[]
 
   @@index([status])
   @@index([createdAt])
   @@index([createdById])
   @@map("problems")
+}
+
+model ProblemVersionModel {
+  id            String   @id @default(uuid())
+  problemId     String   @map("problem_id")
+  versionNumber Int      @map("version_number")
+  changedById   String?  @map("changed_by_id")
+  snapshot      Json     @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  problem ProblemModel @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, versionNumber])
+  @@index([problemId, createdAt])
+  @@map("problem_versions")
 }
 
 // RF-7.1: referência lógica a incidentes no incident-service (mesmo UUID; sem FK entre bases).
@@ -65,12 +81,28 @@ model ChangeModel {
 
   linkedIncidents ChangeLinkedIncidentModel[]
   linkedProblems  ChangeLinkedProblemModel[]
+  versions        ChangeVersionModel[]
 
   @@index([status])
   @@index([createdAt])
   @@index([createdById])
   @@index([risk])
   @@map("changes")
+}
+
+model ChangeVersionModel {
+  id            String   @id @default(uuid())
+  changeId      String   @map("change_id")
+  versionNumber Int      @map("version_number")
+  changedById   String?  @map("changed_by_id")
+  snapshot      Json     @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  change ChangeModel @relation(fields: [changeId], references: [id], onDelete: Cascade)
+
+  @@unique([changeId, versionNumber])
+  @@index([changeId, createdAt])
+  @@map("change_versions")
 }
 
 // RF-7.3: vínculos motivadores (referências lógicas; incident-service / mesma base para problemas).

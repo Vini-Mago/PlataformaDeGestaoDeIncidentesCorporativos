@@ -71,41 +71,74 @@ export class PrismaProblemRepository implements IProblemRepository {
   }
 
   async update(id: string, patch: UpdateProblemPatch): Promise<Problem | null> {
-    const existing = await this.prisma.problemModel.findUnique({ where: { id } });
-    if (!existing) {
-      return null;
-    }
-    const currentStatus = this.parseProblemStatus(existing.status);
-    let resolvedAt = existing.resolvedAt;
-    let closedAt = existing.closedAt;
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.problemModel.findUnique({ where: { id } });
+      if (!existing) {
+        return null;
+      }
+      const currentStatus = this.parseProblemStatus(existing.status);
+      let resolvedAt = existing.resolvedAt;
+      let closedAt = existing.closedAt;
 
-    if (patch.status !== undefined && patch.status !== currentStatus) {
-      const next = patch.status;
-      if (next === "Resolved") {
-        resolvedAt = resolvedAt ?? new Date();
+      if (patch.status !== undefined && patch.status !== currentStatus) {
+        const next = patch.status;
+        if (next === "Resolved") {
+          resolvedAt = resolvedAt ?? new Date();
+        }
+        if (next === "Closed") {
+          closedAt = closedAt ?? new Date();
+        }
+        if (currentStatus === "Closed" && (next === "Open" || next === "InAnalysis")) {
+          closedAt = null;
+        }
+        if (currentStatus === "Resolved" && next !== "Resolved" && next !== "Closed") {
+          resolvedAt = null;
+        }
       }
-      if (next === "Closed") {
-        closedAt = closedAt ?? new Date();
-      }
-      if (currentStatus === "Closed" && (next === "Open" || next === "InAnalysis")) {
-        closedAt = null;
-      }
-      if (currentStatus === "Resolved" && next !== "Resolved" && next !== "Closed") {
-        resolvedAt = null;
-      }
-    }
 
-    const row = await this.prisma.problemModel.update({
-      where: { id },
-      data: {
-        ...(patch.status !== undefined && { status: patch.status }),
-        ...(patch.rootCause !== undefined && { rootCause: patch.rootCause }),
-        ...(patch.actionPlan !== undefined && { actionPlan: patch.actionPlan }),
-        resolvedAt,
-        closedAt,
-      },
+      const row = await tx.problemModel.update({
+        where: { id },
+        data: {
+          ...(patch.status !== undefined && { status: patch.status }),
+          ...(patch.rootCause !== undefined && { rootCause: patch.rootCause }),
+          ...(patch.actionPlan !== undefined && { actionPlan: patch.actionPlan }),
+          resolvedAt,
+          closedAt,
+        },
+      });
+
+      const hasTrackedChange =
+        existing.status !== row.status ||
+        existing.rootCause !== row.rootCause ||
+        existing.actionPlan !== row.actionPlan;
+
+      if (hasTrackedChange) {
+        const versionCount = await tx.problemVersionModel.count({
+          where: { problemId: id },
+        });
+        await tx.problemVersionModel.create({
+          data: {
+            problemId: id,
+            versionNumber: versionCount + 1,
+            changedById: patch.changedById ?? null,
+            snapshot: {
+              before: {
+                status: existing.status,
+                rootCause: existing.rootCause,
+                actionPlan: existing.actionPlan,
+              },
+              after: {
+                status: row.status,
+                rootCause: row.rootCause,
+                actionPlan: row.actionPlan,
+              },
+            } as object,
+          },
+        });
+      }
+
+      return this.toProblem(row);
     });
-    return this.toProblem(row);
   }
 
   async list(filters: ProblemListFilters): Promise<Problem[]> {

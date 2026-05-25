@@ -7,6 +7,7 @@ Microsserviço de **integrações externas** (RF-9.x): webhooks de monitoramento
 | Método | Path | Auth | Descrição |
 |--------|------|------|-----------|
 | POST | `/api/webhooks/v1/monitoring` | `X-API-Key` (+ HMAC opcional) | Ingestão de alertas → `integration.incident_ingest` |
+| POST | `/api/outbound/v1/deliver` | JWT | Enfileira envio outbound assíncrono com timeout/retry/DLQ |
 | GET | `/api/integration-logs` | JWT | Consulta logs de integração |
 | GET | `/api/integration-dlq` | JWT | Lista itens pendentes/reprocessados da DLQ |
 | POST | `/api/integration-dlq/:id/reprocess` | JWT | Recoloca item da DLQ na outbox |
@@ -27,6 +28,16 @@ Microsserviço de **integrações externas** (RF-9.x): webhooks de monitoramento
 2. Serviço valida, regista `integration_logs` e grava outbox.
 3. Relay publica em `integration.events` / `incident_ingest`.
 4. `incident-service` consome `incident.integration_ingest` e cria incidente (idempotente por `externalSource` + `externalId`).
+
+### Saída assíncrona (RF-9.2)
+
+`POST /api/outbound/v1/deliver` adiciona `integration.outbound_dispatch` na outbox.
+
+O relay processa o envio HTTP de saída com:
+- `timeoutMs` por chamada;
+- `retry` até `maxAttempts`;
+- envio para `integration_dlq` ao exceder tentativas;
+- rastreio no `integration_logs` (`direction=outbound`, status, duração e erro).
 
 ## Exemplo
 

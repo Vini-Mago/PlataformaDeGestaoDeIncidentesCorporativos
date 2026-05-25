@@ -128,6 +128,35 @@ describe("integration-service HTTP", () => {
     });
   });
 
+  it("POST outbound/v1/deliver enfileira entrega assíncrona", async ({ skip }) => {
+    if (!dbAvailable) skip();
+    const res = await request(app)
+      .post("/api/outbound/v1/deliver")
+      .set("Authorization", `Bearer ${authToken}`)
+      .set("X-Correlation-Id", "corr-outbound-1")
+      .send({
+        endpoint: "https://erp.example.test/incidents",
+        method: "POST",
+        payload: { incidentId: "INC-1" },
+        externalId: "erp-INC-1",
+        timeoutMs: 2000,
+        maxAttempts: 2,
+      })
+      .expect(202);
+
+    expect(res.body).toMatchObject({
+      accepted: true,
+      endpoint: "https://erp.example.test/incidents",
+      eventName: "integration.outbound_dispatch",
+    });
+
+    const outbox = await container.prisma.outboxModel.findFirst({
+      where: { eventName: "integration.outbound_dispatch" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(outbox).not.toBeNull();
+  });
+
   it("lista e reprocessa itens da DLQ de integração", async ({ skip }) => {
     if (!dbAvailable) skip();
     const dlq = await container.prisma.integrationDlqModel.create({

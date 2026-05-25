@@ -5,6 +5,7 @@ import {
   QUEUE_USER_CREATED_INCIDENT,
   ROUTING_KEY_USER_CREATED,
   USER_CREATED_EVENT,
+  userDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 import type { HandleUserCreatedUseCase } from "../../../application/use-cases/handle-user-created.use-case";
 
@@ -54,13 +55,16 @@ export class RabbitMqUserCreatedConsumer {
         if (!msg) return;
         try {
           const raw = msg.content.toString();
-          const envelope = JSON.parse(raw) as { type?: string; payload?: unknown };
-          if (envelope.type !== USER_CREATED_EVENT || envelope.payload === undefined) {
-            logger.warn({ type: envelope.type }, "user.created consumer: unexpected message type, nack without requeue");
+          const parsedEnvelope = userDomainEventEnvelopeSchema.safeParse(JSON.parse(raw));
+          if (!parsedEnvelope.success || parsedEnvelope.data.type !== USER_CREATED_EVENT) {
+            logger.warn(
+              { issues: parsedEnvelope.success ? undefined : parsedEnvelope.error.issues },
+              "user.created consumer: unexpected/invalid message, nack without requeue"
+            );
             this.channel?.nack(msg, false, false);
             return;
           }
-          const result = await this.handleUserCreated.execute(envelope.payload);
+          const result = await this.handleUserCreated.execute(parsedEnvelope.data.payload);
           if (result.ok) {
             this.channel?.ack(msg);
           } else {

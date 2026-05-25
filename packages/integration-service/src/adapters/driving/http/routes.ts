@@ -24,6 +24,12 @@ export function createRoutes(
     controller.monitoringWebhook
   );
 
+  router.post(
+    "/outbound/v1/deliver",
+    authMiddleware,
+    controller.createOutbound
+  );
+
   router.get(
     "/integration-logs",
     authMiddleware,

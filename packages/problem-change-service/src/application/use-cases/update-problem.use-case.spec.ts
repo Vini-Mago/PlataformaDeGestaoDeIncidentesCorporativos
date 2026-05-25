@@ -43,6 +43,7 @@ describe("UpdateProblemUseCase", () => {
       rootCause: "Firewall mal configurado",
       status: undefined,
       actionPlan: undefined,
+      changedById: undefined,
     });
     expect(result.linkedIncidentIds).toEqual([]);
     expect(result.rootCause).toBe("x");

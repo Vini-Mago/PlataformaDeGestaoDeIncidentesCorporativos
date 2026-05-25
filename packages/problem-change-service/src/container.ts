@@ -5,6 +5,7 @@ import { createAuthMiddleware, JwtTokenVerifier } from "@pgic/shared";
 import { PrismaProblemRepository } from "./adapters/driven/persistence/prisma-problem.repository";
 import { PrismaChangeRepository } from "./adapters/driven/persistence/prisma-change.repository";
 import { PrismaReplicatedUserStore } from "./adapters/driven/persistence/prisma-replicated-user.store";
+import { PrismaVersionHistoryRepository } from "./adapters/driven/persistence/prisma-version-history.repository";
 import { RabbitMqProblemChangeEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-problem-change-event-publisher.adapter";
 import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import { RabbitMqUserCreatedConsumer } from "./adapters/driving/messaging/rabbitmq-user-created.consumer";
@@ -23,6 +24,8 @@ import { LinkIncidentToChangeUseCase } from "./application/use-cases/link-incide
 import { UnlinkIncidentFromChangeUseCase } from "./application/use-cases/unlink-incident-from-change.use-case";
 import { LinkProblemToChangeUseCase } from "./application/use-cases/link-problem-to-change.use-case";
 import { UnlinkProblemFromChangeUseCase } from "./application/use-cases/unlink-problem-from-change.use-case";
+import { ListProblemVersionsUseCase } from "./application/use-cases/list-problem-versions.use-case";
+import { ListChangeVersionsUseCase } from "./application/use-cases/list-change-versions.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { ProblemChangeController } from "./adapters/driving/http/problem-change.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
@@ -42,6 +45,7 @@ interface ProblemChangeCradle {
   problemRepository: PrismaProblemRepository;
   changeRepository: PrismaChangeRepository;
   replicatedUserStore: PrismaReplicatedUserStore;
+  versionHistoryRepository: PrismaVersionHistoryRepository;
   eventPublisher: RabbitMqProblemChangeEventPublisherAdapter;
   outboxRelay: OutboxRelayAdapter;
   createProblemUseCase: CreateProblemUseCase;
@@ -59,6 +63,8 @@ interface ProblemChangeCradle {
   unlinkIncidentFromChangeUseCase: UnlinkIncidentFromChangeUseCase;
   linkProblemToChangeUseCase: LinkProblemToChangeUseCase;
   unlinkProblemFromChangeUseCase: UnlinkProblemFromChangeUseCase;
+  listProblemVersionsUseCase: ListProblemVersionsUseCase;
+  listChangeVersionsUseCase: ListChangeVersionsUseCase;
   handleUserCreatedUseCase: HandleUserCreatedUseCase;
   userCreatedConsumer: RabbitMqUserCreatedConsumer | null;
   problemChangeController: ProblemChangeController;
@@ -89,6 +95,10 @@ export function createContainer(config: ProblemChangeContainerConfig) {
 
     replicatedUserStore: asFunction(
       (cradle: ProblemChangeCradle) => new PrismaReplicatedUserStore(cradle.prisma)
+    ).singleton(),
+
+    versionHistoryRepository: asFunction(
+      (cradle: ProblemChangeCradle) => new PrismaVersionHistoryRepository(cradle.prisma)
     ).singleton(),
 
     eventPublisher: asFunction(
@@ -186,6 +196,16 @@ export function createContainer(config: ProblemChangeContainerConfig) {
         new UnlinkProblemFromChangeUseCase(cradle.changeRepository)
     ).singleton(),
 
+    listProblemVersionsUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new ListProblemVersionsUseCase(cradle.problemRepository, cradle.versionHistoryRepository)
+    ).singleton(),
+
+    listChangeVersionsUseCase: asFunction(
+      (cradle: ProblemChangeCradle) =>
+        new ListChangeVersionsUseCase(cradle.changeRepository, cradle.versionHistoryRepository)
+    ).singleton(),
+
     handleUserCreatedUseCase: asFunction(
       (cradle: ProblemChangeCradle) =>
         new HandleUserCreatedUseCase(cradle.replicatedUserStore)
@@ -214,7 +234,9 @@ export function createContainer(config: ProblemChangeContainerConfig) {
           cradle.linkIncidentToChangeUseCase,
           cradle.unlinkIncidentFromChangeUseCase,
           cradle.linkProblemToChangeUseCase,
-          cradle.unlinkProblemFromChangeUseCase
+          cradle.unlinkProblemFromChangeUseCase,
+          cradle.listProblemVersionsUseCase,
+          cradle.listChangeVersionsUseCase
         )
     ).singleton(),
 

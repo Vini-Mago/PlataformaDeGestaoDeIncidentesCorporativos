@@ -2,6 +2,8 @@ import amqp from "amqplib";
 import { logger } from "@pgic/shared";
 import {
   EXCHANGE_PROBLEM_EVENTS,
+  problemChangeEventEnvelopeSchema,
+  problemIncidentLinkPayloadSchema,
   PROBLEM_INCIDENT_LINKED_EVENT,
   PROBLEM_INCIDENT_UNLINKED_EVENT,
   QUEUE_PROBLEM_INCIDENT_LINKS_INCIDENT,
@@ -12,7 +14,6 @@ import type { HandleProblemIncidentLinkUseCase } from "../../../application/use-
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 type EventType = typeof PROBLEM_INCIDENT_LINKED_EVENT | typeof PROBLEM_INCIDENT_UNLINKED_EVENT;
-type Envelope = { type?: string; payload?: unknown };
 const LOG_CONTEXT = "problem-incident-link-consumer";
 
 export class RabbitMqProblemIncidentLinkConsumer {
@@ -55,19 +56,23 @@ export class RabbitMqProblemIncidentLinkConsumer {
       async (msg) => {
         if (!msg) return;
         try {
-          const envelope = JSON.parse(msg.content.toString()) as Envelope;
-          if (!envelope.type || envelope.payload === undefined) {
+          const parsedEnvelope = problemChangeEventEnvelopeSchema.safeParse(JSON.parse(msg.content.toString()));
+          if (!parsedEnvelope.success) {
+            logger.warn({ context: LOG_CONTEXT, issues: parsedEnvelope.error.issues }, "invalid envelope");
             this.channel?.nack(msg, false, false);
             return;
           }
-          if (
-            envelope.type !== PROBLEM_INCIDENT_LINKED_EVENT &&
-            envelope.type !== PROBLEM_INCIDENT_UNLINKED_EVENT
-          ) {
+          if (parsedEnvelope.data.type !== PROBLEM_INCIDENT_LINKED_EVENT && parsedEnvelope.data.type !== PROBLEM_INCIDENT_UNLINKED_EVENT) {
             this.channel?.nack(msg, false, false);
             return;
           }
-          const ok = await this.handleEvent(envelope.type, envelope.payload);
+          const parsedPayload = problemIncidentLinkPayloadSchema.safeParse(parsedEnvelope.data.payload);
+          if (!parsedPayload.success) {
+            logger.warn({ context: LOG_CONTEXT, issues: parsedPayload.error.issues }, "invalid payload");
+            this.channel?.nack(msg, false, false);
+            return;
+          }
+          const ok = await this.handleEvent(parsedEnvelope.data.type, parsedPayload.data);
           if (ok) this.channel?.ack(msg);
           else this.channel?.nack(msg, false, false);
         } catch (err) {

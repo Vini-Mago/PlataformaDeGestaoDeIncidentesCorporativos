@@ -10,6 +10,7 @@ import {
   ROUTING_KEY_REQUEST_REJECTED,
   ROUTING_KEY_REQUEST_STARTED,
   ROUTING_KEY_REQUEST_SUBMITTED,
+  requestDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 import type { HandleRequestDomainEventUseCase } from "../../../application/use-cases/handle-request-domain-event.use-case";
 
@@ -58,13 +59,17 @@ export class RabbitMqRequestEventsConsumer {
         if (!msg) return;
         try {
           const raw = msg.content.toString();
-          const envelope = JSON.parse(raw) as { type?: string; payload?: unknown };
-          const eventType = envelope.type;
-          if (typeof eventType !== "string" || envelope.payload === undefined) {
-            logger.warn({ type: eventType }, "request.events consumer: missing type or payload, nack without requeue");
+          const parsedEnvelope = requestDomainEventEnvelopeSchema.safeParse(JSON.parse(raw));
+          if (!parsedEnvelope.success) {
+            logger.warn(
+              { issues: parsedEnvelope.error.issues },
+              "request.events consumer: invalid envelope/payload, nack without requeue"
+            );
             this.channel?.nack(msg, false, false);
             return;
           }
+          const envelope = parsedEnvelope.data;
+          const eventType = envelope.type;
           if (!this.handleRequestDomainEvent.handlesEventType(eventType)) {
             logger.warn({ type: eventType }, "request.events consumer: unsupported event type, nack without requeue");
             this.channel?.nack(msg, false, false);

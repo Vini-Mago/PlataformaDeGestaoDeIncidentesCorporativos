@@ -57,36 +57,87 @@ export class PrismaChangeRepository implements IChangeRepository {
   }
 
   async update(id: string, patch: UpdateChangePatch): Promise<Change | null> {
-    const existing = await this.prisma.changeModel.findUnique({ where: { id } });
-    if (!existing) {
-      return null;
-    }
-    const currentStatus = this.parseChangeStatus(existing.status);
-    let completedAt = existing.completedAt;
-
-    if (patch.status !== undefined && patch.status !== currentStatus) {
-      const next = patch.status;
-      if (next === "Completed" || next === "Rollback") {
-        completedAt = completedAt ?? new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.changeModel.findUnique({ where: { id } });
+      if (!existing) {
+        return null;
       }
-    }
+      const currentStatus = this.parseChangeStatus(existing.status);
+      let completedAt = existing.completedAt;
 
-    const row = await this.prisma.changeModel.update({
-      where: { id },
-      data: {
-        ...(patch.status !== undefined && { status: patch.status }),
-        ...(patch.title !== undefined && { title: patch.title }),
-        ...(patch.description !== undefined && { description: patch.description }),
-        ...(patch.justification !== undefined && { justification: patch.justification }),
-        ...(patch.changeType !== undefined && { changeType: patch.changeType }),
-        ...(patch.risk !== undefined && { risk: patch.risk }),
-        ...(patch.windowStart !== undefined && { windowStart: patch.windowStart }),
-        ...(patch.windowEnd !== undefined && { windowEnd: patch.windowEnd }),
-        ...(patch.rollbackPlan !== undefined && { rollbackPlan: patch.rollbackPlan }),
-        completedAt,
-      },
+      if (patch.status !== undefined && patch.status !== currentStatus) {
+        const next = patch.status;
+        if (next === "Completed" || next === "Rollback") {
+          completedAt = completedAt ?? new Date();
+        }
+      }
+
+      const row = await tx.changeModel.update({
+        where: { id },
+        data: {
+          ...(patch.status !== undefined && { status: patch.status }),
+          ...(patch.title !== undefined && { title: patch.title }),
+          ...(patch.description !== undefined && { description: patch.description }),
+          ...(patch.justification !== undefined && { justification: patch.justification }),
+          ...(patch.changeType !== undefined && { changeType: patch.changeType }),
+          ...(patch.risk !== undefined && { risk: patch.risk }),
+          ...(patch.windowStart !== undefined && { windowStart: patch.windowStart }),
+          ...(patch.windowEnd !== undefined && { windowEnd: patch.windowEnd }),
+          ...(patch.rollbackPlan !== undefined && { rollbackPlan: patch.rollbackPlan }),
+          completedAt,
+        },
+      });
+
+      const hasTrackedChange =
+        existing.status !== row.status ||
+        existing.title !== row.title ||
+        existing.description !== row.description ||
+        existing.justification !== row.justification ||
+        existing.changeType !== row.changeType ||
+        existing.risk !== row.risk ||
+        (existing.windowStart?.getTime() ?? null) !== (row.windowStart?.getTime() ?? null) ||
+        (existing.windowEnd?.getTime() ?? null) !== (row.windowEnd?.getTime() ?? null) ||
+        existing.rollbackPlan !== row.rollbackPlan;
+
+      if (hasTrackedChange) {
+        const versionCount = await tx.changeVersionModel.count({
+          where: { changeId: id },
+        });
+        await tx.changeVersionModel.create({
+          data: {
+            changeId: id,
+            versionNumber: versionCount + 1,
+            changedById: patch.changedById ?? null,
+            snapshot: {
+              before: {
+                status: existing.status,
+                title: existing.title,
+                description: existing.description,
+                justification: existing.justification,
+                changeType: existing.changeType,
+                risk: existing.risk,
+                windowStart: existing.windowStart?.toISOString() ?? null,
+                windowEnd: existing.windowEnd?.toISOString() ?? null,
+                rollbackPlan: existing.rollbackPlan,
+              },
+              after: {
+                status: row.status,
+                title: row.title,
+                description: row.description,
+                justification: row.justification,
+                changeType: row.changeType,
+                risk: row.risk,
+                windowStart: row.windowStart?.toISOString() ?? null,
+                windowEnd: row.windowEnd?.toISOString() ?? null,
+                rollbackPlan: row.rollbackPlan,
+              },
+            } as object,
+          },
+        });
+      }
+
+      return this.toChange(row);
     });
-    return this.toChange(row);
   }
 
   async list(filters: ChangeListFilters): Promise<Change[]> {

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   REQUEST_APPROVED_EVENT,
   REQUEST_COMPLETED_EVENT,
@@ -8,22 +7,10 @@ import {
   REQUEST_REJECTED_EVENT,
   REQUEST_STARTED_EVENT,
   REQUEST_SUBMITTED_EVENT,
+  requestDomainEventPayloadSchema,
+  type RequestDomainEventPayload,
 } from "@pgic/shared";
 import { CreateNotificationUseCase } from "./create-notification.use-case";
-
-export const requestDomainEventPayloadSchema = z.object({
-  serviceRequestId: z.string().uuid(),
-  requesterId: z.string().uuid(),
-  catalogItemId: z.string().uuid().optional(),
-  status: z.string().optional(),
-  actorId: z.string().uuid().optional(),
-  fromStatus: z.string().optional(),
-  toStatus: z.string().optional(),
-  occurredAt: z.string().optional(),
-  reason: z.string().optional(),
-});
-
-export type RequestDomainEventPayload = z.infer<typeof requestDomainEventPayloadSchema>;
 
 const handled = new Set<string>(REQUEST_DOMAIN_EVENT_NAMES);
 

@@ -5,6 +5,7 @@ import {
   QUEUE_USER_UPDATED_REQUEST,
   ROUTING_KEY_USER_UPDATED,
   USER_UPDATED_EVENT,
+  userDomainEventEnvelopeSchema,
 } from "@pgic/shared";
 import type { HandleUserCreatedUseCase } from "../../../application/use-cases/handle-user-created.use-case";
 
@@ -93,21 +94,21 @@ export class RabbitMqUserUpdatedConsumer {
         if (!msg) return;
         try {
           const raw = msg.content.toString();
-          const envelope = JSON.parse(raw) as { type?: string; payload?: unknown };
-          if (envelope.type !== USER_UPDATED_EVENT || envelope.payload === undefined) {
+          const parsedEnvelope = userDomainEventEnvelopeSchema.safeParse(JSON.parse(raw));
+          if (!parsedEnvelope.success || parsedEnvelope.data.type !== USER_UPDATED_EVENT) {
             logger.warn(
-              { type: envelope.type },
-              "user.updated consumer: unexpected message type, nack without requeue"
+              { issues: parsedEnvelope.success ? undefined : parsedEnvelope.error.issues },
+              "user.updated consumer: unexpected/invalid message, nack without requeue"
             );
             this.channel?.nack(msg, false, false);
             return;
           }
-          const result = await this.handleReplicateUser.execute(envelope.payload);
+          const result = await this.handleReplicateUser.execute(parsedEnvelope.data.payload);
           if (result.ok) {
             this.channel?.ack(msg);
           } else {
-            const ctx = envelope.payload && typeof envelope.payload === "object" && "userId" in envelope.payload
-              ? { userId: (envelope.payload as { userId?: unknown }).userId }
+            const ctx = parsedEnvelope.data.payload && typeof parsedEnvelope.data.payload === "object" && "userId" in parsedEnvelope.data.payload
+              ? { userId: (parsedEnvelope.data.payload as { userId?: unknown }).userId }
               : {};
             logger.warn(
               { ...ctx, reason: result.reason },

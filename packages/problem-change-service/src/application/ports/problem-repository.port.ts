@@ -18,6 +18,7 @@ export interface UpdateProblemPatch {
   status?: ProblemStatus;
   rootCause?: string | null;
   actionPlan?: string | null;
+  changedById?: string;
 }
 
 export interface IProblemRepository {

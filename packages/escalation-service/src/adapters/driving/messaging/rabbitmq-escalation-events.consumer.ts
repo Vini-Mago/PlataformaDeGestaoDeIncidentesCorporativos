@@ -6,9 +6,17 @@ import {
   QUEUE_INCIDENT_CREATED_ESCALATION,
   QUEUE_SLA_BREACH_ESCALATION,
   QUEUE_SLA_RISK_ESCALATION,
+  INCIDENT_CREATED_EVENT,
   ROUTING_KEY_INCIDENT_CREATED,
   ROUTING_KEY_SLA_BREACH,
   ROUTING_KEY_SLA_RISK,
+  incidentCreatedPayloadSchema,
+  incidentDomainEventEnvelopeSchema,
+  SLA_BREACH_EVENT,
+  SLA_RISK_EVENT,
+  slaBreachPayloadSchema,
+  slaDomainEventEnvelopeSchema,
+  slaRiskPayloadSchema,
 } from "@pgic/shared";
 import type { HandleEscalationDomainEventUseCase } from "../../../application/use-cases/handle-escalation-domain-event.use-case";
 
@@ -36,14 +44,49 @@ export class RabbitMqEscalationEventsConsumer {
       async (msg) => {
         if (!msg) return;
         try {
-          const envelope = JSON.parse(msg.content.toString()) as {
-            type?: string;
-            payload?: Record<string, unknown>;
-          };
-          if (envelope.type && envelope.payload) {
-            await this.handleEvent.execute(envelope.type, envelope.payload);
+          const raw = JSON.parse(msg.content.toString()) as unknown;
+          const parsedIncidentEnvelope = incidentDomainEventEnvelopeSchema.safeParse(raw);
+          if (parsedIncidentEnvelope.success && parsedIncidentEnvelope.data.type === INCIDENT_CREATED_EVENT) {
+            const parsedPayload = incidentCreatedPayloadSchema.safeParse(parsedIncidentEnvelope.data.payload);
+            if (!parsedPayload.success) {
+              logger.warn({ queue, issues: parsedPayload.error.issues }, "escalation consumer invalid incident payload");
+              this.channel?.nack(msg, false, false);
+              return;
+            }
+            await this.handleEvent.execute(parsedIncidentEnvelope.data.type, parsedPayload.data);
+            this.channel?.ack(msg);
+            return;
           }
-          this.channel?.ack(msg);
+
+          const parsedSlaEnvelope = slaDomainEventEnvelopeSchema.safeParse(raw);
+          if (parsedSlaEnvelope.success) {
+            if (parsedSlaEnvelope.data.type === SLA_RISK_EVENT) {
+              const parsedPayload = slaRiskPayloadSchema.safeParse(parsedSlaEnvelope.data.payload);
+              if (!parsedPayload.success) {
+                logger.warn({ queue, issues: parsedPayload.error.issues }, "escalation consumer invalid sla risk payload");
+                this.channel?.nack(msg, false, false);
+                return;
+              }
+              await this.handleEvent.execute(SLA_RISK_EVENT, parsedPayload.data);
+              this.channel?.ack(msg);
+              return;
+            }
+            if (parsedSlaEnvelope.data.type === SLA_BREACH_EVENT) {
+              const parsedPayload = slaBreachPayloadSchema.safeParse(parsedSlaEnvelope.data.payload);
+              if (!parsedPayload.success) {
+                logger.warn({ queue, issues: parsedPayload.error.issues }, "escalation consumer invalid sla breach payload");
+                this.channel?.nack(msg, false, false);
+                return;
+              }
+              await this.handleEvent.execute(SLA_BREACH_EVENT, parsedPayload.data);
+              this.channel?.ack(msg);
+              return;
+            }
+          }
+
+          logger.warn({ queue }, "escalation consumer unknown/invalid envelope, nack without requeue");
+          this.channel?.nack(msg, false, false);
+          return;
         } catch (err) {
           logger.error({ err, queue }, "escalation consumer failed");
           this.channel?.nack(msg, false, false);

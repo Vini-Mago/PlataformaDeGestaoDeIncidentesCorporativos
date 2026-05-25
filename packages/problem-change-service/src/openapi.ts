@@ -65,6 +65,16 @@ const ChangeDetailSchema = ChangeSchema.extend({
   linkedProblemIds: z.array(z.string().uuid()),
 }).openapi("ChangeDetail");
 
+const VersionRecordSchema = z
+  .object({
+    id: z.string().uuid(),
+    versionNumber: z.number().int(),
+    changedById: z.string().uuid().nullable(),
+    snapshot: z.record(z.unknown()),
+    createdAt: z.string().datetime(),
+  })
+  .openapi("EntityVersionRecord");
+
 registry.registerPath({
   method: "post",
   path: "/api/problems",
@@ -142,6 +152,26 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/api/problems/{id}/versions",
+  summary: "List problem version history (RF-3.3)",
+  tags: ["Problems"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    query: z.object({ limit: z.coerce.number().int().min(1).max(200).optional() }),
+  },
+  responses: {
+    200: {
+      description: "Problem version history",
+      content: { "application/json": { schema: z.object({ items: z.array(VersionRecordSchema) }) } },
+    },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/api/problems/{id}/incidents",
   summary: "Link incident (logical id from incident-service)",
@@ -199,6 +229,26 @@ registry.registerPath({
   responses: {
     200: { description: "List of changes", content: { "application/json": { schema: z.array(ChangeSchema) } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/changes/{id}/versions",
+  summary: "List change version history (RF-3.3)",
+  tags: ["Changes"],
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    query: z.object({ limit: z.coerce.number().int().min(1).max(200).optional() }),
+  },
+  responses: {
+    200: {
+      description: "Change version history",
+      content: { "application/json": { schema: z.object({ items: z.array(VersionRecordSchema) }) } },
+    },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
 

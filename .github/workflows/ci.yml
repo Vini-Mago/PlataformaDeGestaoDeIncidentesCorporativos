@@ -94,5 +94,8 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Contract tests (OpenAPI)
+        run: pnpm test:contract
+
       - name: Integration tests
         run: pnpm test:integration

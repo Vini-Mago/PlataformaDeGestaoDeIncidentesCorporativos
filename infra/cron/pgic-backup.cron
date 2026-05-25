@@ -1,0 +1,11 @@
+# PGIC backup schedule template
+# Use: crontab infra/cron/pgic-backup.cron (adjust paths/env first)
+
+# Daily backup at 02:10
+10 2 * * * cd /opt/pgic && /usr/bin/env BACKUP_RETENTION_DAYS=14 BACKUP_KEEP_MIN=10 pnpm db:backup >> /var/log/pgic-backup.log 2>&1
+
+# Backup freshness check every hour
+5 * * * * cd /opt/pgic && /usr/bin/env BACKUP_MAX_AGE_HOURS=26 pnpm db:backup:check >> /var/log/pgic-backup-check.log 2>&1
+
+# Restore smoke test weekly (Sunday 03:20)
+20 3 * * 0 cd /opt/pgic && pnpm db:restore:test identity_service >> /var/log/pgic-restore-test.log 2>&1

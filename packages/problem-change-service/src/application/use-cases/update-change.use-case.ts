@@ -25,7 +25,7 @@ export class UpdateChangeUseCase {
     private readonly options: UpdateChangeOptions
   ) {}
 
-  async execute(id: string, dto: UpdateChangeDto): Promise<ChangeDetail> {
+  async execute(id: string, dto: UpdateChangeDto, changedById?: string): Promise<ChangeDetail> {
     const current = await this.changeRepository.findById(id);
     if (!current) {
       throw new ChangeNotFoundError(id);
@@ -90,6 +90,7 @@ export class UpdateChangeUseCase {
         dto.windowStart !== undefined ? (dto.windowStart === null ? null : new Date(dto.windowStart)) : undefined,
       windowEnd: dto.windowEnd !== undefined ? (dto.windowEnd === null ? null : new Date(dto.windowEnd)) : undefined,
       rollbackPlan: dto.rollbackPlan,
+      changedById,
     });
 
     if (!updated) {

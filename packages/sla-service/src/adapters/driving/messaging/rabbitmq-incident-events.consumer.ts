@@ -8,6 +8,9 @@ import {
   QUEUE_INCIDENT_STATUS_CHANGED_SLA,
   ROUTING_KEY_INCIDENT_CREATED,
   ROUTING_KEY_INCIDENT_STATUS_CHANGED,
+  incidentCreatedPayloadSchema,
+  incidentDomainEventEnvelopeSchema,
+  incidentStatusChangedPayloadSchema,
 } from "@pgic/shared";
 import type { HandleIncidentCreatedForSlaUseCase } from "../../../application/use-cases/handle-incident-created-for-sla.use-case";
 import type { HandleIncidentStatusForSlaUseCase } from "../../../application/use-cases/handle-incident-status-for-sla.use-case";
@@ -49,9 +52,20 @@ export class RabbitMqIncidentEventsConsumer {
       async (msg) => {
         if (!msg) return;
         try {
-          const envelope = JSON.parse(msg.content.toString()) as { type?: string; payload?: unknown };
-          if (envelope.type === INCIDENT_CREATED_EVENT && envelope.payload) {
-            await this.handleCreated.execute(envelope.payload as Parameters<HandleIncidentCreatedForSlaUseCase["execute"]>[0]);
+          const parsedEnvelope = incidentDomainEventEnvelopeSchema.safeParse(JSON.parse(msg.content.toString()));
+          if (!parsedEnvelope.success) {
+            logger.warn({ issues: parsedEnvelope.error.issues }, "sla incident.created: invalid envelope");
+            this.channel?.nack(msg, false, false);
+            return;
+          }
+          if (parsedEnvelope.data.type === INCIDENT_CREATED_EVENT) {
+            const parsedPayload = incidentCreatedPayloadSchema.safeParse(parsedEnvelope.data.payload);
+            if (!parsedPayload.success) {
+              logger.warn({ issues: parsedPayload.error.issues }, "sla incident.created: invalid payload");
+              this.channel?.nack(msg, false, false);
+              return;
+            }
+            await this.handleCreated.execute(parsedPayload.data as Parameters<HandleIncidentCreatedForSlaUseCase["execute"]>[0]);
           }
           this.channel?.ack(msg);
         } catch (err) {
@@ -67,9 +81,20 @@ export class RabbitMqIncidentEventsConsumer {
       async (msg) => {
         if (!msg) return;
         try {
-          const envelope = JSON.parse(msg.content.toString()) as { type?: string; payload?: unknown };
-          if (envelope.type === INCIDENT_STATUS_CHANGED_EVENT && envelope.payload) {
-            const p = envelope.payload as { incidentId: string; toStatus: string };
+          const parsedEnvelope = incidentDomainEventEnvelopeSchema.safeParse(JSON.parse(msg.content.toString()));
+          if (!parsedEnvelope.success) {
+            logger.warn({ issues: parsedEnvelope.error.issues }, "sla incident.status: invalid envelope");
+            this.channel?.nack(msg, false, false);
+            return;
+          }
+          if (parsedEnvelope.data.type === INCIDENT_STATUS_CHANGED_EVENT) {
+            const parsedPayload = incidentStatusChangedPayloadSchema.safeParse(parsedEnvelope.data.payload);
+            if (!parsedPayload.success) {
+              logger.warn({ issues: parsedPayload.error.issues }, "sla incident.status: invalid payload");
+              this.channel?.nack(msg, false, false);
+              return;
+            }
+            const p = parsedPayload.data;
             await this.handleStatus.execute({
               incidentId: p.incidentId,
               toStatus: p.toStatus,

@@ -108,6 +108,44 @@ pnpm --filter <nome-do-pacote> exec prisma migrate dev --name descricao_curta
 
 Use o nome do pacote conforme `packages/*/package.json` (`identity-service`, `request-service`, …).
 
+## Backup e restore (PostgreSQL)
+
+Runbook completo: [BACKUP_RESTORE_RUNBOOK.md](./BACKUP_RESTORE_RUNBOOK.md)
+
+Comandos rápidos:
+
+```bash
+pnpm db:backup
+pnpm db:restore -- --db identity_service
+pnpm db:restore:test
+```
+
+## LGPD operacional (MVP)
+
+Runbook: [LGPD_OPERACIONAL_RUNBOOK.md](./LGPD_OPERACIONAL_RUNBOOK.md)
+
+Comandos:
+
+```bash
+pnpm privacy:anonymize-user -- --user-id <uuid> --dry-run
+pnpm privacy:anonymize-user -- --user-id <uuid>
+pnpm privacy:prune-identity -- --dry-run
+pnpm privacy:prune-identity -- --access-logs-days 180 --password-reset-days 30 --revoked-sessions-days 90
+```
+
+## Observabilidade operacional (MVP)
+
+Runbook: [ops/PLATFORM_OBSERVABILITY_RUNBOOK.md](./ops/PLATFORM_OBSERVABILITY_RUNBOOK.md)
+Failover: [ops/FAILOVER_RUNBOOK.md](./ops/FAILOVER_RUNBOOK.md)
+RTO/RPO: [ops/RTO_RPO_TARGETS.md](./ops/RTO_RPO_TARGETS.md)
+
+Comando:
+
+```bash
+pnpm ops:healthcheck
+pnpm ops:evidence
+```
+
 ## Testes
 
 ```bash
@@ -124,6 +162,8 @@ pnpm test:integration
 Para contexto de produto e arquitetura, ver [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md), [MICROSERVICES_LIST.md](MICROSERVICES_LIST.md) e o README na raiz.
 
 ## Convenções de API (checklist Fase 2)
+
+Política formal: [API_VERSIONING_POLICY.md](./API_VERSIONING_POLICY.md)
 
 ### Paginação e listagens
 
