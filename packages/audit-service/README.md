@@ -16,4 +16,4 @@ Audit trail: who, when, what (entity + action). Stores user and technical action
 
 ## Gateway
 
-- Prefix: `/audit/` (e.g. `http://localhost:8080/audit/health`)
+- Prefix: `/audit/` (e.g. `http://localhost:${GATEWAY_PORT}/audit/health`)

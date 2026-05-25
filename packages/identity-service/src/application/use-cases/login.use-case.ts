@@ -62,7 +62,11 @@ export class LoginUseCase {
       user: {
         id: user.id,
         email: user.email.value,
+        login: user.profile.login,
         name: user.name,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt.toISOString(),
       },
       accessToken,
     };

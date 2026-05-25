@@ -84,14 +84,14 @@ Use esse comando apenas quando quiser subir sem reaplicar migrations.
 Ou por serviço (exemplos):
 
 ```bash
-pnpm dev:identity          # http://localhost:3001
-pnpm dev:request           # http://localhost:3002
-pnpm dev:api-docs          # http://localhost:3003
-pnpm dev:incident          # http://localhost:3004
+pnpm dev:identity          # http://localhost:${IDENTITY_SERVICE_PORT}
+pnpm dev:request           # http://localhost:${REQUEST_SERVICE_PORT}
+pnpm dev:api-docs          # http://localhost:${API_DOCS_PORT}
+pnpm dev:incident          # http://localhost:${INCIDENT_SERVICE_PORT}
 pnpm dev:frontend          # Vite — tipicamente http://localhost:5173
 ```
 
-**Gateway:** `http://localhost:8080` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/integration/`, `/api-docs/`. Ver `nginx/templates/default.conf.template`.
+**Gateway:** `http://localhost:${GATEWAY_PORT}` — prefixos `/identity/`, `/request/`, `/incidents/`, `/problem-change/`, `/sla/`, `/escalation/`, `/notifications/`, `/audit/`, `/reporting/`, `/integration/`, `/api-docs/`. Ver `nginx/templates/default.conf.template`.
 
 ## Testes
 

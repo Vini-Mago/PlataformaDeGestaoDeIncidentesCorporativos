@@ -22,22 +22,22 @@ pnpm dev
 
 ## Serviços HTTP e portas (padrão `.env.example`)
 
-| Pacote | Porta local | Prefixo no gateway (8080) |
+| Pacote | Porta local | Prefixo no gateway (`GATEWAY_PORT`) |
 |--------|-------------|---------------------------|
-| identity-service | 3001 | `/identity/` |
-| request-service | 3002 | `/request/` |
-| api-docs | 3003 | `/api-docs/` |
-| incident-service | 3004 | `/incidents/` |
-| problem-change-service | 3005 | `/problem-change/` |
-| sla-service | 3006 | `/sla/` |
-| escalation-service | 3007 | `/escalation/` |
-| notification-service | 3008 | `/notifications/` |
-| audit-service | 3009 | `/audit/` |
-| reporting-service | 3010 | `/reporting/` |
-| bff | 3100 | — (consumido pelo frontend) |
+| identity-service | 3201 | `/identity/` |
+| request-service | 3202 | `/request/` |
+| api-docs | 3203 | `/api-docs/` |
+| incident-service | 3204 | `/incidents/` |
+| problem-change-service | 3205 | `/problem-change/` |
+| sla-service | 3206 | `/sla/` |
+| escalation-service | 3207 | `/escalation/` |
+| notification-service | 3208 | `/notifications/` |
+| audit-service | 3209 | `/audit/` |
+| reporting-service | 3210 | `/reporting/` |
+| bff | 3300 | — (consumido pelo frontend) |
 | frontend (Vite) | 5173 | — |
 
-Gateway: `http://localhost:8080` (variável `GATEWAY_PORT`). Health do proxy: `GET /health`.
+Gateway: `http://localhost:58080` (variável `GATEWAY_PORT`). Health do proxy: `GET /health`.
 
 ### Subir aplicações
 
@@ -80,9 +80,9 @@ pnpm dev:bff
 
 ### Frontend e BFF
 
-O **BFF** (`pnpm dev:bff`, porta **3100**) repõe o JWT em cookie httpOnly e encaminha pedidos para os microsserviços com cabeçalho `Authorization`. O **frontend** (`pnpm dev:frontend`, **5173**) usa o proxy Vite (`vite.config.ts`) para `/auth`, `/incidents`, etc., até ao BFF.
+O **BFF** (`pnpm dev:bff`, porta **3300**) repõe o JWT em cookie httpOnly e encaminha pedidos para os microsserviços com cabeçalho `Authorization`. O **frontend** (`pnpm dev:frontend`, **5173**) usa o proxy Vite (`vite.config.ts`) para `/auth`, `/incidents`, etc., até ao BFF.
 
-Para sessão e chamadas à API na mesma política de cookies, prefira aceder à UI através do BFF em **`http://localhost:3100`** (ele faz proxy do frontend em desenvolvimento) ou mantenha **5173** com BFF a correr em paralelo. O dashboard lista incidentes em **`GET /incidents/incidents`** (credenciais incluídas).
+Para sessão e chamadas à API na mesma política de cookies, prefira aceder à UI através do BFF em **`http://localhost:3300`** (ele faz proxy do frontend em desenvolvimento) ou mantenha **5173** com BFF a correr em paralelo. O dashboard lista incidentes em **`GET /incidents/incidents`** (credenciais incluídas).
 
 ## Migrações
 

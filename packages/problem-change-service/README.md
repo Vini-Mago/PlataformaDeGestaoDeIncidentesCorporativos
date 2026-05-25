@@ -11,4 +11,4 @@ Problem and Change Management (RF-7.x): recurring problems (root cause, action p
 ## Gateway
 
 - Prefix: `/problem-change/`
-- Health: `http://localhost:8080/problem-change/health` (8080 = gateway port; service listens on `PROBLEM_CHANGE_SERVICE_PORT`, default 3005)
+- Health: `http://localhost:${GATEWAY_PORT}/problem-change/health` (`GATEWAY_PORT` no `.env`; service listens on `PROBLEM_CHANGE_SERVICE_PORT`, default in `.env.example`: 3205)

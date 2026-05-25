@@ -15,4 +15,4 @@ KPIs, dashboards, report definitions and export (RF-4.x). CRUD for saved report 
 
 ## Gateway
 
-- Prefix: `/reporting/` (e.g. `http://localhost:8080/reporting/health`)
+- Prefix: `/reporting/` (e.g. `http://localhost:${GATEWAY_PORT}/reporting/health`)

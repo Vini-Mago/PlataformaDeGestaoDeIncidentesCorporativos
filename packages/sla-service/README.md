@@ -19,7 +19,7 @@ pnpm run dev:sla
 
 - Health: `http://localhost:3006/health`
 - API docs: `http://localhost:3006/api-docs`
-- Via gateway: `http://localhost:8080/sla/`
+- Via gateway: `http://localhost:${GATEWAY_PORT}/sla/`
 
 ## Database
 

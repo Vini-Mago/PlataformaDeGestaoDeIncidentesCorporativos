@@ -10,7 +10,7 @@ loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
 const app = express();
 
 const port = parseInt(process.env.BFF_PORT ?? "3100", 10);
-const identityBaseUrl = process.env.IDENTITY_BASE_URL ?? "http://localhost:3001";
+const identityBaseUrl = process.env.IDENTITY_BASE_URL ?? `http://localhost:${process.env.IDENTITY_SERVICE_PORT ?? "3001"}`;
 const requestServiceBaseUrl = process.env.REQUEST_SERVICE_BASE_URL ?? `http://localhost:${process.env.REQUEST_SERVICE_PORT ?? "3002"}`;
 const incidentServiceBaseUrl = process.env.INCIDENT_SERVICE_BASE_URL ?? `http://localhost:${process.env.INCIDENT_SERVICE_PORT ?? "3004"}`;
 const problemChangeServiceBaseUrl = process.env.PROBLEM_CHANGE_SERVICE_BASE_URL ?? `http://localhost:${process.env.PROBLEM_CHANGE_SERVICE_PORT ?? "3005"}`;
@@ -130,13 +130,27 @@ function clearAuthCookies(req: Request, res: ExpressResponse): void {
 }
 
 async function identityRequest(pathname: string, init: RequestInit = {}): Promise<globalThis.Response> {
-  return fetch(`${normalizeBaseUrl(identityBaseUrl)}${pathname}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-  });
+  const url = `${normalizeBaseUrl(identityBaseUrl)}${pathname}`;
+  const maxAttempts = 2;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await fetch(url, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(init.headers ?? {}),
+        },
+      });
+    } catch (error) {
+      if (attempt >= maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+
+  throw new Error("identity request failed");
 }
 
 function parseJsonBody<T>(req: Request): T {
@@ -422,52 +436,56 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 app.get("/auth/me", async (req, res) => {
-  const accessToken = req.cookies[ACCESS_COOKIE] as string | undefined;
-  if (!accessToken) {
-    res.status(401).json({ message: "Unauthenticated" });
-    return;
-  }
+  try {
+    const accessToken = req.cookies[ACCESS_COOKIE] as string | undefined;
+    if (!accessToken) {
+      res.status(401).json({ message: "Unauthenticated" });
+      return;
+    }
 
-  const meResponse = await identityRequest("/api/auth/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+    const meResponse = await identityRequest("/api/auth/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
-  if (meResponse.ok) {
-    const me = await meResponse.json();
+    if (meResponse.ok) {
+      const me = await meResponse.json();
+      res.status(200).json(me);
+      return;
+    }
+
+    if (meResponse.status !== 401) {
+      const text = await meResponse.text();
+      res.status(meResponse.status).send(text || "Failed to fetch profile");
+      return;
+    }
+
+    const refreshedAccess = await refreshAccessToken(req, res);
+    if (!refreshedAccess) {
+      res.status(401).json({ message: "Unauthenticated" });
+      return;
+    }
+
+    const retryMe = await identityRequest("/api/auth/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${refreshedAccess}`,
+      },
+    });
+
+    if (!retryMe.ok) {
+      clearAuthCookies(req, res);
+      res.status(401).json({ message: "Unauthenticated" });
+      return;
+    }
+
+    const me = await retryMe.json();
     res.status(200).json(me);
-    return;
+  } catch {
+    res.status(502).json({ message: "Failed to fetch profile" });
   }
-
-  if (meResponse.status !== 401) {
-    const text = await meResponse.text();
-    res.status(meResponse.status).send(text || "Failed to fetch profile");
-    return;
-  }
-
-  const refreshedAccess = await refreshAccessToken(req, res);
-  if (!refreshedAccess) {
-    res.status(401).json({ message: "Unauthenticated" });
-    return;
-  }
-
-  const retryMe = await identityRequest("/api/auth/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${refreshedAccess}`,
-    },
-  });
-
-  if (!retryMe.ok) {
-    clearAuthCookies(req, res);
-    res.status(401).json({ message: "Unauthenticated" });
-    return;
-  }
-
-  const me = await retryMe.json();
-  res.status(200).json(me);
 });
 
 app.post("/auth/login", async (req, res) => {
@@ -521,7 +539,11 @@ for (const config of serviceProxyConfigs) {
   });
 
   app.use(config.routePrefix, (req, res) => {
-    void proxyServiceApi(req, res, config.upstreamBaseUrl);
+    void proxyServiceApi(req, res, config.upstreamBaseUrl).catch(() => {
+      if (!res.headersSent) {
+        res.status(502).json({ message: `Failed to reach ${config.routePrefix} upstream` });
+      }
+    });
   });
 }
 

@@ -336,7 +336,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 1.6 Gateway e roteamento
 
-- [x] Via navegador ou `curl`, chamar **http://localhost:8080** com prefixos `/identity/`, `/request/`, `/api-docs/` conforme documentação.
+- [x] Via navegador ou `curl`, chamar **http://localhost:${GATEWAY_PORT}** com prefixos `/identity/`, `/request/`, `/api-docs/` conforme documentação.
 - [~] Confirmar que paths sem barra final ou com barra se comportam como esperado (padronizar no Nginx).
 - [x] Registrar no README interno qualquer desvio (porta diferente, TLS local com mkcert, etc.).
 

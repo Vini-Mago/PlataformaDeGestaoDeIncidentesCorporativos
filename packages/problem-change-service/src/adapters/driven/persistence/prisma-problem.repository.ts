@@ -8,10 +8,30 @@ import type {
   CreateProblemInput,
   ProblemListFilters,
 } from "../../../application/ports/problem-repository.port";
-import { PROBLEM_CREATED_EVENT } from "@pgic/shared";
+import { PROBLEM_CREATED_EVENT, PROBLEM_INCIDENT_LINKED_EVENT, PROBLEM_INCIDENT_UNLINKED_EVENT } from "@pgic/shared";
 
 export class PrismaProblemRepository implements IProblemRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private async writeIncidentLinkOutboxEvent(
+    tx: Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0],
+    eventName: string,
+    problemId: string,
+    incidentId: string
+  ): Promise<void> {
+    await tx.outboxModel.create({
+      data: {
+        id: randomUUID(),
+        eventName,
+        payload: {
+          problemId,
+          incidentId,
+          occurredAt: new Date().toISOString(),
+        } as object,
+        createdAt: new Date(),
+      },
+    });
+  }
 
   async create(input: CreateProblemInput): Promise<Problem> {
     return this.prisma.$transaction(async (tx) => {
@@ -135,12 +155,16 @@ export class PrismaProblemRepository implements IProblemRepository {
       await tx.problemLinkedIncidentModel.create({
         data: { problemId, incidentId },
       });
+      await this.writeIncidentLinkOutboxEvent(tx, PROBLEM_INCIDENT_LINKED_EVENT, problemId, incidentId);
     });
   }
 
   async unlinkIncident(problemId: string, incidentId: string): Promise<void> {
-    await this.prisma.problemLinkedIncidentModel.deleteMany({
-      where: { problemId, incidentId },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.problemLinkedIncidentModel.deleteMany({
+        where: { problemId, incidentId },
+      });
+      await this.writeIncidentLinkOutboxEvent(tx, PROBLEM_INCIDENT_UNLINKED_EVENT, problemId, incidentId);
     });
   }
 

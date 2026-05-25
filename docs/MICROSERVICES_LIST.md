@@ -175,7 +175,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ## 5. sla-service
 
-**Status:** Planejado.
+**Status:** Existe.
 
 **Responsabilidade:** Definição de regras de SLA, calendário de tempo útil, contagem de prazos (resposta e resolução) e detecção de risco/estouro.
 
@@ -312,7 +312,7 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 
 ### Prefixo no gateway
 
-- `/audit/` (e.g. `http://localhost:8080/audit/health`)
+- `/audit/` (e.g. `http://localhost:${GATEWAY_PORT}/audit/health`)
 
 ---
 
@@ -417,4 +417,3 @@ Lista completa dos microserviços necessários para a **Plataforma de Gestão de
 - **docs/AnaliseRequisitos.md** — Requisitos funcionais detalhados (RF-1.x a RF-10.x).
 - **docs/visãogeral.md** — Objetivos, escopo e arquitetura de alto nível.
 - **docs/MICROSERVICES.md** — Decisões atuais (identity e request) e matriz requisitos ↔ serviços.
-

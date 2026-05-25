@@ -2,7 +2,7 @@
 
 Microserviço de identidade: autenticação (JWT), registro de usuários e OAuth (Google/GitHub).
 
-- **Porta HTTP:** 3001 (ou `IDENTITY_SERVICE_PORT`)
+- **Porta HTTP:** `IDENTITY_SERVICE_PORT` (padrão atual no `.env.example`: 3201)
 - **Roteamento:** `/api` (users, auth); `/health`
 
 ## Variáveis de ambiente obrigatórias (produção)
@@ -19,7 +19,7 @@ OAuth (opcional): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`
 ## Rodar e testar
 
 ```bash
-pnpm run dev   # http://localhost:3001
+pnpm run dev   # http://localhost:${IDENTITY_SERVICE_PORT}
 pnpm test      # Vitest (use cases, DTOs, controllers)
 ```
 
@@ -38,4 +38,4 @@ pnpm test:integration   # testes de API; se o banco não estiver disponível, os
 - **application/** — Use cases, DTOs, ports (repositórios, token service, OAuth providers)
 - **infrastructure/** — HTTP (Express, rotas), Prisma, Redis, RabbitMQ, adapters OAuth
 
-Ver [README raiz](../../README.md) e [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md).
+Ver [README raiz](../../README.md), [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md) e [docs/TECHNICAL_REVIEW.md](../../docs/TECHNICAL_REVIEW.md).

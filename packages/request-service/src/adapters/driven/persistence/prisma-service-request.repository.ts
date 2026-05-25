@@ -21,7 +21,7 @@ import type {
   ListServiceRequestsFilter,
   TransitionServiceRequestParams,
 } from "../../../application/ports/service-request-repository.port.js";
-import { ServiceRequestNotFoundError, InvalidStatusTransitionError } from "../../../application/errors.js";
+import { ServiceRequestNotFoundError, InvalidStatusTransitionError } from "../../../application/errors";
 
 function outboxEventNameForToStatus(toStatus: ServiceRequestStatus): string | null {
   switch (toStatus) {

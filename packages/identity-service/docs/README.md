@@ -24,8 +24,8 @@ Composition root: `src/container.ts`. Entry: `src/index.ts`.
 
 ## Documentação geral
 
-- [ARCHITECTURE](../../../docs/ARCHITECTURE.md) — visão do framework e do shared
-- [STRUCTURE](../../../docs/STRUCTURE.md) — árvore e convenções
-- [API](../../../docs/API.md) — endpoints e autenticação
+- [README](../../../README.md) — visão geral do monorepo e serviços
+- [TECHNICAL_REVIEW](../../../docs/TECHNICAL_REVIEW.md) — arquitetura e estado técnico
+- [MICROSERVICES_LIST](../../../docs/MICROSERVICES_LIST.md) — responsabilidades e integração entre serviços
 - [DEVELOPMENT](../../../docs/DEVELOPMENT.md) — rodar, testar, troubleshooting
-- [SECURITY](../../../docs/SECURITY.md) — validação e segurança
+- [RequisitosCorp](../../../docs/RequisitosCorp.md) — requisitos de segurança e conformidade

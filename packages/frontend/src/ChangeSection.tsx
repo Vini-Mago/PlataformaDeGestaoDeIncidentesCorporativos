@@ -27,6 +27,12 @@ const CHANGE_STATUSES = [
 
 const CHANGE_TYPES = ["Standard", "Normal", "Emergency"] as const;
 const RISKS = ["Low", "Medium", "High"] as const;
+const SCHEDULING_EDIT_STATUSES = ["Draft", "Submitted", "InApproval", "Approved", "Scheduled"] as const;
+type SchedulingEditableStatus = (typeof SCHEDULING_EDIT_STATUSES)[number];
+
+function isSchedulingEditableStatus(status: string): status is SchedulingEditableStatus {
+  return SCHEDULING_EDIT_STATUSES.includes(status as SchedulingEditableStatus);
+}
 
 function isoToDatetimeLocal(iso: string | null): string {
   if (!iso) return "";
@@ -132,6 +138,7 @@ export function ChangeSection() {
   }, [detail]);
 
   const isDraft = detail?.status === "Draft";
+  const canEditScheduling = detail ? isSchedulingEditableStatus(detail.status) : false;
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -146,10 +153,12 @@ export function ChangeSection() {
     try {
       const payload: UpdateChangePayload = {
         status,
-        windowStart: ws,
-        windowEnd: we,
-        rollbackPlan: rollbackPlan.trim() || null,
       };
+      if (canEditScheduling) {
+        payload.windowStart = ws;
+        payload.windowEnd = we;
+        payload.rollbackPlan = rollbackPlan.trim() || null;
+      }
       if (isDraft) {
         payload.title = title.trim();
         payload.description = description.trim();

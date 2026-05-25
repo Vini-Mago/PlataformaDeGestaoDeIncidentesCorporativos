@@ -34,10 +34,10 @@ Se alguma porta padrão já estiver ocupada, o script escolhe a próxima porta l
 Depois que o comando imprimir o resumo de inicialização, use os endereços exibidos no terminal. Por padrão:
 
 ```text
-Gateway:  http://localhost:8080
-BFF/UI:   http://localhost:3100
+Gateway:  http://localhost:${GATEWAY_PORT}
+BFF/UI:   http://localhost:${BFF_PORT}
 Frontend: http://localhost:5173
-API Docs: http://localhost:3003
+API Docs: http://localhost:${API_DOCS_PORT}
 ```
 
 Para usar a aplicação pelo fluxo mais completo de cookies e proxy, prefira o endereço do BFF/UI.

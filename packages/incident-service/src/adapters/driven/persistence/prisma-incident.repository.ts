@@ -237,6 +237,13 @@ export class PrismaIncidentRepository implements IIncidentRepository {
     return rows.map((row) => this.toAttachment(row));
   }
 
+  async setProblemLink(incidentId: string, problemId: string | null): Promise<void> {
+    await this.prisma.incidentModel.update({
+      where: { id: incidentId },
+      data: { problemId },
+    });
+  }
+
   private toAttachment(row: {
     id: string;
     incidentId: string;

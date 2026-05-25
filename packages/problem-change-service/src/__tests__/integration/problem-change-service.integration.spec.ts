@@ -14,6 +14,7 @@ import request from "supertest";
 import { createContainer } from "../../container";
 import { createApp } from "../../app";
 import { createTestJwt, TEST_JWT_SECRET } from "./test-jwt";
+import { PROBLEM_INCIDENT_LINKED_EVENT, PROBLEM_INCIDENT_UNLINKED_EVENT } from "@pgic/shared";
 
 const databaseUrl =
   process.env.PROBLEM_CHANGE_DATABASE_URL ??
@@ -207,6 +208,11 @@ describe("Problem-change Service API integration", () => {
         .send({ incidentId: incidentA })
         .expect(204);
 
+      const outboxAfterLink = await container.prisma.outboxModel.findMany({
+        orderBy: { createdAt: "asc" },
+      });
+      expect(outboxAfterLink.some((e) => e.eventName === PROBLEM_INCIDENT_LINKED_EVENT)).toBe(true);
+
       const res = await request(app)
         .get(`/api/problems/${problem.id}`)
         .set("Authorization", `Bearer ${authToken}`)
@@ -218,6 +224,11 @@ describe("Problem-change Service API integration", () => {
         .delete(`/api/problems/${problem.id}/incidents/${incidentA}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(204);
+
+      const outboxAfterUnlink = await container.prisma.outboxModel.findMany({
+        orderBy: { createdAt: "asc" },
+      });
+      expect(outboxAfterUnlink.some((e) => e.eventName === PROBLEM_INCIDENT_UNLINKED_EVENT)).toBe(true);
 
       const afterUnlink = await request(app)
         .get(`/api/problems/${problem.id}`)

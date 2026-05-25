@@ -1,3 +1,8 @@
+export {
+  PROBLEM_INCIDENT_LINKED_EVENT,
+  PROBLEM_INCIDENT_UNLINKED_EVENT,
+} from "./events/problem-incident-link.event";
+
 /**
  * Shared RabbitMQ constants: exchanges, queues, routing keys.
  * Centralize here to keep contract between publishers and consumers.
@@ -66,6 +71,9 @@ export const QUEUE_USER_CREATED_PROBLEM_CHANGE = "problem_change.user_created";
 export const EXCHANGE_PROBLEM_EVENTS = "problem.events";
 export const ROUTING_KEY_PROBLEM_CREATED = "problem_created";
 export const PROBLEM_CREATED_EVENT = "problem.created";
+export const ROUTING_KEY_PROBLEM_INCIDENT_LINKED = "problem_incident_linked";
+export const ROUTING_KEY_PROBLEM_INCIDENT_UNLINKED = "problem_incident_unlinked";
+export const QUEUE_PROBLEM_INCIDENT_LINKS_INCIDENT = "incident.problem_incident_links";
 
 /** Change events (exchange + routing keys). Published by problem-change-service (Outbox Pattern). */
 export const EXCHANGE_CHANGE_EVENTS = "change.events";

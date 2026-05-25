@@ -38,7 +38,7 @@ Cada transição bem-sucedida grava uma linha em `service_request_workflow_event
 ## Environment
 
 - `REQUEST_DATABASE_URL` — PostgreSQL connection string.
-- `REQUEST_SERVICE_PORT` — HTTP port (default 3002).
+- `REQUEST_SERVICE_PORT` — HTTP port (default in `.env.example`: 3202).
 - `JWT_SECRET` — Same as identity-service (≥ 32 chars).
 
 ## Run
@@ -49,4 +49,4 @@ pnpm exec prisma migrate dev --name init
 pnpm run dev
 ```
 
-Gateway: `http://localhost:8080/request/`.
+Gateway: `http://localhost:${GATEWAY_PORT}/request/`.

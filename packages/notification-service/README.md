@@ -16,4 +16,4 @@ Notifications: create, list and get by id. Types: email, in_app, push. Used for 
 
 ## Gateway
 
-- Prefix: `/notifications/` (e.g. `http://localhost:8080/notifications/health`)
+- Prefix: `/notifications/` (e.g. `http://localhost:${GATEWAY_PORT}/notifications/health`)

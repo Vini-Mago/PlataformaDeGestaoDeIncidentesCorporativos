@@ -15,4 +15,4 @@ Escalation orchestration: configurable rules (conditions + actions) and history 
 
 ## Gateway
 
-- Prefix: `/escalation/` (e.g. `http://localhost:8080/escalation/health`)
+- Prefix: `/escalation/` (e.g. `http://localhost:${GATEWAY_PORT}/escalation/health`)

@@ -65,8 +65,7 @@ export class RabbitMqProblemChangeEventPublisherAdapter implements IEventPublish
     if (!this.channel) {
       throw new Error("RabbitMqProblemChangeEventPublisherAdapter not connected; call connect() before publishing.");
     }
-    const exchange =
-      eventName === PROBLEM_CREATED_EVENT ? EXCHANGE_PROBLEM_EVENTS : EXCHANGE_CHANGE_EVENTS;
+    const exchange = eventName.startsWith("problem.") ? EXCHANGE_PROBLEM_EVENTS : EXCHANGE_CHANGE_EVENTS;
     const routingKey =
       eventName === PROBLEM_CREATED_EVENT
         ? ROUTING_KEY_PROBLEM_CREATED

@@ -68,4 +68,5 @@ export interface IIncidentRepository {
   }>;
   addAttachment(input: AddIncidentAttachmentInput): Promise<IncidentAttachment>;
   listAttachments(incidentId: string): Promise<IncidentAttachment[]>;
+  setProblemLink(incidentId: string, problemId: string | null): Promise<void>;
 }

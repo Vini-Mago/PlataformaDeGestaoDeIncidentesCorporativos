@@ -97,6 +97,11 @@ async function bootstrap() {
           logger.error({ err }, "Failed to start integration ingest consumer");
         });
       }
+      if (container.problemIncidentLinkConsumer) {
+        container.problemIncidentLinkConsumer.start().catch((err) => {
+          logger.error({ err }, "Failed to start problem incident link consumer");
+        });
+      }
     }
   } else {
     logger.info("RABBITMQ_URL not set; Outbox relay and user replication disabled");
