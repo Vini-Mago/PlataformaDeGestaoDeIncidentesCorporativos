@@ -6,9 +6,9 @@ import { createApp } from "../../app";
 
 describe("integration-service HTTP", () => {
   const jwtSecret = "integration-test-secret-minimum-32-characters";
-  const databaseUrl =
-    process.env.INTEGRATION_DATABASE_URL ??
-    "postgresql://pgic:pgic@localhost:5432/integration_service";
+const databaseUrl =
+  process.env.INTEGRATION_DATABASE_URL ??
+  "postgresql://pgic:pgic@localhost:55432/integration_service";
 
   const container = createContainer({
     databaseUrl,

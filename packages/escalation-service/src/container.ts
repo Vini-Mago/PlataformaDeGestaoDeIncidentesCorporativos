@@ -59,7 +59,8 @@ export function createContainer(config: EscalationContainerConfig) {
       (cradle: EscalationCradle) =>
         new HandleEscalationDomainEventUseCase(
           cradle.escalationRuleRepository,
-          cradle.escalationHistoryRepository
+          cradle.escalationHistoryRepository,
+          cradle.config.jwtSecret
         )
     ).singleton(),
 

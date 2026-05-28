@@ -36,3 +36,27 @@ Completar cenários avançados de aprovação para tornar o fluxo de requisiçõ
 - Execução CI verde para request-service/frontend.
 - Evidência de caso de exceção e reprovação.
 
+## Evidência atual (2026-05-27)
+
+- Fluxos avançados já implementados no domínio de requisições:
+  - aprovação `single`, `sequential` e `parallel` com `approvalState`.
+  - enforcement por papel e ordem de aprovação.
+  - proteção contra aprovação duplicada no modo paralelo.
+- Arquivos de referência:
+  - `packages/request-service/src/application/use-cases/approve-service-request.use-case.ts`
+  - `packages/request-service/src/application/use-cases/send-for-approval-service-request.use-case.ts`
+  - `packages/request-service/src/__tests__/integration/request-service.integration.spec.ts`
+- Teste unitário adicional adicionado para reforçar entrada em fila de aprovação:
+  - `packages/request-service/src/application/use-cases/send-for-approval-service-request.use-case.spec.ts`
+  - cobre transições:
+    - `none -> Approved`
+    - `sequential -> InApproval (step=0)`
+    - `parallel -> InApproval (roles=[])`
+- Validação local:
+  - `pnpm --filter request-service test -- src/application/use-cases/send-for-approval-service-request.use-case.spec.ts` (verde).
+
+## Status
+
+- Feito técnico para backend de aprovações avançadas (`request-service`).
+- Pendente para fechamento total do item:
+  - evidência funcional equivalente no frontend para todos os cenários avançados de aprovação/exceção em homologação.

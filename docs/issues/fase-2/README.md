@@ -22,7 +22,7 @@ Fonte: `docs/REQUISITOS_PARCIAIS_E_PLANO.md` + `docs/BACKLOG_EXECUCAO_FASEADO.md
 |---|---|
 | `F2-01` Backup automatizado + restore testado | Feito técnico — scripts/runbook/cron/smoke test versionados; operação contínua depende do ambiente |
 | `F2-02` Observabilidade mínima de produção | Feito técnico — `/metrics`, Prometheus, Grafana, alert rules e simulação versionados; ativação contínua em homolog/prod pendente |
-| `F2-03` Plano de rollback e resposta a incidentes | Pendente |
-| `F2-08` Política uniforme de retry/DLQ/reprocessamento | Pendente |
+| `F2-03` Plano de rollback e resposta a incidentes | Feito técnico — runbook de rollback/resposta versionado; game day real em homolog/prod pendente |
+| `F2-08` Política uniforme de retry/DLQ/reprocessamento | Feito técnico — política versionada + evidência automatizada no integration-service; uniformização total cross-service pendente |
 
 Pendências dependentes de deploy/homologação/produção estão consolidadas em `docs/ops/DEPLOYMENT_PENDING_CHECKLIST.md`.

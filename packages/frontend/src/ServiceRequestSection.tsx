@@ -66,13 +66,45 @@ function hasFulfillJwtRole(role: string | undefined): boolean {
 
 function canShowApproveButtons(
   userRole: string | undefined,
-  approverRoleIds: string[] | undefined
+  r: ServiceRequestListItem,
+  cat: CatalogItemSummary | undefined
 ): boolean {
   if (userRole === "admin") return true;
+  if (r.status !== "InApproval") return false;
+  if (!cat) return false;
   if (!hasApproveJwtRole(userRole)) return false;
-  const ids = approverRoleIds ?? [];
-  if (ids.length === 0) return true;
-  return !!userRole && ids.includes(userRole);
+
+  const flow = cat.approvalFlow || "none";
+  const role = userRole ?? "";
+  const approverRoleIds = cat.approverRoleIds ?? [];
+
+  if (flow === "single" || flow === "none") {
+    if (approverRoleIds.length === 0) return true;
+    return approverRoleIds.includes(role);
+  }
+
+  if (flow === "sequential") {
+    const rawState = r.approvalState;
+    let step = 0;
+    if (rawState && typeof rawState === "object" && rawState.mode === "sequential" && typeof rawState.step === "number") {
+      step = rawState.step;
+    }
+    const requiredRole = approverRoleIds[step];
+    if (!requiredRole) return false;
+    return role === requiredRole;
+  }
+
+  if (flow === "parallel") {
+    if (!approverRoleIds.includes(role)) return false;
+    const rawState = r.approvalState;
+    let approvedRoles: string[] = [];
+    if (rawState && typeof rawState === "object" && rawState.mode === "parallel" && Array.isArray(rawState.roles)) {
+      approvedRoles = rawState.roles.filter((val): val is string => typeof val === "string");
+    }
+    return !approvedRoles.includes(role);
+  }
+
+  return false;
 }
 
 export function ServiceRequestSection() {
@@ -363,8 +395,7 @@ export function ServiceRequestSection() {
                   const busy = actionBusyId === r.id;
                   const showSubmit = r.status === "Draft" && isRequester;
                   const showSend = r.status === "Submitted" && isRequester;
-                  const showApproveReject =
-                    r.status === "InApproval" && canShowApproveButtons(userRole, cat?.approverRoleIds);
+                  const showApproveReject = canShowApproveButtons(userRole, r, cat);
                   const showStart = r.status === "Approved" && hasFulfillJwtRole(userRole);
                   const showComplete = r.status === "InProgress" && hasFulfillJwtRole(userRole);
 
@@ -380,7 +411,51 @@ export function ServiceRequestSection() {
                             </span>
                           ) : null}
                         </td>
-                        <td>{r.status}</td>
+                        <td>
+                          <div>
+                            <strong>{r.status}</strong>
+                            {r.status === "InApproval" && (
+                              <div style={{ fontSize: "0.8rem", color: "var(--text-muted, #6c757d)", marginTop: "0.2rem" }}>
+                                {r.approvalState?.mode === "sequential" && (
+                                  <>
+                                    <span style={{ display: "block" }}>
+                                      Passo {((r.approvalState?.step ?? 0) as number) + 1} de {cat?.approverRoleIds?.length ?? 0}
+                                    </span>
+                                    {cat?.approverRoleIds && cat.approverRoleIds[(r.approvalState?.step ?? 0) as number] && (
+                                      <span style={{ display: "block", fontStyle: "italic" }}>
+                                        Aguardando: {cat.approverRoleIds[(r.approvalState?.step ?? 0) as number]}
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                                {r.approvalState?.mode === "parallel" && (
+                                  <>
+                                    <span style={{ display: "block" }}>
+                                      Aprovados: {Array.isArray(r.approvalState?.roles) ? r.approvalState.roles.length : 0} de {cat?.approverRoleIds ? [...new Set(cat.approverRoleIds)].length : 0}
+                                    </span>
+                                    {Array.isArray(r.approvalState?.roles) && r.approvalState.roles.length > 0 && (
+                                      <span style={{ display: "block", fontStyle: "italic" }}>
+                                        Por: {r.approvalState.roles.join(", ")}
+                                      </span>
+                                    )}
+                                    {cat?.approverRoleIds && (
+                                      <span style={{ display: "block", fontStyle: "italic" }}>
+                                        Restantes: {[...new Set(cat.approverRoleIds)]
+                                          .filter((role) => !Array.isArray(r.approvalState?.roles) || !r.approvalState.roles.includes(role))
+                                          .join(", ")}
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                                {(!r.approvalState || r.approvalState.mode === "single") && cat?.approverRoleIds && cat.approverRoleIds.length > 0 && (
+                                  <span style={{ display: "block", fontStyle: "italic" }}>
+                                    Aguardando: {cat.approverRoleIds.join(", ")}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td title={r.requesterId}>{shortId(r.requesterId)}</td>
                         <td>{r.createdAt ? new Date(r.createdAt).toLocaleString() : "—"}</td>
                         <td>

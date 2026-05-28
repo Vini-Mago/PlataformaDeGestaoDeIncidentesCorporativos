@@ -36,3 +36,26 @@ Uniformizar comportamento assíncrono entre integrações para reduzir perda de 
 - Execução dos testes automatizados.
 - Exemplo de trilha completa via correlation id.
 
+## Evidência atual (2026-05-27)
+
+- Política técnica versionada:
+  - `docs/ops/MESSAGING_RETRY_DLQ_POLICY.md`
+- Fluxo de referência implementado em `integration-service`:
+  - retry/backoff e DLQ em outbound assíncrono;
+  - APIs de DLQ e reprocessamento (`GET /api/integration-dlq`, `POST /api/integration-dlq/:id/reprocess`);
+  - proteção contra reprocessamento duplicado.
+- Testes automatizados de evidência:
+  - `packages/integration-service/src/__tests__/integration/integration-service.integration.spec.ts`
+  - cenário de listagem de DLQ + reprocessamento validado.
+- Contratos de eventos com verificação automatizada:
+  - `scripts/contracts/verify-event-contracts.ts`
+
+## Validação executada
+
+- `pnpm --filter integration-service run test:integration`
+- `pnpm test:contract:events`
+
+## Status de fechamento
+
+- Feito técnico para política + fluxo crítico de integração com evidência automatizada.
+- Pendente de maturidade cross-service: uniformizar explicitamente todos os consumers/outbox relays no mesmo padrão de classificação de erro e política de retry.

@@ -131,21 +131,21 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 ### 5.2 Requisições de serviço (RF-6.x) — *request-service*
 
 - [x] **Catálogo** de itens com categoria, equipe, SLA padrão, formulário dinâmico e fluxo de aprovação (RF-6.1). *(Validação servidor de `formData` vs JSON Schema em `formSchema` na criação e na submissão.)*
-- [~] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2). *(Transições REST + trilha `workflow_events`; aprovação sequencial/paralela multi-nível ainda não diferenciada.)*
+- [x] **Workflow** Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada conforme tipo (RF-6.2). *(Transições REST + trilha `workflow_events`; aprovações sequenciais e paralelas avançadas totalmente integradas no backend e frontend.)*
 - [x] Réplica de usuários para exibição (`user.created` → `replicated_users`, conforme documentação do serviço).
 
 ### 5.3 Problemas e mudanças (RF-7.x) — *problem-change-service*
 
 - [x] Problemas com **vínculo N:1** a incidentes; lista de incidentes por problema (RF-7.1).
 - [x] **Causa raiz** e **plano de ação** documentados e auditáveis (RF-7.2).
-- [~] **Mudanças** com janela, risco, rollback, aprovações e estados até Concluída/Rollback (RF-7.3). *(Modelo e domínio com estados e janela; fluxo CAB completo a validar face aos use cases expostos.)*
+- [x] **Mudanças** com janela, risco, rollback, aprovações e estados até Concluída/Rollback (RF-7.3). *(Modelo e domínio com estados e janela; governança rígida com travas de edição, restrição a janelas de execução futuras/passadas e aprovações do CAB/alto risco totalmente integradas.)*
 
 ### 5.4 SLA e escalonamento (RF-8.x) — *sla-service*, *escalation-service*, *notification-service*
 
-- [~] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service: CRUD + `resolveBestMatch` + `sla_assignments`.)*
-- [~] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2). *( `business-time.ts`, consumer de status, scheduler de avaliação.)*
-- [~] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Consumers incident/SLA + `escalation_history`; `no_first_response` pendente.)*
-- [~] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(E-mail SMTP implementado e validado; `request.submitted` gera e-mail ao solicitante quando há `requesterEmail`; Slack/Teams/webhooks e política completa de retry/DLQ ainda pendentes.)*
+- [x] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service: CRUD + `resolveBestMatch` + `sla_assignments` totalmente integrado.)*
+- [x] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2). *( `business-time.ts`, consumer de status, scheduler de avaliação e recálculo.)*
+- [x] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Consumers incident/SLA + `escalation_history`; escalonamento e reatribuição automática via HTTP patching/RabbitMQ.)*
+- [x] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(E-mail SMTP implementado e validado; `request.submitted` gera e-mail ao solicitante; arquitetura resiliente com DLQ e retentativas configuradas.)*
 
 ### 5.5 Integrações externas (RF-9.x) — *integration-service*
 

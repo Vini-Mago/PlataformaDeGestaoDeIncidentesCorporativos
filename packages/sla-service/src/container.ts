@@ -223,6 +223,9 @@ export function createContainer(config: SlaContainerConfig) {
     get slaEvaluationScheduler() {
       return c.slaEvaluationScheduler;
     },
+    get evaluateSlaAssignmentsUseCase() {
+      return c.evaluateSlaAssignmentsUseCase;
+    },
     async connectRabbitMQ(): Promise<void> {
       if (c.config.rabbitmqUrl && "connect" in c.eventPublisher && typeof c.eventPublisher.connect === "function") {
         await c.eventPublisher.connect();

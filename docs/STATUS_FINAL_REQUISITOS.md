@@ -18,9 +18,9 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 | RF-3 Auditoria e rastreamento | Parcial | Versionamento RF-3.3 fechado em problemas/mudanças; cobertura transversal total ainda pendente. |
 | RF-4 Dashboards/KPIs | Parcial | Dashboard operacional mínimo fechado; KPIs executivos completos ainda pendentes. |
 | RF-5 Incidentes | Parcial | Fluxo principal implementado; amarrações completas de SLA/UX ainda em evolução. |
-| RF-6 Requisições | Parcial | Catálogo + fluxo principal prontos; cenários avançados de aprovação ainda pendentes. |
-| RF-7 Problemas/Mudanças | Parcial | Problemas bem cobertos; mudanças com fluxo principal e melhorias de governança em andamento. |
-| RF-8 SLA/Escalonamento | Parcial | Serviços e base implementados; cobertura completa de regras/canais ainda pendente. |
+| RF-6 Requisições | Feito | Catálogo + fluxo principal prontos; fluxos de aprovação sequencial e paralela avançados integrados em Backend e React Frontend. |
+| RF-7 Problemas/Mudanças | Feito | Problemas bem cobertos; mudanças com regras rígidas de janela de execução, travas de edição de campos sensíveis pós-aprovação e validações. |
+| RF-8 SLA/Escalonamento | Feito | SLA e Escalonamento integrados ponta a ponta e validados via E2E; incidentes críticos geram SLAs de 15m/120m e breach executa reatribuição via REST. |
 | RF-9 Integrações externas | Parcial | Entrada e saída MVP implementadas (inclui RF-9.2), com logs/DLQ/retry; maturidade de conectores produtivos pendente. |
 | RF-10 Assíncrono (jobs/retry/DLQ) | Parcial | Outbox/relay e DLQ presentes; padronização total de jobs pesados ainda pendente. |
 | Segurança NFR (RC §3.1) | Parcial | SQLi/rate-limit base, backup e LGPD operacional MVP implementados; formalização jurídica e produção pendentes. |
@@ -31,6 +31,9 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 
 ## Itens que foram fechados neste ciclo
 
+- RF-6: Cenários avançados de aprovação sequencial e paralela implementados em `request-service` e integrados ao Frontend.
+- RF-7: Governança de Mudanças (trava de edição em campos críticos, restrição de janelas de execução futuras/passadas e validações em `problem-change-service`).
+- RF-8: SLA & Escalonamento E2E integrados via RabbitMQ + HTTP (criação de SLA, simulação de breach e reatribuição automática de equipe).
 - RF-3.3: versionamento de dados em `problem-change-service` (`problem_versions`/`change_versions`) + endpoints de consulta.
 - RF-9.2: saída assíncrona em `integration-service` (`/api/outbound/v1/deliver`) com timeout/retry/DLQ.
 - Endurecimento RF-10.2/RF-9.2: backoff exponencial no retry outbound e envio de body HTTP apenas quando aplicável.

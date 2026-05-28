@@ -468,7 +468,7 @@ Para fechar o normativo, verificar explicitamente:
 1. [x] Modelar **requisição** com estados: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Em Atendimento → Concluída/Cancelada (ajustar nomes ao seu domínio).
 2. [x] Implementar **aprovação sequencial ou paralela** conforme configuração do item. *(Campo `approval_state` JSON; `sequential` = ordem em `approverRoleIds`; `parallel` = cada papel distinto deve aprovar; `single` inalterado.)*
 3. [x] Registrar **quem aprovou/rejeitou**, quando e motivo. *(Tabela `service_request_workflow_events` + endpoints approve/reject.)*
-4. [~] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
+4. [x] Após aprovação, encaminhar para **fila da equipe** e permitir comentários e conclusão como em incidente simplificado.
 
 ### 4.3 Consumidor `user.created`
 
@@ -477,7 +477,7 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 4.4 Integração assíncrona futura
 
-- [~] Publicar eventos `request.*` para **auditoria** e reporting quando houver consumidor dedicado. *(Contratos + outbox + relay no request-service; **notification-service** consome `request.events` → in-app ao solicitante.)*
+- [x] Publicar eventos `request.*` para **auditoria** e reporting quando houver consumidor dedicado. *(Contratos + outbox + relay no request-service; **notification-service** consome `request.events` → in-app ao solicitante.)*
 
 ### Balanço de saída da Fase 4
 
@@ -559,8 +559,8 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [x] Modelar mudança com tipo (padrão, normal, emergencial), **risco**, **janela** de execução, **rollback**.
-2. [~] Workflow: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Agendada → Em Execução → Concluída/Rollback.
-3. [~] Regra: mudança **alto risco** exige aprovação extra (CAB) se política assim definir.
+2. [x] Workflow: Rascunho → Submetida → Em Aprovação → Aprovada/Rejeitada → Agendada → Em Execução → Concluída/Rollback.
+3. [x] Regra: mudança **alto risco** exige aprovação extra (CAB) se política assim definir.
 4. [x] Vincular mudança a **incidentes/problemas** motivadores.
 
 ### 6.3 Eventos
@@ -569,8 +569,8 @@ Para fechar o normativo, verificar explicitamente:
 
 ### Balanço de saída da Fase 6
 
-- [~] Da tela de incidente, associar a um problema existente ou criar novo.
-- [~] Mudança não “executa” fora da janela aprovada (validação no domínio).
+- [x] Da tela de incidente, associar a um problema existente ou criar novo.
+- [x] Mudança não “executa” fora da janela aprovada (validação no domínio).
 
 ---
 
@@ -583,27 +583,27 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [x] Entidades: política de SLA, condições (tipo de chamado, criticidade, serviço, cliente), tempos de resposta e resolução.
-2. [~] Algoritmo de **resolução de conflito** quando várias políticas coincidem (documentar a regra).
-3. [~] API para **consultar** SLA aplicável a um incidente/requisição e para **recalcular** quando campos relevantes mudam.
+2. [x] Algoritmo de **resolução de conflito** quando várias políticas coincidem (documentar a regra).
+3. [x] API para **consultar** SLA aplicável a um incidente/requisição e para **recalcular** quando campos relevantes mudam.
 
 ### 7.2 Calendário e tempo útil (RF-8.2)
 
 **Passos:**
 
 1. [x] Configurar **dias úteis**, **feriados**, **janela diária** (ex.: 08:00–18:00).
-2. [~] Implementar função de **adição de minutos úteis** a um instante inicial (testada com unitários em cenários de fim de semana e feriado).
-3. [~] Pausar cronômetro em estados configuráveis.
+2. [x] Implementar função de **adição de minutos úteis** a um instante inicial (testada com unitários em cenários de fim de semana e feriado).
+3. [x] Pausar cronômetro em estados configuráveis.
 
 ### 7.3 Eventos de risco e estouro
 
 **Passos:**
 
-1. [~] Job ou consumer que compara **agora** com **deadlines** e emite `sla.risk` e `sla.breach`.
-2. [~] Definir limiares de “risco” (ex.: 80% do tempo consumido).
+1. [x] Job ou consumer que compara **agora** com **deadlines** e emite `sla.risk` e `sla.breach`.
+2. [x] Definir limiares de “risco” (ex.: 80% do tempo consumido).
 
 ### Balanço de saída da Fase 7
 
-- [~] Dois ambientes com mesmos dados de entrada produzem **mesmos deadlines** (testes automatizados).
+- [x] Dois ambientes com mesmos dados de entrada produzem **mesmos deadlines** (testes automatizados).
 
 ---
 
@@ -615,23 +615,23 @@ Para fechar o normativo, verificar explicitamente:
 
 **Passos:**
 
-1. [~] Cadastro de regras: condição (sem primeira resposta em X min, % do SLA, criticidade).
-2. [~] Ações: notificar gestor, **reatribuir equipe**, aumentar prioridade (se modelo permitir).
-3. [~] Consumir eventos de incidente e SLA.
-4. [~] Persistir **histórico de escalonamentos** (quem foi notificado, qual regra disparou).
+1. [x] Cadastro de regras: condição (sem primeira resposta em X min, % do SLA, criticidade).
+2. [x] Ações: notificar gestor, **reatribuir equipe**, aumentar prioridade (se modelo permitir).
+3. [x] Consumir eventos de incidente e SLA.
+4. [x] Persistir **histórico de escalonamentos** (quem foi notificado, qual regra disparou).
 
 ### 8.2 Notificações (RF-8.4)
 
 **Passos:**
 
-1. [~] Abstração de **canal**: e-mail (SMTP), Slack webhook, Teams webhook, webhook genérico.
-2. [~] **Templates** com variáveis (`{{ticketId}}`, `{{title}}`, `{{link}}`).
-3. [~] Fila de envio com **retry** e **DLQ**; logs de falha por provedor.
-4. [~] Rate limit por canal para não estourar quotas SMTP ou APIs.
+1. [x] Abstração de **canal**: e-mail (SMTP), Slack webhook, Teams webhook, webhook genérico.
+2. [x] **Templates** com variáveis (`{{ticketId}}`, `{{title}}`, `{{link}}`).
+3. [x] Fila de envio com **retry** e **DLQ**; logs de falha por provedor.
+4. [x] Rate limit por canal para não estourar quotas SMTP ou APIs.
 
 ### Balanço de saída da Fase 8
 
-- [~] Simular **estouro de SLA** em staging e verificar notificação e registro de escalonamento.
+- [x] Simular **estouro de SLA** em staging e verificar notificação e registro de escalonamento.
 
 ---
 

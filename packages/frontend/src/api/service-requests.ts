@@ -7,6 +7,7 @@ export type ServiceRequestListItem = {
   requesterId: string;
   status: string;
   formData: Record<string, unknown> | null;
+  approvalState?: Record<string, any> | null;
   assignedTeamId: string | null;
   assignedToId: string | null;
   submittedAt?: string | null;

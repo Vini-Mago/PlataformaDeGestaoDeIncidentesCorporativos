@@ -36,3 +36,23 @@ Padronizar rollback por serviço e o fluxo de resposta operacional para reduzir 
 - Registro da simulação (início/fim, decisão, impacto).
 - PR com atualização de documentação.
 
+## Evidência atual (2026-05-27)
+
+- Runbook técnico criado e versionado:
+  - `docs/ops/ROLLBACK_INCIDENT_RESPONSE_RUNBOOK.md`
+- Runbook de failover já existente e referenciado para camada de infraestrutura:
+  - `docs/ops/FAILOVER_RUNBOOK.md`
+- Procedimento cobre:
+  - critérios de acionamento;
+  - decisão rollback vs hotfix;
+  - fluxo de comunicação operacional;
+  - timeline padrão de incidente;
+  - checklist de encerramento;
+  - roteiro de game day.
+
+## Status de fechamento
+
+- Feito técnico para escopo de documentação e procedimento versionado.
+- Pendente operacional fora do repositório:
+  - executar game day real em homologação e anexar evidência temporal;
+  - validar rollback em pipeline/deploy real do ambiente.

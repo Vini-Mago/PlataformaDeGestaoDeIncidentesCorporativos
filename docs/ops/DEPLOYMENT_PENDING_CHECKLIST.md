@@ -137,7 +137,7 @@ Checklist de deploy:
 
 ## 8. Rollback, resposta a incidentes e game day
 
-Status técnico no repo: issue `docs/issues/fase-2/F2-03-rollback-resposta-incidentes.md` planejada; failover básico documentado em `docs/ops/FAILOVER_RUNBOOK.md`.
+Status técnico no repo: runbook de rollback/resposta versionado em `docs/ops/ROLLBACK_INCIDENT_RESPONSE_RUNBOOK.md` + failover básico em `docs/ops/FAILOVER_RUNBOOK.md`; execução de game day real ainda pendente.
 
 Checklist de deploy:
 
@@ -203,7 +203,7 @@ Checklist de deploy:
 
 ## 12. Retry, DLQ e reprocessamento operacional
 
-Status técnico no repo: DLQ/retry existe em fluxos específicos; uniformização planejada em `docs/issues/fase-2/F2-08-politica-retry-dlq.md`.
+Status técnico no repo: política versionada em `docs/ops/MESSAGING_RETRY_DLQ_POLICY.md` e fluxo crítico implementado no `integration-service`; uniformização total cross-service ainda pendente.
 
 Checklist de deploy:
 
