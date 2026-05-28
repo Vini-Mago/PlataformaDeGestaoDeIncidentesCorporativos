@@ -13,6 +13,8 @@ describe("ListNotificationsUseCase", () => {
   beforeEach(() => {
     notificationRepository = {
       create: vi.fn(),
+      markAsSent: vi.fn(),
+      markAsFailed: vi.fn(),
       findById: vi.fn(),
       list: vi.fn().mockResolvedValue([]),
     };

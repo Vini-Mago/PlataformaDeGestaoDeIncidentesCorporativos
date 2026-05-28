@@ -13,6 +13,7 @@ import {
 import { CreateNotificationUseCase } from "./create-notification.use-case";
 
 const handled = new Set<string>(REQUEST_DOMAIN_EVENT_NAMES);
+const emailEventTypes = new Set<string>([REQUEST_SUBMITTED_EVENT]);
 
 function notificationCopy(
   eventType: string,
@@ -82,12 +83,21 @@ export class HandleRequestDomainEventUseCase {
     }
     const p = parsed.data;
     const { subject, body } = notificationCopy(eventType, p);
+    const requesterEmail = typeof p.requesterEmail === "string" ? p.requesterEmail : undefined;
     await this.createNotification.execute({
       type: "in_app",
       recipient: p.requesterId,
       subject,
       body,
     });
+    if (emailEventTypes.has(eventType) && requesterEmail) {
+      await this.createNotification.execute({
+        type: "email",
+        recipient: requesterEmail,
+        subject,
+        body,
+      });
+    }
     return { ok: true };
   }
 }

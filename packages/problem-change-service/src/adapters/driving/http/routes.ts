@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from "express";
-import { requireJwtPermission } from "@pgic/shared";
+import { requireAnyJwtPermission, requireJwtPermission } from "@pgic/shared";
 import type { ProblemChangeController } from "./problem-change.controller";
 import {
   validateIdParam,
@@ -20,6 +20,14 @@ export function createRoutes(
   authMiddleware: RequestHandler
 ): Router {
   const router = Router();
+  const readProblems = requireAnyJwtPermission([
+    { module: "problems", action: "read", scope: "all" },
+    { module: "problems", action: "read", scope: "own" },
+  ]);
+  const readChanges = requireAnyJwtPermission([
+    { module: "changes", action: "read", scope: "all" },
+    { module: "changes", action: "read", scope: "own" },
+  ]);
 
   router.post(
     "/problems",
@@ -28,7 +36,7 @@ export function createRoutes(
     validateCreateProblem,
     controller.createProblemHandler as RequestHandler
   );
-  router.get("/problems", authMiddleware, requireJwtPermission("problems", "read", "all"), controller.listProblemsHandler as RequestHandler);
+  router.get("/problems", authMiddleware, readProblems, controller.listProblemsHandler as RequestHandler);
   router.get(
     "/problems/linked-for-incidents",
     authMiddleware,
@@ -54,7 +62,7 @@ export function createRoutes(
   router.get(
     "/problems/:id",
     authMiddleware,
-    requireJwtPermission("problems", "read", "all"),
+    readProblems,
     validateIdParam,
     controller.getProblemHandler as RequestHandler
   );
@@ -69,7 +77,7 @@ export function createRoutes(
   router.get(
     "/problems/:id/versions",
     authMiddleware,
-    requireJwtPermission("problems", "read", "all"),
+    readProblems,
     validateIdParam,
     validateListVersionsQuery,
     controller.listProblemVersionsHandler as RequestHandler
@@ -82,7 +90,7 @@ export function createRoutes(
     validateCreateChange,
     controller.createChangeHandler as RequestHandler
   );
-  router.get("/changes", authMiddleware, requireJwtPermission("changes", "read", "all"), controller.listChangesHandler as RequestHandler);
+  router.get("/changes", authMiddleware, readChanges, controller.listChangesHandler as RequestHandler);
   router.post(
     "/changes/:id/incidents",
     authMiddleware,
@@ -124,14 +132,14 @@ export function createRoutes(
   router.get(
     "/changes/:id",
     authMiddleware,
-    requireJwtPermission("changes", "read", "all"),
+    readChanges,
     validateIdParam,
     controller.getChangeHandler as RequestHandler
   );
   router.get(
     "/changes/:id/versions",
     authMiddleware,
-    requireJwtPermission("changes", "read", "all"),
+    readChanges,
     validateIdParam,
     validateListVersionsQuery,
     controller.listChangeVersionsHandler as RequestHandler

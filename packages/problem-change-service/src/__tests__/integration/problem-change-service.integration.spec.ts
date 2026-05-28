@@ -147,6 +147,10 @@ describe("Problem-change Service API integration", () => {
   });
 
   describe("GET /api/problems/:id (auth required)", () => {
+    const readOwnPerms = ["problems:read:own"];
+    const ownUserId = "44444444-4444-4444-4444-444444444444";
+    const otherUserId = "55555555-5555-5555-5555-555555555555";
+
     it("returns 401 when Authorization is missing", async ({ skip }) => {
       if (!dbAvailable) skip();
       await request(app)
@@ -187,6 +191,51 @@ describe("Problem-change Service API integration", () => {
       });
       expect(res.body).toHaveProperty("linkedIncidentIds");
       expect(Array.isArray(res.body.linkedIncidentIds)).toBe(true);
+    });
+
+    it("returns 403 when user has read:own and is not owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-problems@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Owned by other",
+          description: "Desc",
+          status: "Open",
+          createdById: otherUserId,
+        },
+      });
+      await request(app)
+        .get(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("returns 200 when user has read:own and is owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-problems@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Owned by self",
+          description: "Desc",
+          status: "Open",
+          createdById: ownUserId,
+        },
+      });
+      const res = await request(app)
+        .get(`/api/problems/${problem.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.id).toBe(problem.id);
     });
 
     const incidentA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -245,6 +294,173 @@ describe("Problem-change Service API integration", () => {
         .send({ incidentId: incidentA })
         .expect(404);
       expect(res.body).toHaveProperty("error");
+    });
+  });
+
+  describe("GET /api/changes/:id (auth required)", () => {
+    const readOwnPerms = ["changes:read:own"];
+    const ownUserId = "66666666-6666-6666-6666-666666666666";
+    const otherUserId = "77777777-7777-7777-7777-777777777777";
+
+    it("returns 403 when user has read:own and is not owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-changes@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const change = await container.prisma.changeModel.create({
+        data: {
+          title: "Change owned by other",
+          description: "Desc",
+          justification: "Ownership check",
+          changeType: "Normal",
+          status: "Draft",
+          risk: "Medium",
+          createdById: otherUserId,
+        },
+      });
+      await request(app)
+        .get(`/api/changes/${change.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("returns 200 when user has read:own and is owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-changes@test.com",
+        role: "user",
+        perms: readOwnPerms,
+      });
+      const change = await container.prisma.changeModel.create({
+        data: {
+          title: "Change owned by self",
+          description: "Desc",
+          justification: "Ownership check",
+          changeType: "Normal",
+          status: "Draft",
+          risk: "Medium",
+          createdById: ownUserId,
+        },
+      });
+      const res = await request(app)
+        .get(`/api/changes/${change.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.id).toBe(change.id);
+    });
+  });
+
+  describe("GET /api/changes/:id/versions (auth required)", () => {
+    const ownUserId = "66666666-6666-6666-6666-666666666666";
+    const otherUserId = "77777777-7777-7777-7777-777777777777";
+
+    it("returns 403 when user has changes:read:own and is not owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-changes@test.com",
+        role: "user",
+        perms: ["changes:read:own"],
+      });
+      const change = await container.prisma.changeModel.create({
+        data: {
+          title: "Change version owned by other",
+          description: "Desc",
+          justification: "J",
+          changeType: "Normal",
+          risk: "Medium",
+          status: "Draft",
+          createdById: otherUserId,
+        },
+      });
+      await container.prisma.changeVersionModel.create({
+        data: {
+          changeId: change.id,
+          versionNumber: 1,
+          changedById: otherUserId,
+          snapshot: { after: { title: change.title } },
+        },
+      });
+
+      await request(app)
+        .get(`/api/changes/${change.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("returns versions when user has changes:read:own and is owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-changes@test.com",
+        role: "user",
+        perms: ["changes:read:own"],
+      });
+      const change = await container.prisma.changeModel.create({
+        data: {
+          title: "Change version owned by self",
+          description: "Desc",
+          justification: "J",
+          changeType: "Normal",
+          risk: "Medium",
+          status: "Draft",
+          createdById: ownUserId,
+        },
+      });
+      await container.prisma.changeVersionModel.create({
+        data: {
+          changeId: change.id,
+          versionNumber: 1,
+          changedById: ownUserId,
+          snapshot: { after: { title: change.title } },
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/changes/${change.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({ versionNumber: 1, changedById: ownUserId });
+    });
+
+    it("returns versions when user has changes:read:all", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "all-changes@test.com",
+        role: "user",
+        perms: ["changes:read:all"],
+      });
+      const change = await container.prisma.changeModel.create({
+        data: {
+          title: "Change version read all",
+          description: "Desc",
+          justification: "J",
+          changeType: "Normal",
+          risk: "Medium",
+          status: "Draft",
+          createdById: otherUserId,
+        },
+      });
+      await container.prisma.changeVersionModel.create({
+        data: {
+          changeId: change.id,
+          versionNumber: 1,
+          changedById: otherUserId,
+          snapshot: { after: { title: change.title } },
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/changes/${change.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.items).toHaveLength(1);
     });
   });
 
@@ -337,6 +553,20 @@ describe("Problem-change Service API integration", () => {
   });
 
   describe("GET /api/problems/linked-for-incidents (auth required)", () => {
+    it("returns 403 when user only has problems:read:own", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: userId,
+        email: "own-problems@test.com",
+        role: "user",
+        perms: ["problems:read:own"],
+      });
+      await request(app)
+        .get("/api/problems/linked-for-incidents?incidentIds=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
     it("returns link rows for requested incident ids", async ({ skip }) => {
       if (!dbAvailable) skip();
       const problem = await container.prisma.problemModel.create({
@@ -375,6 +605,107 @@ describe("Problem-change Service API integration", () => {
         .get("/api/problems/linked-for-incidents")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(400);
+    });
+  });
+
+  describe("GET /api/problems/:id/versions (auth required)", () => {
+    const ownUserId = "44444444-4444-4444-4444-444444444444";
+    const otherUserId = "55555555-5555-5555-5555-555555555555";
+
+    it("returns 403 when user has problems:read:own and is not owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-problems@test.com",
+        role: "user",
+        perms: ["problems:read:own"],
+      });
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Version owned by other",
+          description: "Desc",
+          status: "Open",
+          createdById: otherUserId,
+        },
+      });
+      await container.prisma.problemVersionModel.create({
+        data: {
+          problemId: problem.id,
+          versionNumber: 1,
+          changedById: otherUserId,
+          snapshot: { after: { title: problem.title } },
+        },
+      });
+
+      await request(app)
+        .get(`/api/problems/${problem.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("returns versions when user has problems:read:own and is owner", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "own-problems@test.com",
+        role: "user",
+        perms: ["problems:read:own"],
+      });
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Version owned by self",
+          description: "Desc",
+          status: "Open",
+          createdById: ownUserId,
+        },
+      });
+      await container.prisma.problemVersionModel.create({
+        data: {
+          problemId: problem.id,
+          versionNumber: 1,
+          changedById: ownUserId,
+          snapshot: { after: { title: problem.title } },
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/problems/${problem.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({ versionNumber: 1, changedById: ownUserId });
+    });
+
+    it("returns versions when user has problems:read:all", async ({ skip }) => {
+      if (!dbAvailable) skip();
+      const token = createTestJwt({
+        sub: ownUserId,
+        email: "all-problems@test.com",
+        role: "user",
+        perms: ["problems:read:all"],
+      });
+      const problem = await container.prisma.problemModel.create({
+        data: {
+          title: "Version read all",
+          description: "Desc",
+          status: "Open",
+          createdById: otherUserId,
+        },
+      });
+      await container.prisma.problemVersionModel.create({
+        data: {
+          problemId: problem.id,
+          versionNumber: 1,
+          changedById: otherUserId,
+          snapshot: { after: { title: problem.title } },
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/problems/${problem.id}/versions`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.items).toHaveLength(1);
     });
   });
 

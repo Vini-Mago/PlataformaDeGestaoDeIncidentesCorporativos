@@ -15,3 +15,27 @@ export class InvalidReportTypeError extends AppError {
     Object.setPrototypeOf(this, InvalidReportTypeError.prototype);
   }
 }
+
+export class ReportExportJobNotFoundError extends AppError {
+  override name = "ReportExportJobNotFoundError";
+  constructor(id: string) {
+    super(`Report export job not found: ${id}`);
+    Object.setPrototypeOf(this, ReportExportJobNotFoundError.prototype);
+  }
+}
+
+export class ReportExportJobNotReadyError extends AppError {
+  override name = "ReportExportJobNotReadyError";
+  constructor(id: string, status: string) {
+    super(`Report export job ${id} is not ready for download (status: ${status})`);
+    Object.setPrototypeOf(this, ReportExportJobNotReadyError.prototype);
+  }
+}
+
+export class ReportExportJobForbiddenError extends AppError {
+  override name = "ReportExportJobForbiddenError";
+  constructor() {
+    super("Forbidden");
+    Object.setPrototypeOf(this, ReportExportJobForbiddenError.prototype);
+  }
+}

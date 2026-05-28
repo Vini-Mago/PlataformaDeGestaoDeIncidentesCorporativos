@@ -13,12 +13,19 @@ describe("GetNotificationUseCase", () => {
     recipient: "user@example.com",
     subject: "Subject",
     body: null,
+    status: "pending",
+    sentAt: null,
+    deliveredAt: null,
+    failedAt: null,
+    errorMessage: null,
     createdAt: new Date(),
   };
 
   beforeEach(() => {
     notificationRepository = {
       create: vi.fn(),
+      markAsSent: vi.fn(),
+      markAsFailed: vi.fn(),
       findById: vi.fn().mockResolvedValue(mockNotification),
       list: vi.fn(),
     };

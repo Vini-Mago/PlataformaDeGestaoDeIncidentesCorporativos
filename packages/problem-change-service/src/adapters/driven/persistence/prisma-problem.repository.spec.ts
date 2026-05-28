@@ -2,6 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { PrismaProblemRepository } from "./prisma-problem.repository";
 import { PROBLEM_INCIDENT_LINKED_EVENT, PROBLEM_INCIDENT_UNLINKED_EVENT } from "@pgic/shared";
 
+interface TxStub {
+  problemLinkedIncidentModel: {
+    deleteMany: ReturnType<typeof vi.fn>;
+    create?: ReturnType<typeof vi.fn>;
+  };
+  outboxModel: {
+    create: ReturnType<typeof vi.fn>;
+  };
+}
+
 describe("PrismaProblemRepository link/unlink outbox", () => {
   it("writes linked event to outbox when linking incident", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
@@ -9,7 +19,7 @@ describe("PrismaProblemRepository link/unlink outbox", () => {
     const createOutbox = vi.fn().mockResolvedValue({});
 
     const prisma = {
-      $transaction: async (fn: (tx: any) => Promise<void>) =>
+      $transaction: async (fn: (tx: TxStub) => Promise<void>) =>
         fn({
           problemLinkedIncidentModel: {
             deleteMany,
@@ -19,9 +29,9 @@ describe("PrismaProblemRepository link/unlink outbox", () => {
             create: createOutbox,
           },
         }),
-    } as any;
+    };
 
-    const repo = new PrismaProblemRepository(prisma);
+    const repo = new PrismaProblemRepository(prisma as unknown as ConstructorParameters<typeof PrismaProblemRepository>[0]);
     await repo.linkIncident("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222");
 
     expect(deleteMany).toHaveBeenCalledWith({ where: { incidentId: "22222222-2222-4222-8222-222222222222" } });
@@ -45,7 +55,7 @@ describe("PrismaProblemRepository link/unlink outbox", () => {
     const createOutbox = vi.fn().mockResolvedValue({});
 
     const prisma = {
-      $transaction: async (fn: (tx: any) => Promise<void>) =>
+      $transaction: async (fn: (tx: TxStub) => Promise<void>) =>
         fn({
           problemLinkedIncidentModel: {
             deleteMany,
@@ -54,9 +64,9 @@ describe("PrismaProblemRepository link/unlink outbox", () => {
             create: createOutbox,
           },
         }),
-    } as any;
+    };
 
-    const repo = new PrismaProblemRepository(prisma);
+    const repo = new PrismaProblemRepository(prisma as unknown as ConstructorParameters<typeof PrismaProblemRepository>[0]);
     await repo.unlinkIncident("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222");
 
     expect(deleteMany).toHaveBeenCalledWith({

@@ -7,6 +7,8 @@ import {
   requestLoggingMiddleware,
   createErrorHandlerMiddleware,
   createHealthHandler,
+  createMetricsHandler,
+  createMetricsMiddleware,
 } from "@pgic/shared";
 import type { HttpErrorMapping } from "@pgic/shared";
 
@@ -37,6 +39,7 @@ export function createApp(
   app.set("trust proxy", 1);
   app.use(requestIdMiddleware);
   app.use(requestLoggingMiddleware);
+  app.use(createMetricsMiddleware("identity-service"));
 
   if (options.corsOrigin) {
     app.use(
@@ -63,6 +66,7 @@ export function createApp(
   app.use("/api", container.rbacRoutes);
 
   app.get("/health", createHealthHandler("identity-service"));
+  app.get("/metrics", createMetricsHandler("identity-service"));
 
   app.use(
     createErrorHandlerMiddleware(

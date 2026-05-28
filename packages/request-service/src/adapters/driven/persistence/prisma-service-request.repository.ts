@@ -47,6 +47,10 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
 
   async create(data: CreateServiceRequestData): Promise<ServiceRequest> {
     return await this.prisma.$transaction(async (tx) => {
+      const requester = await tx.replicatedUserModel.findUnique({
+        where: { id: data.requesterId },
+        select: { email: true },
+      });
       const row = await tx.serviceRequestModel.create({
         data: {
           catalogItemId: data.catalogItemId,
@@ -63,6 +67,7 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
             serviceRequestId: row.id,
             catalogItemId: row.catalogItemId,
             requesterId: row.requesterId,
+            ...(requester?.email ? { requesterEmail: requester.email } : {}),
             status: row.status,
             occurredAt: row.createdAt.toISOString(),
           } as object,
@@ -128,6 +133,10 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
       if (eventName) {
         const trimmedReason =
           params.reason != null && params.reason.trim().length > 0 ? params.reason.trim() : undefined;
+        const requester = await tx.replicatedUserModel.findUnique({
+          where: { id: row.requesterId },
+          select: { email: true },
+        });
         await tx.outboxModel.create({
           data: {
             id: randomUUID(),
@@ -136,6 +145,7 @@ export class PrismaServiceRequestRepository implements IServiceRequestRepository
               serviceRequestId: row.id,
               catalogItemId: row.catalogItemId,
               requesterId: row.requesterId,
+              ...(requester?.email ? { requesterEmail: requester.email } : {}),
               status: params.toStatus,
               actorId: params.actorId,
               fromStatus: current.status,

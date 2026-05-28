@@ -55,7 +55,11 @@ describe("LoginUseCase", () => {
     expect(result.user).toEqual({
       id: "user-1",
       email: "u@example.com",
+      login: "u@example.com",
       name: "Nome",
+      role: "user",
+      status: "active",
+      createdAt: "2025-01-01T00:00:00.000Z",
     });
     expect(result.accessToken).toBe("fake-jwt-token");
     expect(tokenService.sign).toHaveBeenCalledWith({

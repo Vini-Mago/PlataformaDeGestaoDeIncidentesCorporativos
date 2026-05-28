@@ -87,6 +87,12 @@ function renderAt(path: string) {
   );
 }
 
+function metricValue(label: string): string {
+  const card = screen.getByText(label).closest("article");
+  expect(card).not.toBeNull();
+  return card!.querySelector("strong")?.textContent ?? "";
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -163,7 +169,72 @@ describe("dashboard and module pages", () => {
     expect(await screen.findByText("Incidentes abertos")).toBeInTheDocument();
     expect(screen.getByText("API offline")).toBeInTheDocument();
     expect(screen.getByText("Requisições recentes")).toBeInTheDocument();
-    expect(screen.getByText("Alta criticidade")).toBeInTheDocument();
+    expect(screen.getByText("Em risco de SLA")).toBeInTheDocument();
+    expect(screen.getByText("Concluídos no período")).toBeInTheDocument();
+    expect(screen.getByLabelText("Período")).toBeInTheDocument();
+    expect(screen.getByLabelText("Criticidade")).toBeInTheDocument();
+    expect(screen.getByLabelText("Equipe")).toBeInTheDocument();
+  });
+
+  it("keeps old open incidents in open and SLA-risk metrics when a period is selected", async () => {
+    const now = Date.now();
+    const oldCreatedAt = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
+
+    installFetchMock(authenticatedRoutes([
+      {
+        match: "/incidents/incidents",
+        body: [
+          {
+            id: "old-open",
+            title: "Fila de faturamento parada",
+            status: "Open",
+            criticality: "Critical",
+            requesterId: "user-1",
+            assignedTeamId: "ops",
+            createdAt: oldCreatedAt,
+          },
+        ],
+      },
+    ]));
+
+    renderAt("/dashboard");
+    await screen.findByText("Incidentes abertos");
+    await userEvent.selectOptions(screen.getByLabelText("Período"), "24h");
+
+    expect(metricValue("Incidentes abertos")).toBe("1");
+    expect(metricValue("Em risco de SLA")).toBe("1");
+    expect(screen.queryByText("Fila de faturamento parada")).not.toBeInTheDocument();
+  });
+
+  it("counts old incidents resolved inside the selected period by completion date", async () => {
+    const now = Date.now();
+    const oldCreatedAt = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
+    const resolvedAt = new Date(now - 2 * 60 * 60 * 1000).toISOString();
+
+    installFetchMock(authenticatedRoutes([
+      {
+        match: "/incidents/incidents",
+        body: [
+          {
+            id: "old-resolved",
+            title: "VPN estabilizada",
+            status: "Resolved",
+            criticality: "High",
+            requesterId: "user-1",
+            assignedTeamId: "network",
+            createdAt: oldCreatedAt,
+            resolvedAt,
+          },
+        ],
+      },
+    ]));
+
+    renderAt("/dashboard");
+    await screen.findByText("Concluídos no período");
+    await userEvent.selectOptions(screen.getByLabelText("Período"), "24h");
+
+    expect(metricValue("Concluídos no período")).toBe("1");
+    expect(screen.queryByText("VPN estabilizada")).not.toBeInTheDocument();
   });
 
   it("opens the incidents page with create form, list, problem link controls and attachment controls", async () => {

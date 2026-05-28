@@ -27,6 +27,33 @@ export class PrismaNotificationRepository implements INotificationRepository {
     return row ? this.toNotification(row) : null;
   }
 
+  async markAsSent(id: string): Promise<Notification> {
+    const now = new Date();
+    const row = await this.prisma.notificationModel.update({
+      where: { id },
+      data: {
+        status: "sent",
+        sentAt: now,
+        deliveredAt: now,
+        failedAt: null,
+        errorMessage: null,
+      },
+    });
+    return this.toNotification(row);
+  }
+
+  async markAsFailed(id: string, errorMessage: string): Promise<Notification> {
+    const row = await this.prisma.notificationModel.update({
+      where: { id },
+      data: {
+        status: "failed",
+        failedAt: new Date(),
+        errorMessage,
+      },
+    });
+    return this.toNotification(row);
+  }
+
   async list(filters: NotificationListFilters = {}): Promise<Notification[]> {
     const defaultLimit = 100;
     const maxLimit = 500;

@@ -5,6 +5,8 @@ import {
   requestLoggingMiddleware,
   createErrorHandlerMiddleware,
   createHealthHandler,
+  createMetricsHandler,
+  createMetricsMiddleware,
 } from "@pgic/shared";
 import type { HttpErrorMapping } from "@pgic/shared";
 import swaggerUi from "swagger-ui-express";
@@ -22,6 +24,7 @@ export function createApp(
   const app = express();
   app.use(requestIdMiddleware);
   app.use(requestLoggingMiddleware);
+  app.use(createMetricsMiddleware("integration-service"));
 
   if (options.corsOrigin) {
     const origins = options.corsOrigin.split(",").map((s) => s.trim()).filter(Boolean);
@@ -55,6 +58,7 @@ export function createApp(
 
   app.use("/api", container.routes);
   app.get("/health", createHealthHandler("integration-service"));
+  app.get("/metrics", createMetricsHandler("integration-service"));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
     container.mapApplicationErrorToHttp(err);

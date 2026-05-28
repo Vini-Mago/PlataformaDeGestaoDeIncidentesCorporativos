@@ -53,6 +53,7 @@ const publicAllowedHostSuffixes = (process.env.PUBLIC_ALLOWED_HOST_SUFFIXES ?? "
   .map((part) => part.trim())
   .filter((part) => part.length > 0);
 const passwordAuthEnabled = (process.env.PASSWORD_AUTH_ENABLED ?? "false").toLowerCase() === "true";
+const notificationServiceBaseUrl = process.env.NOTIFICATION_SERVICE_BASE_URL?.trim() || undefined;
 const refreshTokenExpiresInSeconds = parseInt(
   process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS ?? String(60 * 60 * 24 * 30),
   10
@@ -123,6 +124,7 @@ async function bootstrap() {
     publicOriginOverride,
     publicAllowedHostSuffixes,
     passwordAuthEnabled,
+    notificationServiceBaseUrl,
     googleOAuth,
     githubOAuth,
   });

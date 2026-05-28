@@ -115,6 +115,13 @@ export class ProblemChangeController {
 
   listProblemVersionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    if (!canReadAllProblems(req)) {
+      const problem = await this.getProblem.execute(id);
+      const uid = req.userId;
+      if (!uid || !isProblemOwner(problem, uid)) {
+        throw new ProblemForbiddenError();
+      }
+    }
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const items = await this.listProblemVersionsUseCase.execute(id, Number.isFinite(limit) ? limit : 50);
     res.json({ items });
@@ -203,6 +210,13 @@ export class ProblemChangeController {
 
   listChangeVersionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    if (!canReadAllChanges(req)) {
+      const change = await this.getChange.execute(id);
+      const uid = req.userId;
+      if (!uid || !isChangeOwner(change, uid)) {
+        throw new ChangeForbiddenError();
+      }
+    }
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const items = await this.listChangeVersionsUseCase.execute(id, Number.isFinite(limit) ? limit : 50);
     res.json({ items });

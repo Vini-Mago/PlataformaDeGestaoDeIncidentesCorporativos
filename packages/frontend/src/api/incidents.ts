@@ -9,7 +9,10 @@ export type IncidentListItem = {
   criticality: string;
   serviceAffected?: string | null;
   requesterId: string;
+  assignedTeamId?: string | null;
   createdAt?: string;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
 };
 
 export type IncidentCriticality = "Low" | "Medium" | "High" | "Critical";

@@ -2,6 +2,11 @@ import { createContainer as createAwilixContainer, asValue, asFunction } from "a
 import { PrismaClient } from "../generated/prisma-client/index";
 import { createAuthMiddleware, JwtTokenVerifier, logger } from "@pgic/shared";
 import { PrismaNotificationRepository } from "./adapters/driven/persistence/prisma-notification.repository";
+import {
+  NoopEmailSenderAdapter,
+  SmtpEmailSenderAdapter,
+  type SmtpEmailSenderConfig,
+} from "./adapters/driven/email/smtp-email-sender.adapter";
 import { CreateNotificationUseCase } from "./application/use-cases/create-notification.use-case";
 import { ListNotificationsUseCase } from "./application/use-cases/list-notifications.use-case";
 import { GetNotificationUseCase } from "./application/use-cases/get-notification.use-case";
@@ -10,10 +15,12 @@ import { RabbitMqRequestEventsConsumer } from "./adapters/driving/messaging/rabb
 import { NotificationController } from "./adapters/driving/http/notification.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
+import type { IEmailSender } from "./application/ports/email-sender.port";
 
 export interface NotificationContainerConfig {
   databaseUrl: string;
   jwtSecret: string;
+  email?: SmtpEmailSenderConfig;
   /** Quando definido, inicia consumidor `request.events` → notificações in-app ao solicitante. */
   rabbitmqUrl?: string;
 }
@@ -22,6 +29,7 @@ interface NotificationCradle {
   config: NotificationContainerConfig;
   prisma: PrismaClient;
   notificationRepository: PrismaNotificationRepository;
+  emailSender: IEmailSender;
   createNotificationUseCase: CreateNotificationUseCase;
   handleRequestDomainEventUseCase: HandleRequestDomainEventUseCase;
   requestDomainEventsConsumer: RabbitMqRequestEventsConsumer | null;
@@ -48,10 +56,16 @@ export function createContainer(config: NotificationContainerConfig) {
     notificationRepository: asFunction(
       (cradle: NotificationCradle) => new PrismaNotificationRepository(cradle.prisma)
     ).singleton(),
+    emailSender: asFunction((cradle: NotificationCradle) => {
+      if (!cradle.config.email) {
+        return new NoopEmailSenderAdapter();
+      }
+      return new SmtpEmailSenderAdapter(cradle.config.email);
+    }).singleton(),
 
     createNotificationUseCase: asFunction(
       (cradle: NotificationCradle) =>
-        new CreateNotificationUseCase(cradle.notificationRepository)
+        new CreateNotificationUseCase(cradle.notificationRepository, cradle.emailSender)
     ).singleton(),
 
     handleRequestDomainEventUseCase: asFunction(

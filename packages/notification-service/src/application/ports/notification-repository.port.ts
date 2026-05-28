@@ -18,6 +18,8 @@ export interface NotificationListFilters {
 
 export interface INotificationRepository {
   create(input: CreateNotificationInput): Promise<Notification>;
+  markAsSent(id: string): Promise<Notification>;
+  markAsFailed(id: string, errorMessage: string): Promise<Notification>;
   findById(id: string): Promise<Notification | null>;
   list(filters?: NotificationListFilters): Promise<Notification[]>;
 }

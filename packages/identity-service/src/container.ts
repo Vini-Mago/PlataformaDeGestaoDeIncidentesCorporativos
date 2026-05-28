@@ -15,6 +15,10 @@ import { RabbitMqEventPublisherAdapter } from "./adapters/driven/messaging/rabbi
 import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import type { IEventPublisher } from "./application/ports/event-publisher.port";
 import { UserCreatedNotifierAdapter } from "./adapters/driven/notifiers/user-created-notifier.adapter";
+import {
+  HttpPasswordRecoveryNotifierAdapter,
+  NoopPasswordRecoveryNotifierAdapter,
+} from "./adapters/driven/notifiers/http-password-recovery-notifier.adapter";
 import { JwtTokenService } from "./adapters/driven/auth/jwt-token.service";
 import { Argon2PasswordHasher } from "./adapters/driven/auth/argon2-password-hasher";
 import { GoogleOAuthProvider } from "./adapters/driven/auth/google-oauth.provider";
@@ -36,6 +40,7 @@ import { createAuthRoutes } from "./adapters/driving/http/auth.routes";
 import { createRbacRoutes } from "./adapters/driving/http/rbac.routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 import { createRequirePermission } from "./adapters/driving/http/authorization.middleware";
+import type { IPasswordRecoveryNotifier } from "./application/ports/password-recovery-notifier.port";
 
 /** Optional event publisher for tests (no-op connect/disconnect). When set, RabbitMQ is not used. */
 export type TestEventPublisher = IEventPublisher & {
@@ -56,6 +61,7 @@ export interface ContainerConfig {
   publicOriginOverride?: string;
   publicAllowedHostSuffixes?: string[];
   passwordAuthEnabled?: boolean;
+  notificationServiceBaseUrl?: string;
   googleOAuth?: { clientId: string; clientSecret: string };
   githubOAuth?: { clientId: string; clientSecret: string };
   /** When set, used instead of RabbitMQ (e.g. no-op in integration tests). */
@@ -92,6 +98,7 @@ interface IdentityCradle {
   passwordAuthEnabled: boolean;
   jwtExpiresInSeconds: number;
   userCreatedNotifier: UserCreatedNotifierAdapter;
+  passwordRecoveryNotifier: IPasswordRecoveryNotifier;
   createUserUseCase: CreateUserUseCase;
   getUserByIdUseCase: GetUserByIdUseCase;
   registerUseCase: RegisterUseCase;
@@ -214,6 +221,15 @@ export function createContainer(config: ContainerConfig) {
       (cradle: IdentityCradle) =>
         new UserCreatedNotifierAdapter(cradle.cache)
     ).singleton(),
+    passwordRecoveryNotifier: asFunction(
+      (cradle: IdentityCradle) => {
+        const baseUrl = cradle.config.notificationServiceBaseUrl?.trim();
+        if (!baseUrl) {
+          return new NoopPasswordRecoveryNotifierAdapter();
+        }
+        return new HttpPasswordRecoveryNotifierAdapter(baseUrl, cradle.tokenService);
+      }
+    ).singleton(),
 
     createUserUseCase: asFunction(
       (cradle: IdentityCradle) =>
@@ -300,7 +316,8 @@ export function createContainer(config: ContainerConfig) {
           cradle.oauthRedirectUrl,
           cradle.oauthRedirectPath,
           cradle.publicOriginOverride,
-          cradle.publicAllowedHostSuffixes
+          cradle.publicAllowedHostSuffixes,
+          cradle.passwordRecoveryNotifier
         )
     ).singleton(),
 

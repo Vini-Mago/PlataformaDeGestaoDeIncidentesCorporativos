@@ -15,6 +15,10 @@ import type { IPasswordResetTokenRepository } from "../../../application/ports/p
 import type { IPasswordHasher } from "../../../application/ports/password-hasher.port";
 import type { IAccessLogRepository } from "../../../application/ports/access-log-repository.port";
 import type { IAuthorizationRepository } from "../../../application/ports/authorization-repository.port";
+import type {
+  IPasswordRecoveryNotifier,
+  PasswordRecoveryNotifyInput,
+} from "../../../application/ports/password-recovery-notifier.port";
 import { resolveEffectivePermissionKeys } from "../../../application/services/effective-permissions";
 import type { RegisterDto } from "../../../application/dtos/register.dto";
 import type { LoginDto } from "../../../application/dtos/login.dto";
@@ -27,7 +31,7 @@ import {
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
 import { createRefreshToken, hashToken } from "./utils/refresh-token";
-import { sendError, sendValidationError } from "@pgic/shared";
+import { logger, sendError, sendValidationError } from "@pgic/shared";
 import { ExpiredRefreshTokenError, InvalidPasswordResetTokenError, InvalidRefreshTokenError } from "../../../application/errors";
 import type { ForgotPasswordDto } from "../../../application/dtos/forgot-password.dto";
 import type { ResetPasswordDto } from "../../../application/dtos/reset-password.dto";
@@ -38,6 +42,11 @@ const OAUTH_LOGIN_CODE_PREFIX = "oauth_login_code:";
 const OAUTH_LOGIN_CODE_TTL_SECONDS = 60;
 const OAUTH_REDIRECT_FLOW_HEADER = "x-pgic-oauth-redirect";
 const PUBLIC_ORIGIN_HEADER = "x-pgic-public-origin";
+const FORGOT_PASSWORD_MIN_RESPONSE_MS = 150;
+
+type PasswordRecoveryNotifyInputWithUserId = PasswordRecoveryNotifyInput & {
+  userId: string;
+};
 
 export class AuthController {
   constructor(
@@ -63,7 +72,8 @@ export class AuthController {
     private readonly oauthRedirectUrl?: string,
     private readonly oauthRedirectPath: string = "/auth/callback",
     private readonly publicOriginOverride?: string,
-    private readonly publicAllowedHostSuffixes: string[] = []
+    private readonly publicAllowedHostSuffixes: string[] = [],
+    private readonly passwordRecoveryNotifier?: IPasswordRecoveryNotifier
   ) {}
 
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -289,18 +299,29 @@ export class AuthController {
   };
 
   forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const startedAt = process.hrtime.bigint();
     try {
       const dto: ForgotPasswordDto = req.body;
       const user = await this.userRepository.findByIdentifier(dto.identifier);
       let resetToken: string | undefined;
       if (user) {
         resetToken = createRefreshToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         await this.passwordResetTokenRepository.create({
           userId: user.id,
           tokenHash: hashToken(resetToken),
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+          expiresAt,
           requesterIp: req.ip ?? null,
         });
+        if (this.passwordRecoveryNotifier) {
+          this.dispatchPasswordRecoveryEmail({
+            recipientEmail: user.email.value,
+            recipientName: user.name,
+            resetToken,
+            expiresAt,
+            userId: user.id,
+          });
+        }
       }
 
       const body: Record<string, string> = {
@@ -310,6 +331,7 @@ export class AuthController {
         body.resetToken = resetToken;
       }
       await this.logAccess(req, "auth.forgot_password", "success", 200, user?.id, dto.identifier);
+      await this.enforceForgotPasswordMinimumLatency(startedAt);
       res.status(200).json(body);
     } catch (err) {
       next(err);
@@ -408,6 +430,27 @@ export class AuthController {
       next(err);
     }
   };
+
+  private dispatchPasswordRecoveryEmail(input: PasswordRecoveryNotifyInputWithUserId): void {
+    setImmediate(() => {
+      void this.passwordRecoveryNotifier?.notifyPasswordRecovery({
+        recipientEmail: input.recipientEmail,
+        recipientName: input.recipientName,
+        resetToken: input.resetToken,
+        expiresAt: input.expiresAt,
+      }).catch((err) => {
+        logger.error({ err, userId: input.userId }, "Failed to dispatch password recovery email");
+      });
+    });
+  }
+
+  private async enforceForgotPasswordMinimumLatency(startedAt: bigint): Promise<void> {
+    const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    const remainingMs = FORGOT_PASSWORD_MIN_RESPONSE_MS - elapsedMs;
+    if (remainingMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remainingMs));
+    }
+  }
 
   private redirectOAuthError(res: Response, message: string, req?: Request): boolean {
     const callbackUrl = this.createOAuthRedirectCallbackUrl(req);

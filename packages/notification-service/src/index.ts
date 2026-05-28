@@ -7,6 +7,7 @@ import type { Server } from "http";
 import { createContainer } from "./container";
 import { createApp } from "./app";
 import { logger } from "@pgic/shared";
+import { buildEmailConfigFromEnv } from "./config/email-config";
 
 const port = parseInt(process.env.NOTIFICATION_SERVICE_PORT ?? "3008", 10);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -35,6 +36,7 @@ async function bootstrap() {
   const container = createContainer({
     databaseUrl,
     jwtSecret,
+    email: buildEmailConfigFromEnv(process.env, isProduction),
     rabbitmqUrl,
   });
 

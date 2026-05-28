@@ -7,6 +7,7 @@ export const requestDomainEventPayloadSchema = z
   .object({
     serviceRequestId: z.string().uuid(),
     requesterId: z.string().uuid(),
+    requesterEmail: z.string().email().optional(),
     occurredAt: z.string().datetime(),
     catalogItemId: z.string().uuid().optional(),
     status: z.string().optional(),

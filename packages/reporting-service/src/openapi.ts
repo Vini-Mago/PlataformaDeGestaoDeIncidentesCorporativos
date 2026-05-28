@@ -39,6 +39,23 @@ const ReportDefinitionsQuerySchema = z.object({
   reportType: z.enum(["incidents_summary", "kpi_dashboard", "sla_compliance", "custom"]).optional(),
 }).openapi("ReportDefinitionsQuery");
 
+const ReportExportJobSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["pending", "processing", "completed", "failed"]),
+  format: z.literal("csv"),
+  fileName: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+}).openapi("ReportExportJob");
+
+const ReportExportJobAcceptedSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["pending", "processing", "completed", "failed"]),
+  createdAt: z.string().datetime(),
+}).openapi("ReportExportJobAccepted");
+
 registry.registerPath({
   method: "get",
   path: "/api/report-definitions",
@@ -67,6 +84,49 @@ registry.registerPath({
     },
     400: { description: "Invalid filter", content: { "application/json": { schema: ErrorSchema } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/report-definitions/export-jobs",
+  summary: "Request asynchronous CSV export job",
+  tags: ["Report Definitions"],
+  security: [{ bearerAuth: [] }],
+  request: { query: ReportDefinitionsQuerySchema },
+  responses: {
+    202: { description: "Accepted", content: { "application/json": { schema: ReportExportJobAcceptedSchema } } },
+    400: { description: "Invalid filter", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/report-definitions/export-jobs/{id}",
+  summary: "Get export job status",
+  tags: ["Report Definitions"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Export job", content: { "application/json": { schema: ReportExportJobSchema } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/report-definitions/export-jobs/{id}/download",
+  summary: "Download export file when job is completed",
+  tags: ["Report Definitions"],
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "CSV file", content: { "text/csv": { schema: z.string() } } },
+    401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+    409: { description: "Job not completed", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
 

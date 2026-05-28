@@ -8,6 +8,7 @@ import type {
   AddIncidentAttachmentInput,
   IncidentAttachment,
   IncidentListFilters,
+  IncidentStatusHistoryEntry,
 } from "../../../application/ports/incident-repository.port";
 import { INCIDENT_CREATED_EVENT, INCIDENT_STATUS_CHANGED_EVENT, INCIDENT_ASSIGNED_EVENT } from "@pgic/shared";
 
@@ -72,16 +73,21 @@ export class PrismaIncidentRepository implements IIncidentRepository {
     (Incident & {
       comments: Array<{
         id: string;
+        incidentId: string;
         authorId: string;
         body: string;
         createdAt: Date;
       }>;
+      statusHistory: IncidentStatusHistoryEntry[];
     }) | null
   > {
     const row = await this.prisma.incidentModel.findUnique({
       where: { id },
       include: {
         comments: {
+          orderBy: { createdAt: "asc" },
+        },
+        statusHistory: {
           orderBy: { createdAt: "asc" },
         },
       },
@@ -91,9 +97,19 @@ export class PrismaIncidentRepository implements IIncidentRepository {
       ...this.toIncident(row),
       comments: row.comments.map((c) => ({
         id: c.id,
+        incidentId: c.incidentId,
         authorId: c.authorId,
         body: c.body,
         createdAt: c.createdAt,
+      })),
+      statusHistory: row.statusHistory.map((entry) => ({
+        id: entry.id,
+        incidentId: entry.incidentId,
+        fromStatus: entry.fromStatus,
+        toStatus: entry.toStatus,
+        changedById: entry.changedById,
+        comment: entry.comment,
+        createdAt: entry.createdAt,
       })),
     };
   }

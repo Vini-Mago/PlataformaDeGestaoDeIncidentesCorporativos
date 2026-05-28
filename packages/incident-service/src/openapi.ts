@@ -40,6 +40,16 @@ const CommentSchema = z.object({
   createdAt: z.string().datetime(),
 }).openapi("IncidentComment");
 
+const StatusHistorySchema = z.object({
+  id: z.string().uuid(),
+  incidentId: z.string().uuid(),
+  fromStatus: z.string(),
+  toStatus: z.string(),
+  changedById: z.string().nullable(),
+  comment: z.string().nullable(),
+  createdAt: z.string().datetime(),
+}).openapi("IncidentStatusHistory");
+
 const AttachmentSchema = z.object({
   id: z.string().uuid(),
   incidentId: z.string().uuid(),
@@ -52,6 +62,7 @@ const AttachmentSchema = z.object({
 
 const IncidentWithCommentsSchema = IncidentSchema.extend({
   comments: z.array(CommentSchema),
+  statusHistory: z.array(StatusHistorySchema),
 }).openapi("IncidentWithComments");
 
 registry.registerPath({
@@ -115,12 +126,12 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/api/incidents/{id}",
-  summary: "Get incident by id (with comments)",
+  summary: "Get incident by id (with comments and status history)",
   tags: ["Incidents"],
   security: [{ bearerAuth: [] }],
   request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
-    200: { description: "Incident with comments", content: { "application/json": { schema: IncidentWithCommentsSchema } } },
+    200: { description: "Incident with comments and status history", content: { "application/json": { schema: IncidentWithCommentsSchema } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
   },

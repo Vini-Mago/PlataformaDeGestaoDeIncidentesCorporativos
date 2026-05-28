@@ -65,6 +65,20 @@ describe("Request Service API integration", () => {
 
     beforeAll(async () => {
       if (!dbAvailable) return;
+      await container.prisma.replicatedUserModel.upsert({
+        where: { id: userId },
+        update: {
+          email: "user@test.com",
+          name: "Request User",
+          lastEventOccurredAt: new Date(),
+        },
+        create: {
+          id: userId,
+          email: "user@test.com",
+          name: "Request User",
+          lastEventOccurredAt: new Date(),
+        },
+      });
       const item = await container.prisma.serviceCatalogItemModel.create({
         data: {
           name: "Outbox catalog",
@@ -97,6 +111,7 @@ describe("Request Service API integration", () => {
         serviceRequestId: id,
         catalogItemId,
         requesterId: userId,
+        requesterEmail: "user@test.com",
         status: "Draft",
       });
     });
@@ -127,6 +142,7 @@ describe("Request Service API integration", () => {
         serviceRequestId: id,
         toStatus: "Submitted",
         actorId: userId,
+        requesterEmail: "user@test.com",
       });
     });
   });
@@ -134,6 +150,7 @@ describe("Request Service API integration", () => {
   describe("GET /api/catalog-items (public)", () => {
     it("returns 200 and empty array when no catalog items", async ({ skip }) => {
       if (!dbAvailable) skip();
+      await container.prisma.serviceCatalogItemModel.deleteMany({});
       const res = await request(app).get("/api/catalog-items").expect(200);
       expect(res.body).toEqual([]);
     });

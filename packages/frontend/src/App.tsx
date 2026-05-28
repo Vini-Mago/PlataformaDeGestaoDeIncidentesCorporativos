@@ -227,11 +227,33 @@ function StatCard({ label, value, detail }: { label: string; value: string | num
   );
 }
 
+function periodDurationMs(period: "24h" | "7d" | "30d"): number {
+  if (period === "24h") return 24 * 60 * 60 * 1000;
+  if (period === "7d") return 7 * 24 * 60 * 60 * 1000;
+  return 30 * 24 * 60 * 60 * 1000;
+}
+
+function parseTimestamp(value?: string | null): number | null {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function completionTimestamp(incident: IncidentListItem): number | null {
+  const primary = incident.status === "Closed" ? incident.closedAt : incident.resolvedAt;
+  const secondary = incident.status === "Closed" ? incident.resolvedAt : incident.closedAt;
+  return parseTimestamp(primary) ?? parseTimestamp(secondary) ?? parseTimestamp(incident.createdAt);
+}
+
 function DashboardHome() {
   const [incidents, setIncidents] = useState<IncidentListItem[] | null>(null);
   const [requests, setRequests] = useState<ServiceRequestListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<"24h" | "7d" | "30d">("7d");
+  const [criticalityFilter, setCriticalityFilter] = useState<"all" | "Low" | "Medium" | "High" | "Critical">("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -243,6 +265,7 @@ function DashboardHome() {
       ]);
       setIncidents(incidentRows);
       setRequests(requestRows);
+      setLastUpdatedAt(new Date());
       if (!incidentRows && !requestRows) setError("Sem permissão ou serviços indisponíveis para carregar indicadores.");
     } finally {
       setLoading(false);
@@ -253,18 +276,60 @@ function DashboardHome() {
     void load();
   }, [load]);
 
-  const metrics = useMemo(() => {
-    const incidentRows = incidents ?? [];
-    const requestRows = requests ?? [];
-    return {
-      openIncidents: incidentRows.filter((i) => !["Resolved", "Closed"].includes(i.status)).length,
-      criticalIncidents: incidentRows.filter((i) => i.criticality === "Critical" || i.criticality === "High").length,
-      pendingRequests: requestRows.filter((r) => !["Completed", "Cancelled", "Rejected"].includes(r.status)).length,
-      completedRequests: requestRows.filter((r) => r.status === "Completed").length,
-    };
-  }, [incidents, requests]);
+  const teamOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const row of incidents ?? []) {
+      if (row.assignedTeamId && row.assignedTeamId.trim()) values.add(row.assignedTeamId.trim());
+    }
+    return Array.from(values).sort();
+  }, [incidents]);
 
-  const latestIncidents = (incidents ?? []).slice(0, 5);
+  const dimensionFilteredIncidents = useMemo(() => {
+    const incidentRows = incidents ?? [];
+    return incidentRows.filter((row) => {
+      if (criticalityFilter !== "all" && row.criticality !== criticalityFilter) return false;
+      if (teamFilter !== "all" && (row.assignedTeamId ?? "") !== teamFilter) return false;
+      return true;
+    });
+  }, [incidents, criticalityFilter, teamFilter]);
+
+  const periodFilteredIncidents = useMemo(() => {
+    const periodStartMs = Date.now() - periodDurationMs(period);
+    return dimensionFilteredIncidents.filter((row) => {
+      if (!row.createdAt) return true;
+      const createdAtMs = parseTimestamp(row.createdAt);
+      if (createdAtMs === null) return true;
+      return createdAtMs >= periodStartMs;
+    });
+  }, [dimensionFilteredIncidents, period]);
+
+  const metrics = useMemo(() => {
+    const requestRows = requests ?? [];
+    const openStatuses = new Set(["Open", "InAnalysis", "InProgress", "PendingCustomer"]);
+    const closedStatuses = new Set(["Resolved", "Closed"]);
+    const now = Date.now();
+    const periodStartMs = now - periodDurationMs(period);
+    const riskThresholdMs = 4 * 60 * 60 * 1000;
+    const openIncidents = dimensionFilteredIncidents.filter((i) => openStatuses.has(i.status));
+    const slaAtRisk = openIncidents.filter((i) => {
+      const createdAtMs = parseTimestamp(i.createdAt);
+      if (createdAtMs === null) return false;
+      return now - createdAtMs >= riskThresholdMs;
+    });
+    const completedInPeriod = dimensionFilteredIncidents.filter((i) => {
+      if (!closedStatuses.has(i.status)) return false;
+      const completedAtMs = completionTimestamp(i);
+      return completedAtMs !== null && completedAtMs >= periodStartMs;
+    });
+    return {
+      openIncidents: openIncidents.length,
+      slaAtRisk: slaAtRisk.length,
+      completedInPeriod: completedInPeriod.length,
+      pendingRequests: requestRows.filter((r) => !["Completed", "Cancelled", "Rejected"].includes(r.status)).length,
+    };
+  }, [dimensionFilteredIncidents, period, requests]);
+
+  const latestIncidents = periodFilteredIncidents.slice(0, 5);
   const latestRequests = (requests ?? []).slice(0, 5);
 
   return (
@@ -273,17 +338,61 @@ function DashboardHome() {
         <div>
           <span className="eyebrow">Dashboard</span>
           <h2>Visão operacional</h2>
+          <small className="hint">
+            {lastUpdatedAt ? `Última atualização: ${lastUpdatedAt.toLocaleString()}` : "Última atualização: —"}
+          </small>
         </div>
         <button type="button" className="btn-secondary" onClick={() => void load()} disabled={loading}>
           {loading ? "Atualizando..." : "Atualizar"}
         </button>
       </section>
+      <section className="panel surface-panel">
+        <div className="form-grid-2">
+          <label>
+            Período
+            <select value={period} onChange={(ev) => setPeriod(ev.target.value as "24h" | "7d" | "30d")}>
+              <option value="24h">Últimas 24h</option>
+              <option value="7d">Últimos 7 dias</option>
+              <option value="30d">Últimos 30 dias</option>
+            </select>
+          </label>
+          <label>
+            Criticidade
+            <select
+              value={criticalityFilter}
+              onChange={(ev) => setCriticalityFilter(ev.target.value as "all" | "Low" | "Medium" | "High" | "Critical")}
+            >
+              <option value="all">Todas</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </label>
+        </div>
+        <div className="form-grid-2">
+          <label>
+            Equipe
+            <select value={teamFilter} onChange={(ev) => setTeamFilter(ev.target.value)}>
+              <option value="all">Todas</option>
+              {teamOptions.map((team) => (
+                <option key={team} value={team}>
+                  {team}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="hint">
+            Indicador "Em risco de SLA" usa heurística operacional: incidente aberto com mais de 4h desde criação.
+          </div>
+        </div>
+      </section>
       {error ? <div className="banner-error">{error}</div> : null}
       <section className="stats-grid">
-        <StatCard label="Incidentes abertos" value={metrics.openIncidents} detail="exceto resolvidos/fechados" />
-        <StatCard label="Alta criticidade" value={metrics.criticalIncidents} detail="High + Critical" />
+        <StatCard label="Incidentes abertos" value={metrics.openIncidents} detail="status operacionais" />
+        <StatCard label="Em risco de SLA" value={metrics.slaAtRisk} detail="abertos há mais de 4h" />
+        <StatCard label="Concluídos no período" value={metrics.completedInPeriod} detail="Resolved + Closed" />
         <StatCard label="Requisições ativas" value={metrics.pendingRequests} detail="em fluxo" />
-        <StatCard label="Requisições concluídas" value={metrics.completedRequests} detail="histórico carregado" />
       </section>
       <section className="dashboard-grid">
         <DashboardTable title="Incidentes recentes" empty="Sem incidentes visíveis">

@@ -2,9 +2,13 @@ import { createContainer as createAwilixContainer, asValue, asFunction } from "a
 import { PrismaClient } from "../generated/prisma-client/index";
 import { createAuthMiddleware, JwtTokenVerifier } from "@pgic/shared";
 import { PrismaReportDefinitionRepository } from "./adapters/driven/persistence/prisma-report-definition.repository";
+import { PrismaReportExportJobRepository } from "./adapters/driven/persistence/prisma-report-export-job.repository";
 import { CreateReportDefinitionUseCase } from "./application/use-cases/create-report-definition.use-case";
 import { ListReportDefinitionsUseCase } from "./application/use-cases/list-report-definitions.use-case";
 import { GetReportDefinitionUseCase } from "./application/use-cases/get-report-definition.use-case";
+import { RequestReportExportUseCase } from "./application/use-cases/request-report-export.use-case";
+import { GetReportExportJobUseCase } from "./application/use-cases/get-report-export-job.use-case";
+import { DownloadReportExportJobUseCase } from "./application/use-cases/download-report-export-job.use-case";
 import { ReportingController } from "./adapters/driving/http/reporting.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -18,9 +22,13 @@ interface ReportingCradle {
   config: ReportingContainerConfig;
   prisma: PrismaClient;
   reportDefinitionRepository: PrismaReportDefinitionRepository;
+  reportExportJobRepository: PrismaReportExportJobRepository;
   createReportDefinitionUseCase: CreateReportDefinitionUseCase;
   listReportDefinitionsUseCase: ListReportDefinitionsUseCase;
   getReportDefinitionUseCase: GetReportDefinitionUseCase;
+  requestReportExportUseCase: RequestReportExportUseCase;
+  getReportExportJobUseCase: GetReportExportJobUseCase;
+  downloadReportExportJobUseCase: DownloadReportExportJobUseCase;
   reportingController: ReportingController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -42,6 +50,9 @@ export function createContainer(config: ReportingContainerConfig) {
     reportDefinitionRepository: asFunction(
       (cradle: ReportingCradle) => new PrismaReportDefinitionRepository(cradle.prisma)
     ).singleton(),
+    reportExportJobRepository: asFunction(
+      (cradle: ReportingCradle) => new PrismaReportExportJobRepository(cradle.prisma)
+    ).singleton(),
 
     createReportDefinitionUseCase: asFunction(
       (cradle: ReportingCradle) =>
@@ -57,13 +68,31 @@ export function createContainer(config: ReportingContainerConfig) {
       (cradle: ReportingCradle) =>
         new GetReportDefinitionUseCase(cradle.reportDefinitionRepository)
     ).singleton(),
+    requestReportExportUseCase: asFunction(
+      (cradle: ReportingCradle) =>
+        new RequestReportExportUseCase(
+          cradle.reportExportJobRepository,
+          cradle.reportDefinitionRepository
+        )
+    ).singleton(),
+    getReportExportJobUseCase: asFunction(
+      (cradle: ReportingCradle) =>
+        new GetReportExportJobUseCase(cradle.reportExportJobRepository)
+    ).singleton(),
+    downloadReportExportJobUseCase: asFunction(
+      (cradle: ReportingCradle) =>
+        new DownloadReportExportJobUseCase(cradle.reportExportJobRepository)
+    ).singleton(),
 
     reportingController: asFunction(
       (cradle: ReportingCradle) =>
         new ReportingController(
           cradle.createReportDefinitionUseCase,
           cradle.listReportDefinitionsUseCase,
-          cradle.getReportDefinitionUseCase
+          cradle.getReportDefinitionUseCase,
+          cradle.requestReportExportUseCase,
+          cradle.getReportExportJobUseCase,
+          cradle.downloadReportExportJobUseCase
         )
     ).singleton(),
 

@@ -1,5 +1,6 @@
 export { sendError } from "./send-error";
 export { createHealthHandler } from "./health";
+export { createMetricsHandler, createMetricsMiddleware } from "./metrics.middleware";
 export type { HttpErrorMapping } from "./error-mapping";
 export { createErrorToHttpMapper } from "./error-to-http.factory";
 export { sendValidationError } from "./send-validation-error";

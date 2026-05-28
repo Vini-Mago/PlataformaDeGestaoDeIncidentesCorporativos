@@ -21,6 +21,17 @@ describe("createNotificationSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts transient deliveryBody for sender-only content", () => {
+    const result = createNotificationSchema.safeParse({
+      type: "email",
+      recipient: "user@example.com",
+      subject: "Password recovery",
+      body: "Sensitive content omitted.",
+      deliveryBody: "Use token raw-reset-token",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects missing type", () => {
     const result = createNotificationSchema.safeParse({
       recipient: "user@example.com",

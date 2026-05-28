@@ -32,6 +32,16 @@ export interface IncidentAttachment {
   createdAt: Date;
 }
 
+export interface IncidentStatusHistoryEntry {
+  id: string;
+  incidentId: string;
+  fromStatus: string;
+  toStatus: string;
+  changedById: string | null;
+  comment: string | null;
+  createdAt: Date;
+}
+
 export interface AddIncidentAttachmentInput {
   incidentId: string;
   uploadedById: string;
@@ -44,7 +54,10 @@ export interface IIncidentRepository {
   create(input: CreateIncidentInput): Promise<Incident>;
   findByExternalRef(externalSource: string, externalId: string): Promise<Incident | null>;
   findById(id: string): Promise<Incident | null>;
-  findByIdWithComments(id: string): Promise<(Incident & { comments: Array<{ id: string; authorId: string; body: string; createdAt: Date }> }) | null>;
+  findByIdWithComments(id: string): Promise<(Incident & {
+    comments: Array<{ id: string; incidentId: string; authorId: string; body: string; createdAt: Date }>;
+    statusHistory: IncidentStatusHistoryEntry[];
+  }) | null>;
   list(filters: IncidentListFilters): Promise<Incident[]>;
   updateStatus(
     id: string,

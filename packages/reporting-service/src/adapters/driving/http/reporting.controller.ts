@@ -3,10 +3,14 @@ import type { AuthenticatedRequest } from "@pgic/shared";
 import type { CreateReportDefinitionUseCase } from "../../../application/use-cases/create-report-definition.use-case";
 import type { ListReportDefinitionsUseCase } from "../../../application/use-cases/list-report-definitions.use-case";
 import type { GetReportDefinitionUseCase } from "../../../application/use-cases/get-report-definition.use-case";
+import type { RequestReportExportUseCase } from "../../../application/use-cases/request-report-export.use-case";
+import type { GetReportExportJobUseCase } from "../../../application/use-cases/get-report-export-job.use-case";
+import type { DownloadReportExportJobUseCase } from "../../../application/use-cases/download-report-export-job.use-case";
 import { parseReportTypeFilterOrThrow } from "../../../application/use-cases/list-report-definitions.use-case";
 import { asyncHandler } from "@pgic/shared";
 import { createReportDefinitionSchema } from "../../../application/dtos/create-report-definition.dto";
 import type { ReportDefinition } from "../../../domain/entities/report-definition.entity";
+import { canAccessAllReportExports } from "./report-export-access.helper";
 
 function csvEscape(value: unknown): string {
   const text = value instanceof Date ? value.toISOString() : String(value ?? "");
@@ -35,7 +39,10 @@ export class ReportingController {
   constructor(
     private readonly createReportDefinition: CreateReportDefinitionUseCase,
     private readonly listReportDefinitions: ListReportDefinitionsUseCase,
-    private readonly getReportDefinition: GetReportDefinitionUseCase
+    private readonly getReportDefinition: GetReportDefinitionUseCase,
+    private readonly requestReportExport: RequestReportExportUseCase,
+    private readonly getReportExportJob: GetReportExportJobUseCase,
+    private readonly downloadReportExportJob: DownloadReportExportJobUseCase
   ) {}
 
   createReportDefinitionHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -71,5 +78,36 @@ export class ReportingController {
     const { id } = req.params;
     const report = await this.getReportDefinition.execute(id);
     res.json(report);
+  });
+
+  requestExportJobHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const reportType = parseReportTypeFilterOrThrow(req.query.reportType);
+    const job = await this.requestReportExport.execute({
+      requestedById: req.userId,
+      reportType,
+    });
+    res.status(202).json(job);
+  });
+
+  getExportJobHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const job = await this.getReportExportJob.execute(id, {
+      requesterId: req.userId,
+      canAccessAll: canAccessAllReportExports(req),
+    });
+    res.json(job);
+  });
+
+  downloadExportJobHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const file = await this.downloadReportExportJob.execute(id, {
+      requesterId: req.userId,
+      canAccessAll: canAccessAllReportExports(req),
+    });
+    res
+      .status(200)
+      .setHeader("Content-Type", "text/csv; charset=utf-8")
+      .setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`)
+      .send(file.content);
   });
 }

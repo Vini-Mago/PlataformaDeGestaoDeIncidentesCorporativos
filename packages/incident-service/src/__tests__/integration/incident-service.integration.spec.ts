@@ -6,7 +6,8 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 const packageRoot = path.resolve(__dirname, "../../..");
-loadEnv({ path: path.join(packageRoot, "../../../.env") });
+const repoRoot = path.resolve(packageRoot, "../..");
+loadEnv({ path: path.join(repoRoot, ".env") });
 loadEnv({ path: path.join(packageRoot, ".env"), override: true });
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -15,13 +16,12 @@ import { createContainer } from "../../container";
 import { createApp } from "../../app";
 import { createTestJwt, TEST_JWT_SECRET } from "./test-jwt";
 
-const databaseUrl =
-  process.env.INCIDENT_DATABASE_URL ??
-  "postgresql://pgic:pgic@localhost:5432/incident_service";
+const databaseUrl = process.env.INCIDENT_DATABASE_URL;
+const unavailableDatabaseUrl = "postgresql://pgic:pgic@127.0.0.1:1/incident_service";
 
 describe("Incident Service API integration", () => {
   const config = {
-    databaseUrl,
+    databaseUrl: databaseUrl ?? unavailableDatabaseUrl,
     jwtSecret: TEST_JWT_SECRET,
     rabbitmqUrl: undefined,
   };
@@ -34,6 +34,10 @@ describe("Incident Service API integration", () => {
   const authToken = createTestJwt({ sub: userId, email: "user@test.com", role: "admin" });
 
   beforeAll(async () => {
+    if (!databaseUrl) {
+      console.warn("Integration tests: missing INCIDENT_DATABASE_URL. Load repo .env or export it explicitly.");
+      return;
+    }
     try {
       await container.prisma.$connect();
       await container.prisma.incidentAttachmentModel.deleteMany({});
@@ -176,7 +180,7 @@ describe("Incident Service API integration", () => {
       expect(res.body).toHaveProperty("error", "Incident not found: 00000000-0000-0000-0000-000000000000");
     });
 
-    it("returns 200 with incident and comments", async ({ skip }) => {
+    it("returns 200 with incident, comments and status history", async ({ skip }) => {
       if (!dbAvailable) skip();
       const incident = await container.prisma.incidentModel.create({
         data: {
@@ -185,6 +189,15 @@ describe("Incident Service API integration", () => {
           status: "Open",
           criticality: "Low",
           requesterId: userId,
+        },
+      });
+      await container.prisma.incidentStatusHistoryModel.create({
+        data: {
+          incidentId: incident.id,
+          fromStatus: "Open",
+          toStatus: "InAnalysis",
+          changedById: userId,
+          comment: "Started triage",
         },
       });
       const res = await request(app)
@@ -198,6 +211,16 @@ describe("Incident Service API integration", () => {
       });
       expect(res.body).toHaveProperty("comments");
       expect(Array.isArray(res.body.comments)).toBe(true);
+      expect(res.body).toHaveProperty("statusHistory");
+      expect(res.body.statusHistory).toEqual([
+        expect.objectContaining({
+          incidentId: incident.id,
+          fromStatus: "Open",
+          toStatus: "InAnalysis",
+          changedById: userId,
+          comment: "Started triage",
+        }),
+      ]);
     });
 
     const readOwnPerms = ["incidents:read:own"];

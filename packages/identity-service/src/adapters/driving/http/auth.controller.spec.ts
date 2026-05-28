@@ -16,6 +16,7 @@ import type { IPasswordResetTokenRepository } from "../../../application/ports/p
 import type { IPasswordHasher } from "../../../application/ports/password-hasher.port";
 import type { IAccessLogRepository } from "../../../application/ports/access-log-repository.port";
 import type { IAuthorizationRepository } from "../../../application/ports/authorization-repository.port";
+import type { IPasswordRecoveryNotifier } from "../../../application/ports/password-recovery-notifier.port";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
@@ -112,7 +113,7 @@ describe("AuthController", () => {
     }) as NextFunction;
   });
 
-  function createController(): AuthController {
+  function createController(passwordRecoveryNotifier?: IPasswordRecoveryNotifier): AuthController {
     return new AuthController(
       registerUseCase,
       loginUseCase,
@@ -132,7 +133,12 @@ describe("AuthController", () => {
       passwordHasher,
       accessLogRepository,
       authorizationRepository,
-      false
+      false,
+      undefined,
+      "/auth/callback",
+      undefined,
+      [],
+      passwordRecoveryNotifier
     );
   }
 
@@ -320,6 +326,49 @@ describe("AuthController", () => {
 
       expect(res.status).toHaveBeenCalledWith(503);
       expect(res.json).toHaveBeenCalledWith({ error: "GitHub OAuth is not configured" });
+    });
+  });
+
+  describe("forgotPassword", () => {
+    it("returns a uniform message when account does not exist", async () => {
+      vi.mocked(userRepository.findByIdentifier).mockResolvedValue(null);
+      const controller = createController();
+      const req = createMockRequest({ body: { identifier: "missing@example.com" } });
+
+      await controller.forgotPassword(req, res, next);
+
+      expect(passwordResetTokenRepository.create).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "If the account exists, recovery instructions were sent.",
+      });
+    });
+
+    it("dispatches password recovery email without waiting for notifier completion", async () => {
+      vi.mocked(userRepository.findByIdentifier).mockResolvedValue({
+        id: "user-1",
+        email: { value: "u@example.com" },
+        name: "User",
+      } as never);
+      vi.mocked(passwordResetTokenRepository.create).mockResolvedValue(undefined as never);
+      const notifier: IPasswordRecoveryNotifier = {
+        notifyPasswordRecovery: vi.fn().mockReturnValue(new Promise(() => undefined)),
+      };
+      const controller = createController(notifier);
+      const req = createMockRequest({ body: { identifier: "u@example.com" } });
+
+      await controller.forgotPassword(req, res, next);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(notifier.notifyPasswordRecovery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientEmail: "u@example.com",
+          recipientName: "User",
+          resetToken: expect.any(String),
+          expiresAt: expect.any(Date),
+        })
+      );
     });
   });
 

@@ -13,6 +13,7 @@ describe("GetIncidentUseCase", () => {
     status: "Open",
     criticality: "Medium",
     comments: [{ id: "c1", authorId: "u1", body: "Comment", createdAt: new Date() }],
+    statusHistory: [],
   };
 
   beforeEach(() => {
@@ -24,6 +25,9 @@ describe("GetIncidentUseCase", () => {
       updateStatus: vi.fn(),
       assign: vi.fn(),
       addComment: vi.fn(),
+      addAttachment: vi.fn(),
+      listAttachments: vi.fn(),
+      setProblemLink: vi.fn(),
     };
   });
 

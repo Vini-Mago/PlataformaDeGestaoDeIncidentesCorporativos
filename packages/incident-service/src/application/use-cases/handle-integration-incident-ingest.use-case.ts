@@ -1,4 +1,5 @@
 import type { IIncidentRepository } from "../ports/incident-repository.port";
+import { logger } from "@pgic/shared";
 
 export interface IntegrationIncidentIngestPayload {
   externalId: string;
@@ -8,6 +9,7 @@ export interface IntegrationIncidentIngestPayload {
   criticality: string;
   serviceAffected?: string | null;
   requesterId: string;
+  correlationId?: string | null;
 }
 
 export class HandleIntegrationIncidentIngestUseCase {
@@ -19,6 +21,16 @@ export class HandleIntegrationIncidentIngestUseCase {
       payload.externalId
     );
     if (existing) {
+      logger.info(
+        {
+          incidentId: existing.id,
+          externalSource: payload.externalSource,
+          externalId: payload.externalId,
+          correlationId: payload.correlationId ?? null,
+          decision: "replay_existing",
+        },
+        "integration ingest idempotent replay"
+      );
       return { incident: existing, created: false as const };
     }
 
@@ -35,6 +47,17 @@ export class HandleIntegrationIncidentIngestUseCase {
       externalSource: payload.externalSource,
       publishCreatedEvent: true,
     });
+
+    logger.info(
+      {
+        incidentId: incident.id,
+        externalSource: payload.externalSource,
+        externalId: payload.externalId,
+        correlationId: payload.correlationId ?? null,
+        decision: "created_new",
+      },
+      "integration ingest incident created"
+    );
 
     return { incident, created: true as const };
   }
