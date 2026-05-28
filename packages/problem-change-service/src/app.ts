@@ -20,6 +20,7 @@ export interface ProblemChangeAppContainer {
 export interface CreateAppOptions {
   corsOrigin?: string;
   baseUrl?: string;
+  metricsToken?: string;
 }
 
 export function createApp(
@@ -52,7 +53,7 @@ export function createApp(
 
   app.use("/api", container.routes);
   app.get("/health", createHealthHandler("problem-change-service"));
-  app.get("/metrics", createMetricsHandler("problem-change-service"));
+  app.get("/metrics", createMetricsHandler("problem-change-service", { token: options.metricsToken }));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
     container.mapApplicationErrorToHttp(err);

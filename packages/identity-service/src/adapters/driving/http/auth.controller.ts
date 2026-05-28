@@ -439,7 +439,13 @@ export class AuthController {
         resetToken: input.resetToken,
         expiresAt: input.expiresAt,
       }).catch((err) => {
-        logger.error({ err, userId: input.userId }, "Failed to dispatch password recovery email");
+        logger.error(
+          {
+            userId: input.userId,
+            errorName: err instanceof Error ? err.name : "unknown_error",
+          },
+          "Failed to dispatch password recovery email"
+        );
       });
     });
   }

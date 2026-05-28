@@ -9,6 +9,16 @@ interface NotificationApiResponse {
   id?: string;
 }
 
+class NotificationServiceRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode?: number,
+    public readonly upstreamRequestId?: string
+  ) {
+    super(message);
+  }
+}
+
 export class HttpPasswordRecoveryNotifierAdapter implements IPasswordRecoveryNotifier {
   constructor(
     private readonly notificationServiceBaseUrl: string,
@@ -85,7 +95,13 @@ export class HttpPasswordRecoveryNotifierAdapter implements IPasswordRecoveryNot
               }
               return;
             }
-            reject(new Error(`notification-service returned ${res.statusCode ?? "unknown"}: ${chunks}`));
+            reject(
+              new NotificationServiceRequestError(
+                `notification-service returned ${res.statusCode ?? "unknown"}`,
+                res.statusCode,
+                typeof res.headers["x-request-id"] === "string" ? res.headers["x-request-id"] : undefined
+              )
+            );
           });
         }
       );
@@ -97,7 +113,14 @@ export class HttpPasswordRecoveryNotifierAdapter implements IPasswordRecoveryNot
       req.write(body);
       req.end();
     }).catch((err) => {
-      logger.error({ err }, "Failed to send password recovery notification");
+      if (err instanceof NotificationServiceRequestError) {
+        logger.error(
+          { statusCode: err.statusCode, upstreamRequestId: err.upstreamRequestId },
+          "Failed to send password recovery notification"
+        );
+        throw err;
+      }
+      logger.error({ err: err instanceof Error ? err.message : "unknown_error" }, "Failed to send password recovery notification");
       throw err;
     });
   }

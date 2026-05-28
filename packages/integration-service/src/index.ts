@@ -42,7 +42,11 @@ async function bootstrap() {
   });
 
   const baseUrl = process.env.INTEGRATION_SERVICE_URL ?? `http://localhost:${port}`;
-  const app = createApp(container, { corsOrigin: process.env.CORS_ORIGIN, baseUrl });
+  const app = createApp(container, {
+    corsOrigin: process.env.CORS_ORIGIN,
+    baseUrl,
+    metricsToken: process.env.METRICS_TOKEN,
+  });
   const server: Server = app.listen(port, () => {
     logger.info(`Integration service listening on http://localhost:${port}`);
   });

@@ -19,7 +19,7 @@ export interface IntegrationAppContainer {
 
 export function createApp(
   container: IntegrationAppContainer,
-  options: { corsOrigin?: string; baseUrl?: string } = {}
+  options: { corsOrigin?: string; baseUrl?: string; metricsToken?: string } = {}
 ): Express {
   const app = express();
   app.use(requestIdMiddleware);
@@ -58,7 +58,7 @@ export function createApp(
 
   app.use("/api", container.routes);
   app.get("/health", createHealthHandler("integration-service"));
-  app.get("/metrics", createMetricsHandler("integration-service"));
+  app.get("/metrics", createMetricsHandler("integration-service", { token: options.metricsToken }));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
     container.mapApplicationErrorToHttp(err);

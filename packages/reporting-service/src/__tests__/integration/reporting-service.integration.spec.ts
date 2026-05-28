@@ -16,7 +16,7 @@ import { createTestJwt, TEST_JWT_SECRET } from "./test-jwt";
 
 const databaseUrl =
   process.env.REPORTING_DATABASE_URL ??
-  "postgresql://pgic:pgic@localhost:5432/reporting_service";
+  "postgresql://pgic:pgic@localhost:55432/reporting_service";
 
 describe("Reporting Service API integration", () => {
   const config = {
@@ -215,7 +215,9 @@ describe("Reporting Service API integration", () => {
       expect(res.headers["content-type"]).toContain("text/csv");
       expect(res.text).toContain("id,name,description,reportType,filters,createdAt,updatedAt");
       expect(res.text).toContain('"KPI ""Diretoria"""');
-      expect(res.text).toContain('"{""period"":""month"",""team"":""support""}"');
+      expect(res.text).toMatch(
+        /"\{""(period"":""month"",""team"":""support|team"":""support"",""period"":""month)""\}"/
+      );
     });
   });
 

@@ -20,6 +20,7 @@ export interface AuditAppContainer {
 export interface CreateAppOptions {
   corsOrigin?: string;
   baseUrl?: string;
+  metricsToken?: string;
 }
 
 export function createApp(
@@ -52,7 +53,7 @@ export function createApp(
 
   app.use("/api", container.routes);
   app.get("/health", createHealthHandler("audit-service"));
-  app.get("/metrics", createMetricsHandler("audit-service"));
+  app.get("/metrics", createMetricsHandler("audit-service", { token: options.metricsToken }));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
     container.mapApplicationErrorToHttp(err);

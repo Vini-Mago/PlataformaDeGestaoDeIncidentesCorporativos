@@ -20,6 +20,7 @@ export interface EscalationAppContainer {
 export interface CreateAppOptions {
   corsOrigin?: string;
   baseUrl?: string;
+  metricsToken?: string;
 }
 
 export function createApp(
@@ -52,7 +53,7 @@ export function createApp(
 
   app.use("/api", container.routes);
   app.get("/health", createHealthHandler("escalation-service"));
-  app.get("/metrics", createMetricsHandler("escalation-service"));
+  app.get("/metrics", createMetricsHandler("escalation-service", { token: options.metricsToken }));
 
   const errorMapper = (err: unknown): HttpErrorMapping =>
     container.mapApplicationErrorToHttp(err);

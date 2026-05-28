@@ -31,6 +31,7 @@ describe("Outbox integration", () => {
     jwtSecret: "outbox-test-secret-min-32-chars-for-jwt",
     jwtExpiresInSeconds: 3600,
     baseUrl: "http://localhost:3001",
+    passwordAuthEnabled: true,
     eventPublisherOverride: createNoOpEventPublisher(),
     cacheOverride: createNoOpCache(),
   };

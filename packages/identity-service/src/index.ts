@@ -141,6 +141,7 @@ async function bootstrap() {
 
   const app = createApp(container, {
     corsOrigin: process.env.CORS_ORIGIN,
+    metricsToken: process.env.METRICS_TOKEN,
     baseUrl,
   });
 

@@ -111,6 +111,7 @@ registry.registerPath({
   responses: {
     200: { description: "Export job", content: { "application/json": { schema: ReportExportJobSchema } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
@@ -125,6 +126,7 @@ registry.registerPath({
   responses: {
     200: { description: "CSV file", content: { "text/csv": { schema: z.string() } } },
     401: { description: "Unauthorized", content: { "application/json": { schema: ErrorSchema } } },
+    403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
     409: { description: "Job not completed", content: { "application/json": { schema: ErrorSchema } } },
   },

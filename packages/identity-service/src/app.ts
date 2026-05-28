@@ -24,6 +24,7 @@ export interface CreateAppOptions {
   corsOrigin?: string;
   /** When set, enables API docs and OpenAPI spec at /api-docs and /api-docs.json. */
   baseUrl?: string;
+  metricsToken?: string;
 }
 
 /**
@@ -66,7 +67,7 @@ export function createApp(
   app.use("/api", container.rbacRoutes);
 
   app.get("/health", createHealthHandler("identity-service"));
-  app.get("/metrics", createMetricsHandler("identity-service"));
+  app.get("/metrics", createMetricsHandler("identity-service", { token: options.metricsToken }));
 
   app.use(
     createErrorHandlerMiddleware(

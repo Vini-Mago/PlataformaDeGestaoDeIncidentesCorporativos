@@ -75,6 +75,7 @@ async function bootstrap() {
   const app = createApp(container, {
     baseUrl,
     corsOrigin: process.env.CORS_ORIGIN,
+    metricsToken: process.env.METRICS_TOKEN,
   });
 
   const server: Server = app.listen(port, () => {

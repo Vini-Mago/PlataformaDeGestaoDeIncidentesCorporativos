@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
 const DEFAULT_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
+const DEFAULT_MAX_SERIES = 2000;
+const METRICS_UNKNOWN_ROUTE = "/unknown";
 const UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 const NUMERIC_SEGMENT_RE = /\/[0-9]+(?=\/|$)/g;
 
@@ -13,6 +15,14 @@ interface RequestMetric {
 interface MetricsStore {
   startedAt: number;
   requests: Map<string, RequestMetric>;
+}
+
+interface MetricsMiddlewareOptions {
+  maxSeries?: number;
+}
+
+interface MetricsHandlerOptions {
+  token?: string;
 }
 
 const stores = new Map<string, MetricsStore>();
@@ -42,10 +52,21 @@ function metricKey(method: string, route: string, statusClass: string): string {
   return `${method}\u0000${route}\u0000${statusClass}`;
 }
 
-function observe(serviceName: string, method: string, route: string, statusCode: number, durationSeconds: number): void {
+function observe(
+  serviceName: string,
+  method: string,
+  route: string,
+  statusCode: number,
+  durationSeconds: number,
+  maxSeries: number
+): void {
   const store = getStore(serviceName);
   const statusClass = `${Math.floor(statusCode / 100)}xx`;
-  const key = metricKey(method, route, statusClass);
+  const requestedKey = metricKey(method, route, statusClass);
+  const key =
+    store.requests.has(requestedKey) || store.requests.size < maxSeries
+      ? requestedKey
+      : metricKey(method, METRICS_UNKNOWN_ROUTE, statusClass);
   const metric = store.requests.get(key) ?? {
     count: 0,
     sumSeconds: 0,
@@ -59,21 +80,47 @@ function observe(serviceName: string, method: string, route: string, statusCode:
   store.requests.set(key, metric);
 }
 
-export function createMetricsMiddleware(serviceName: string) {
+function resolveRoute(req: Request): string {
+  const routePath = req.route?.path;
+  if (typeof routePath === "string") {
+    return normalizePath(routePath.startsWith("/") ? routePath : `/${routePath}`);
+  }
+  return normalizePath(req.path);
+}
+
+export function createMetricsMiddleware(serviceName: string, options: MetricsMiddlewareOptions = {}) {
+  const maxSeries = Math.max(1, options.maxSeries ?? DEFAULT_MAX_SERIES);
   getStore(serviceName);
   return (req: Request, res: Response, next: NextFunction): void => {
     const started = process.hrtime.bigint();
     res.on("finish", () => {
+      if (res.statusCode === 404) return;
       const durationSeconds = Number(process.hrtime.bigint() - started) / 1_000_000_000;
-      observe(serviceName, req.method, normalizePath(req.path), res.statusCode, durationSeconds);
+      observe(serviceName, req.method, resolveRoute(req), res.statusCode, durationSeconds, maxSeries);
     });
     next();
   };
 }
 
-export function createMetricsHandler(serviceName: string) {
+export function createMetricsHandler(serviceName: string, options: MetricsHandlerOptions = {}) {
   const store = getStore(serviceName);
-  return (_req: Request, res: Response): void => {
+  const requiredToken = options.token?.trim();
+  return (req: Request, res: Response): void => {
+    if (!requiredToken) {
+      res.status(503).json({ error: "Metrics endpoint disabled. Configure METRICS_TOKEN." });
+      return;
+    }
+    const authHeader = req.headers.authorization;
+    const bearerToken = typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length).trim()
+      : undefined;
+    const headerToken = typeof req.headers["x-metrics-token"] === "string"
+      ? req.headers["x-metrics-token"].trim()
+      : undefined;
+    if (bearerToken !== requiredToken && headerToken !== requiredToken) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     const lines: string[] = [
       "# HELP pgic_service_up Service process is up.",
       "# TYPE pgic_service_up gauge",

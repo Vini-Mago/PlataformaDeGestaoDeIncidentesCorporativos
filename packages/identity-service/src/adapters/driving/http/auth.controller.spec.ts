@@ -24,7 +24,7 @@ import {
   PasswordValidationError,
 } from "../../../application/errors";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
-import { sendError } from "@pgic/shared";
+import { logger, sendError } from "@pgic/shared";
 import { createMockRequest, createMockResponse, createMockAuthenticatedRequest } from "@pgic/shared/test";
 
 describe("AuthController", () => {
@@ -330,6 +330,21 @@ describe("AuthController", () => {
   });
 
   describe("forgotPassword", () => {
+    it("enforces minimum response latency to reduce user enumeration timing signal", async () => {
+      const setTimeoutSpy = vi.spyOn(global, "setTimeout");
+      vi.mocked(userRepository.findByIdentifier).mockResolvedValue(null);
+      const controller = createController();
+      const req = createMockRequest({ body: { identifier: "missing@example.com" } });
+      await controller.forgotPassword(req, res, next);
+
+      expect(setTimeoutSpy).toHaveBeenCalled();
+      const delayArg = setTimeoutSpy.mock.calls[0]?.[1];
+      expect(typeof delayArg).toBe("number");
+      expect(Number(delayArg)).toBeGreaterThan(0);
+      expect(res.status).toHaveBeenCalledWith(200);
+      setTimeoutSpy.mockRestore();
+    });
+
     it("returns a uniform message when account does not exist", async () => {
       vi.mocked(userRepository.findByIdentifier).mockResolvedValue(null);
       const controller = createController();
@@ -369,6 +384,29 @@ describe("AuthController", () => {
           expiresAt: expect.any(Date),
         })
       );
+    });
+
+    it("does not log reset token when notifier fails", async () => {
+      const secretTokenMarker = "secret-reset-token";
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+      vi.mocked(userRepository.findByIdentifier).mockResolvedValue({
+        id: "user-1",
+        email: { value: "u@example.com" },
+        name: "User",
+      } as never);
+      vi.mocked(passwordResetTokenRepository.create).mockResolvedValue(undefined as never);
+      const notifier: IPasswordRecoveryNotifier = {
+        notifyPasswordRecovery: vi.fn().mockRejectedValue(new Error(`failure ${secretTokenMarker}`)),
+      };
+      const controller = createController(notifier);
+      const req = createMockRequest({ body: { identifier: "u@example.com" } });
+
+      await controller.forgotPassword(req, res, next);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(loggerSpy).toHaveBeenCalled();
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(secretTokenMarker);
+      loggerSpy.mockRestore();
     });
   });
 
