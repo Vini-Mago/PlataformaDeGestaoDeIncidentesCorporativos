@@ -90,7 +90,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [x] **Cadastro, edição e exclusão/desativação de usuários** com dados mínimos e política de senha (RF-1.1–RF-1.3).
 - [x] **RBAC** com perfis alinhados à operação (Usuário Final, Analista, NOC, Gestor, Administrador) e, se aplicável, permissões granulares e exceções por usuário (RF-1.4, RF-2.2).
 - [~] **Autenticação segura** JWT e/ou OAuth2; hash forte de senha; opcional integração AD/LDAP em roadmap (RF-1.5). *(JWT + OAuth Google/GitHub opcional; Argon2; AD/LDAP não implementado.)*
-- [~] **Recuperação de senha** com fluxo assíncrono (fila), expiração de token/código, mensagem genérica na UI, rate limiting (RF-1.6). *(Token, expiração, resposta genérica e rate limit no serviço; envio de e-mail via fila/SMTP não evidenciado no identity.)*
+- [x] **Recuperação de senha** com fluxo assíncrono, expiração de token/código, mensagem genérica na UI, rate limiting e envio por e-mail (RF-1.6). *(Fluxo `forgotPassword` despacha para `notification-service`; SMTP/STARTTLS validado por integração com sandbox local; token bruto não é persistido em claro.)*
 - [x] **Controle de sessão** — timeout, refresh, revogação ao desativar usuário, possibilidade de encerrar outras sessões (RF-1.7).
 - [x] **Coerência com eventos** — ex.: publicação `user.created` para réplicas em outros serviços (*MICROSERVICES_LIST.md*).
 
@@ -112,7 +112,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [~] **Métricas estratégicas** — MTTR, MTBF, % SLA cumprido, disponibilidade/uptime por serviço, volume por período (RF-4.1). *(reporting-service com CRUD de definições; agregações MTTR/MTBF em produto ainda não evidenciadas.)*
 - [~] **Indicadores operacionais** — abertos por criticidade, em risco de SLA, filas por equipe, recém-abertos (RF-4.2).
 - [~] **Filtros** por período, serviço, equipe, criticidade, unidade (RF-4.3).
-- [~] **Exportação** PDF/CSV/Excel; relatórios pesados em background com notificação (RF-4.4). *(CSV de definições implementado; exportação pesada assíncrona pendente.)*
+- [~] **Exportação** PDF/CSV/Excel; relatórios pesados em background com notificação (RF-4.4). *(`reporting-service` agora suporta exportação assíncrona de definições via jobs: `POST /api/report-definitions/export-jobs`, `GET /api/report-definitions/export-jobs/:id`, `GET /api/report-definitions/export-jobs/:id/download`; ainda pendente expandir para KPIs executivos completos e notificação ativa de conclusão.)*
 - [~] **Atualização dinâmica** — polling curto ou WebSocket/SSE; “última atualização” visível (RF-4.5). *(SPA no frontend; dashboards executivos completos pendentes.)*
 - [~] **Cache de agregados** (Redis) com TTL definido para não sobrecarregar consultas. *(Redis no Compose; uso para KPIs agregados ainda não generalizado.)*
 
@@ -145,7 +145,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 - [~] Políticas de SLA por tipo, criticidade, cliente/contrato, serviço; resolução de conflito entre regras (RF-8.1). *(sla-service: CRUD + `resolveBestMatch` + `sla_assignments`.)*
 - [~] **Tempo útil** — calendário, feriados, horário comercial; pausa em estados configuráveis (RF-8.2). *( `business-time.ts`, consumer de status, scheduler de avaliação.)*
 - [~] **Escalonamento** por tempo sem resposta, proximidade de estouro, criticidade; histórico de ações (RF-8.3). *(Consumers incident/SLA + `escalation_history`; `no_first_response` pendente.)*
-- [~] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(notification-service presente; canais/DLQ documentados operacionalmente — pendente.)*
+- [~] **Alertas** por e-mail, Slack, Teams, webhooks; templates e destinatários por regra; assíncrono com retry/DLQ (RF-8.4). *(E-mail SMTP implementado e validado; `request.submitted` gera e-mail ao solicitante quando há `requesterEmail`; Slack/Teams/webhooks e política completa de retry/DLQ ainda pendentes.)*
 
 ### 5.5 Integrações externas (RF-9.x) — *integration-service*
 
@@ -188,7 +188,7 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 ### 6.4 Disponibilidade
 
 - [x] **Health checks** por serviço.
-- [~] Monitoramento e alertas (métricas, logs centralizados). *(Healthcheck operacional automatizado `pnpm ops:healthcheck` com verificação HTTP/infra/backlog e webhook de alerta; centralização de métricas/logs/APM em produção ainda pendente.)*
+- [~] Monitoramento e alertas (métricas, logs centralizados). *(Healthcheck operacional `pnpm ops:healthcheck`; `/metrics` Prometheus por serviço; regras `ServiceDown`, `5xx`, `p95`, backlog; dashboard Grafana versionado; APM/log centralizado e operação contínua em produção ainda pendentes.)*
 - [x] Estratégia de failover para banco e broker em ambientes produtivos. *(Runbook operacional definido em `docs/ops/FAILOVER_RUNBOOK.md`, com validação pós-recuperação via `pnpm ops:healthcheck`.)*
 
 ### 6.5 Interoperabilidade
@@ -296,7 +296,7 @@ Considere a PGIC alinhada ao **RequisitosCorp** quando, no mínimo:
 - [~] **Incidentes** e/ou **requisições** percorrem ciclo completo com **histórico** consultável. *(Incidente com histórico; requisição com workflow completo ainda parcial.)*
 - [~] **SLA** (mesmo que em versão inicial) aplica regras de forma explicável e testável.
 - [~] **Integrações** críticas têm logs, retry e caminho de recuperação (DLQ/reprocessamento). *(Entrada webhook + DLQ schema; saída ERP e reprocessamento UI pendentes.)*
-- [ ] **Dashboard/relatórios** refletem filtros e exportação com dados consistentes com o back-end.
+- [~] **Dashboard/relatórios** refletem filtros e exportação com dados consistentes com o back-end. *(Dashboard operacional mínimo fechado: abertos, risco de SLA e concluídos por período com filtros; export jobs protegidos por dono/all. KPIs executivos completos ainda pendentes.)*
 - [~] **Infra de desenvolvimento** (Compose, migrations, gateway) está documentada e reproduzível; **roadmap** claro para HA e CI/CD em produção.
 
 ---

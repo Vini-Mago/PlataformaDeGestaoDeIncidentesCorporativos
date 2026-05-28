@@ -36,3 +36,11 @@ Definir provedor de e-mail por ambiente com configuração segura e operacionali
 ## Evidências esperadas
 
 - Documento de decisão + teste de envio em homologação.
+
+## Evidência atual (2026-05-27)
+
+- Documento de decisão criado: `docs/ops/EMAIL_PROVIDER_DECISION.md`.
+- Variáveis padronizadas adicionadas em `.env.example` e `packages/notification-service/.env.example`.
+- `notification-service`: configuração SMTP com `SMTP_REQUIRE_TLS`, `SMTP_CONNECTION_TIMEOUT_MS` e `SMTP_MESSAGE_TIMEOUT_MS`.
+- `notification-service`: SMTP implementado via Nodemailer, com STARTTLS obrigatório por padrão em porta `587` e TLS implícito em `465`.
+- Configuração inválida de `EMAIL_PROVIDER=smtp` falha no boot em produção em vez de cair para noop silencioso.

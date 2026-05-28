@@ -35,3 +35,11 @@ Criar rastreabilidade objetiva entre requisito funcional, cobertura de teste e e
 ## Evidências esperadas
 
 - Arquivo da matriz + checklist de atualização em PR template (se aplicável).
+
+## Evidência atual (2026-05-26)
+
+- Matriz publicada: `docs/MATRIZ_RF_TESTE_EVIDENCIA_FASE1.md`.
+- O documento mapeia `F1-01` a `F1-08` com:
+  - suíte/comando de teste por item,
+  - evidência atual no repositório,
+  - status (`Feito` / `Parcial`) e lacunas explícitas com owner sugerido.

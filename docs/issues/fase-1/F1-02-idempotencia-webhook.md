@@ -37,3 +37,13 @@ Impedir criação duplicada de incidente quando o mesmo evento externo for reenv
 
 - Migration/ajuste de schema (se necessário).
 - Suite de testes verde.
+
+## Evidência atual (2026-05-26)
+
+- Chave idempotente implementada por `externalSource + externalId` no `incident-service`:
+  - constraint única em `packages/incident-service/prisma/schema.prisma`.
+  - lookup prévio via `findByExternalRef` em `HandleIntegrationIncidentIngestUseCase`.
+- Teste E2E cobrindo replay sem duplicação:
+  - `packages/integration-service/src/__tests__/e2e/webhook-to-incident.e2e.spec.ts` valida `created: true` na primeira ingestão e `created: false` no replay, com mesmo `incident.id`.
+- Logging de decisão idempotente adicionado:
+  - `decision: "created_new"` e `decision: "replay_existing"` com `externalSource`, `externalId` e `correlationId`.

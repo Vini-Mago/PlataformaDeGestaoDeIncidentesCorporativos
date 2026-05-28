@@ -32,3 +32,10 @@ Reduzir warnings evitáveis de lint e padronizar exceções explícitas.
 ## Evidências esperadas
 
 - Saída de lint no PR.
+
+## Evidência atual (2026-05-26)
+
+- `pnpm lint` executado com sucesso e sem warnings/erros.
+- Warnings de `any` removidos nos arquivos:
+  - `packages/problem-change-service/src/adapters/driven/persistence/prisma-problem.repository.spec.ts`
+  - `packages/request-service/src/adapters/driving/http/service-request.controller.spec.ts`

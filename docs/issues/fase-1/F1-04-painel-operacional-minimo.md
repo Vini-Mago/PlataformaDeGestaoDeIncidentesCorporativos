@@ -37,3 +37,17 @@ Entregar visão operacional mínima: abertos, em risco de SLA e concluídos por 
 
 - Prints/GIF da tela.
 - Testes verdes e contrato documentado.
+
+## Evidência atual (2026-05-27)
+
+- Dashboard operacional mínimo implementado no frontend (`/dashboard`) com:
+  - 3 KPIs principais: `Incidentes abertos`, `Em risco de SLA`, `Concluídos no período`.
+  - filtros funcionais: `Período` (24h/7d/30d), `Criticidade`, `Equipe`.
+  - estado de atualização e `Última atualização`.
+- Dados derivados do backend de incidentes (`/incidents/incidents`) com consistência de filtro aplicada na camada de apresentação.
+- Correção de regra:
+  - `Incidentes abertos` e `Em risco de SLA` não excluem incidentes antigos apenas pelo filtro de período.
+  - `Concluídos no período` usa `resolvedAt`/`closedAt` quando disponível, com fallback legado para `createdAt`.
+- Regressão validada:
+  - `pnpm --filter frontend test` (verde)
+  - `pnpm --filter frontend build` (verde)

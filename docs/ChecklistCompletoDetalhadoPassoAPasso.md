@@ -66,7 +66,7 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 - [~] **Visualização de métricas estratégicas** (MTTR, MTBF, SLA, disponibilidade, volumes — conforme escopo PGIC).
 - [~] **Indicadores operacionais em tempo real** (ou quase real — polling/WebSocket/SSE).
 - [~] **Filtros por período** (e demais dimensões acordadas: serviço, equipe, criticidade).
-- [~] **Exportação de relatórios** (PDF, CSV/Excel ou equivalentes). *(CSV de definições em reporting-service; exportação assíncrona de dashboards/listas ainda pendente.)*
+- [~] **Exportação de relatórios** (PDF, CSV/Excel ou equivalentes). *(Reporting-service com exportação assíncrona por job para CSV de definições (`export-jobs` + status/download); expansão para dashboards/KPIs e notificação ativa de conclusão ainda pendente.)*
 - [~] **Atualização dinâmica** da visualização sem recarregar a página inteira de forma grosseira (SPA + atualização incremental).
 
 ### RC §3 Requisitos não funcionais
@@ -96,7 +96,7 @@ Use esta secção como **lista mestra**: quando todos os itens estiverem marcado
 #### RC §3.4 Disponibilidade
 
 - [~] **Alta disponibilidade (HA)** — pelo menos planejada para Postgres, Redis, RabbitMQ e apps em produção (réplicas, quorum, SLA de infra). *(Planejamento operacional e metas em `docs/ops/RTO_RPO_TARGETS.md`; implantação HA de produção ainda pendente.)*
-- [~] **Monitoramento com métricas e alertas** — latência, erros, filas, disco, pods/nós. *(`pnpm ops:healthcheck` implementado para health HTTP + infra + profundidade de filas + alerta webhook; stack completa de métricas/APM/log centralizado ainda pendente.)*
+- [~] **Monitoramento com métricas e alertas** — latência, erros, filas, disco, pods/nós. *(`/metrics` Prometheus por serviço, dashboard Grafana, regras de alerta e `pnpm ops:alert:simulate` implementados; APM/log centralizado e implantação contínua em produção ainda pendentes.)*
 - [x] **Health checks** — por serviço, consumidos por orquestrador ou monitor.
 - [x] **Failover** — procedimento documentado para falha de nó, broker ou DB (mesmo que manual na primeira versão). *(Runbook `docs/ops/FAILOVER_RUNBOOK.md`.)*
 
@@ -186,7 +186,7 @@ O sistema deve suportar:
 
 **Exemplos de uso previstos no normativo — mapeamento PGIC:**
 
-- [~] **Geração de relatórios** — fila + arquivo temporário + notificação. *(Export CSV síncrono parcial; geração assíncrona com notificação pendente.)*
+- [~] **Geração de relatórios** — fila + arquivo temporário + notificação. *(Export assíncrono de CSV para definições implementado com job persistido; falta notificação ativa e cobertura de relatórios executivos.)*
 - [~] **Envio de e-mails** — recuperação de senha, alertas SLA, convites.
 - [x] **Processamento de pagamentos** — *não aplicável à PGIC por padrão*; marcar N/A ou substituir por **cobrança interna de SLA**/integração financeira se existir.
 - [~] **Atualização de KPIs** — jobs ou consumo de eventos para materializar agregados/cache.
@@ -684,7 +684,7 @@ Para fechar o normativo, verificar explicitamente:
 **Passos:**
 
 1. [ ] Filtros globais por período, serviço, equipe, criticidade.
-2. [~] Exportação PDF/CSV assíncrona com **notificação** ao concluir; expiração de arquivo temporário. *(CSV síncrono de definições implementado; exportação pesada assíncrona pendente.)*
+2. [~] Exportação PDF/CSV assíncrona com **notificação** ao concluir; expiração de arquivo temporário. *(CSV assíncrono por job implementado no reporting-service; notificação de conclusão e política de expiração ainda pendentes.)*
 
 ### Balanço de saída da Fase 10
 
@@ -781,7 +781,7 @@ Para fechar o normativo, verificar explicitamente:
 ### 13.4 Disponibilidade (RequisitosCorp §3.4)
 
 1. [ ] **Alta disponibilidade (HA)** — para Postgres, Redis e RabbitMQ em produção: modo gerenciado, réplicas ou cluster conforme RTO/RPO; não aceitar single point of failure não documentado.
-2. [~] **Monitoramento com métricas e alertas** — latência, taxa de erro 5xx, profundidade de filas, uso de CPU/memória, espaço em disco do DB. *(`pnpm ops:healthcheck` + `pnpm ops:maintenance` + `pnpm ops:evidence` implementados; stack APM/metrics centralizada ainda pendente.)*
+2. [~] **Monitoramento com métricas e alertas** — latência, taxa de erro 5xx, profundidade de filas, uso de CPU/memória, espaço em disco do DB. *(`pnpm ops:healthcheck`, `/metrics`, Prometheus/Grafana versionados e simulação de alerta implementados; APM/log centralizado ainda pendente.)*
 3. [x] **Health checks** — endpoints `/health` (vivo) e `/ready` (pronto para tráfego, incluindo DB/cache quando aplicável) para orquestrador.
 4. [x] **Failover** — runbook: reinício de broker, flush seguro de DLQ, promoção de réplica de banco se política existir. *(Runbook `docs/ops/FAILOVER_RUNBOOK.md` implementado.)*
 

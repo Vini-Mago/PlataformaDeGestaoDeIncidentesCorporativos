@@ -19,3 +19,21 @@ Fonte: `docs/BACKLOG_EXECUCAO_FASEADO.md`
 - Toda issue com PR, testes automatizados e evidência anexada.
 - Sem regressão em `pnpm test` e `pnpm test:integration` nos pacotes afetados.
 - Atualização de documentação em `docs/` quando houver mudança de contrato/fluxo.
+
+## Fechamento consolidado
+
+- Relatório final da fase: `docs/RELATORIO_FECHAMENTO_FASE1.md`.
+- Matriz de rastreabilidade: `docs/MATRIZ_RF_TESTE_EVIDENCIA_FASE1.md`.
+
+## Status atualizado (2026-05-27)
+
+| Item | Status |
+|---|---|
+| `F1-01` E2E crítico de jornada principal | Feito |
+| `F1-02` Idempotência de ingestão de webhooks | Feito |
+| `F1-03` Notificação mínima funcional | Feito |
+| `F1-04` Painel operacional mínimo | Feito |
+| `F1-05` Consolidação de permissões nos fluxos principais | Feito |
+| `F1-06` Padronização de warnings de lint | Feito |
+| `F1-07` Matriz RF x Teste x Evidência | Feito |
+| `F1-08` Definição operacional de provedor de e-mail | Feito |
