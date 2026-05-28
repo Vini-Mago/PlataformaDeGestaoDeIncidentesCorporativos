@@ -31,9 +31,11 @@ const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min
 const baseUrl = process.env.AUDIT_SERVICE_URL ?? `http://localhost:${port}`;
 
 async function bootstrap() {
+  const rabbitmqUrl = process.env.RABBITMQ_URL;
   const container = createContainer({
     databaseUrl,
     jwtSecret,
+    rabbitmqUrl,
   });
 
   const app = createApp(container, {
@@ -45,6 +47,13 @@ async function bootstrap() {
   const server: Server = app.listen(port, () => {
     logger.info(`Audit service listening on http://localhost:${port}`);
   });
+
+  if (rabbitmqUrl && container.auditEventsConsumer) {
+    container.auditEventsConsumer.start().catch((err) => {
+      logger.error({ err }, "Failed to start audit event consumers");
+    });
+  }
+
   server.on("error", (err) => {
     logger.error({ err }, "HTTP server error");
     process.exit(1);

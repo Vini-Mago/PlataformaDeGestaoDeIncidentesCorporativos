@@ -15,7 +15,7 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 |---|---|---|
 | RF-1 Gestão de usuários | Parcial | Base forte (cadastro, sessão, RBAC); recuperação de senha por e-mail fechada na Fase 1; AD/LDAP ainda evolutivo. |
 | RF-2 Controle de acesso | Feito | Autorização e permissões por módulo/ação em backend com logs de acesso. |
-| RF-3 Auditoria e rastreamento | Parcial | Versionamento RF-3.3 fechado em problemas/mudanças; cobertura transversal total ainda pendente. |
+| RF-3 Auditoria e rastreamento | Feito | Versionamento RF-3.3 fechado em problemas/mudanças; Auditoria Transversal (RF-3.1/RF-3.2) concluída via RabbitMqAuditEventsConsumer integrando incidentes, requisições de serviço, problemas, mudanças e usuários. |
 | RF-4 Dashboards/KPIs | Parcial | Dashboard operacional mínimo fechado; KPIs executivos completos ainda pendentes. |
 | RF-5 Incidentes | Parcial | Fluxo principal implementado; amarrações completas de SLA/UX ainda em evolução. |
 | RF-6 Requisições | Feito | Catálogo + fluxo principal prontos; fluxos de aprovação sequencial e paralela avançados integrados em Backend e React Frontend. |
@@ -31,6 +31,7 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 
 ## Itens que foram fechados neste ciclo
 
+- RF-3.1 / RF-3.2: Auditoria Transversal integrada via RabbitMQ no `audit-service` (consumo assíncrono e resiliência a partir de incidentes, requisições de serviço, problemas, mudanças e usuários no banco `audit_entries`).
 - RF-6: Cenários avançados de aprovação sequencial e paralela implementados em `request-service` e integrados ao Frontend.
 - RF-7: Governança de Mudanças (trava de edição em campos críticos, restrição de janelas de execução futuras/passadas e validações em `problem-change-service`).
 - RF-8: SLA & Escalonamento E2E integrados via RabbitMQ + HTTP (criação de SLA, simulação de breach e reatribuição automática de equipe).

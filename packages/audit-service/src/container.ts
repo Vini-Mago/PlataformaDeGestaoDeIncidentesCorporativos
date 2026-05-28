@@ -8,10 +8,12 @@ import { GetAuditEntryUseCase } from "./application/use-cases/get-audit-entry.us
 import { AuditController } from "./adapters/driving/http/audit.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
+import { RabbitMqAuditEventsConsumer } from "./adapters/driving/messaging/rabbitmq-audit-events.consumer";
 
 export interface AuditContainerConfig {
   databaseUrl: string;
   jwtSecret: string;
+  rabbitmqUrl?: string;
 }
 
 interface AuditCradle {
@@ -25,6 +27,7 @@ interface AuditCradle {
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
   routes: ReturnType<typeof createRoutes>;
+  auditEventsConsumer: RabbitMqAuditEventsConsumer | null;
 }
 
 export function createContainer(config: AuditContainerConfig) {
@@ -80,6 +83,14 @@ export function createContainer(config: AuditContainerConfig) {
       (cradle: AuditCradle) =>
         createRoutes(cradle.auditController, cradle.authMiddleware)
     ).singleton(),
+
+    auditEventsConsumer: asFunction((cradle: AuditCradle) => {
+      if (!cradle.config.rabbitmqUrl) return null;
+      return new RabbitMqAuditEventsConsumer(
+        cradle.config.rabbitmqUrl,
+        cradle.createAuditEntryUseCase
+      );
+    }).singleton(),
   });
 
   const c = awilix.cradle;
@@ -91,12 +102,18 @@ export function createContainer(config: AuditContainerConfig) {
     get routes() {
       return c.routes;
     },
+    get auditEventsConsumer() {
+      return c.auditEventsConsumer;
+    },
     mapApplicationErrorToHttp,
     async disconnect(): Promise<void> {
       try {
+        if (c.auditEventsConsumer) {
+          await c.auditEventsConsumer.stop();
+        }
         await c.prisma.$disconnect();
       } catch (err) {
-        console.error("Error disconnecting Prisma client", err);
+        console.error("Error disconnecting Prisma client or stopping consumer", err);
       }
     },
   };

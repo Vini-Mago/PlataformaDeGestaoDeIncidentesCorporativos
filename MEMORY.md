@@ -22,6 +22,13 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 ## 2. Recent Milestones & Code Changes (2026-05-28)
 
+### Transversal Audit Core Implementation
+*   **RF-3: Transversal Audit Trail (2026-05-28)**:
+    *   Implemented `RabbitMqAuditEventsConsumer` in the `audit-service` to asynchronously consume and persist domain events published by the `incident-service`, `request-service`, `problem-change-service`, and `identity-service`.
+    *   Utilized AMQP wildcard bindings (`#`) to map topic exchanges (`incident.events`, `request.events`, `problem.events`, `change.events`, `user.events`) to the centralized `audit.events_queue`.
+    *   Implemented smart fallback extraction for actor `userId`, `resourceType`, `resourceId`, and payload mapping, preserving robust system action trails.
+    *   Added full suite of integration tests (`rabbitmq-audit-events.consumer.integration.spec.ts`) verifying Postgres persistence from RabbitMQ messages.
+
 ### Platform Boot & Integration Fixes
 *   **F2-10 (Dev Orchestration & Type Resolution)**:
     *   Diagnosed and resolved TypeScript compilation errors across downstream microservices (`Expected 1 arguments, but got 2` in `app.ts` files).

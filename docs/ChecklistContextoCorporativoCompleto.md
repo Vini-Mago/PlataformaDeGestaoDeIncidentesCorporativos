@@ -102,10 +102,10 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 4.3 Auditoria e rastreamento (RequisitosCorp §2.3 ↔ RF-3.x)
 
-- [~] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Histórico de estado/comentários em incidentes; anexos persistidos; audit-service com API dedicada; cobertura transversal a consolidar.)*
-- [~] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2). *(Histórico de status em incident-service; demais entidades parcial.)*
+- [x] **Registro de ações relevantes** — CRUD, mudança de status, reatribuição, comentários, aprovações, escalonamentos, anexos (RF-3.1). *(Consumidor RabbitMqAuditEventsConsumer no audit-service intercepta de forma transversal e persiste todos os eventos de incidentes, requisições, problemas e mudanças.)*
+- [x] **Histórico de alterações** em campos críticos (serviço, prioridade, SLA, responsável, status) (RF-3.2). *(Auditoria transversal unificada intercepta todas as atualizações de estado e reatribuições.)*
 - [x] **Versionamento** onde compliance exigir — recuperação de versões anteriores, política de retenção (RF-3.3). *(Implementado em `problem-change-service` com snapshots `before/after` e endpoints `GET /api/problems/:id/versions` e `GET /api/changes/:id/versions`.)*
-- [~] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*). *(Serviço e API existentes; consumo automático de todos os eventos de domínio a verificar.)*
+- [x] **Serviço dedicado de auditoria** consumindo eventos dos demais serviços (*audit-service* em *MICROSERVICES_LIST.md*). *(Consumidor assíncrono RabbitMqAuditEventsConsumer totalmente integrado no audit-service e validado por testes de integração.)*
 
 ### 4.4 Dashboard com KPIs (RequisitosCorp §2.4 ↔ RF-4.x)
 

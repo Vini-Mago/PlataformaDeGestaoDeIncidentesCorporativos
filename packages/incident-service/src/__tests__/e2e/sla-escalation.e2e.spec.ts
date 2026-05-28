@@ -236,7 +236,7 @@ describe("E2E SLA and Escalation Flow", () => {
 
     // 8. Run SLA evaluations to detect breach and enqueue sla.breach outbox event
     // We access evaluateSlaAssignmentsUseCase directly from the container
-    // @ts-ignore
+    // @ts-expect-error - evaluateSlaAssignmentsUseCase is accessed dynamically in E2E container scope
     await slaContainer.evaluateSlaAssignmentsUseCase.execute();
 
     // 9. Run SLA outbox relay to publish the sla.breach event
