@@ -1,7 +1,8 @@
 import path from "path";
 import { config as loadEnv } from "dotenv";
 
-// Load monorepo root .env so RABBITMQ_URL etc. are set when running via pnpm run dev from root (cwd = packages/identity-service)
+// Load monorepo root env defaults first; .env overrides them when present.
+loadEnv({ path: path.resolve(process.cwd(), "../../.env.example") });
 loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
 
 import { createContainer } from "./container";

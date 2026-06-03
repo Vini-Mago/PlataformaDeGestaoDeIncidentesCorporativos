@@ -430,6 +430,28 @@ async function runMigrations(env: Record<string, string>): Promise<void> {
   }
 }
 
+async function buildSharedPackage(env: Record<string, string>): Promise<void> {
+  console.log("[shared] compilando pacote compartilhado");
+  await runCommand(
+    "build:shared",
+    "pnpm",
+    ["--filter", "@pgic/shared", "run", "build"],
+    env,
+    { quiet: !verbose }
+  );
+}
+
+async function runDevSeed(env: Record<string, string>): Promise<void> {
+  console.log("[seed] garantindo usuario dev");
+  await runCommand(
+    "seed:identity",
+    "pnpm",
+    ["--filter", "identity-service", "run", "seed:dev"],
+    env,
+    { quiet: !verbose }
+  );
+}
+
 function waitForTcp(host: string, port: number, timeoutMs: number): Promise<void> {
   const startedAt = Date.now();
 
@@ -461,6 +483,15 @@ function printSummary(env: Record<string, string>, title = "PGIC dev iniciado"):
   console.log(`- BFF/UI:   http://localhost:${env.BFF_PORT}`);
   console.log(`- Frontend: http://localhost:${env.FRONTEND_PORT}`);
   console.log(`- API Docs: http://localhost:${env.API_DOCS_PORT}`);
+  console.log("");
+  console.log("Usuarios dev seedados:");
+  console.log(`- admin:    ${env.DEV_SEED_ADMIN_LOGIN ?? "admin"} / ${env.DEV_SEED_ADMIN_EMAIL ?? "admin@pgic.local"}`);
+  console.log(`- gestor:   ${env.DEV_SEED_MANAGER_LOGIN ?? "gestor"} / ${env.DEV_SEED_MANAGER_EMAIL ?? "gestor@pgic.local"}`);
+  console.log(`- analista: ${env.DEV_SEED_ANALYST_LOGIN ?? "analista"} / ${env.DEV_SEED_ANALYST_EMAIL ?? "analista@pgic.local"}`);
+  console.log(`- noc:      ${env.DEV_SEED_NOC_LOGIN ?? "noc"} / ${env.DEV_SEED_NOC_EMAIL ?? "noc@pgic.local"}`);
+  console.log(`- usuario:  ${env.DEV_SEED_USER_LOGIN ?? "usuario"} / ${env.DEV_SEED_USER_EMAIL ?? "usuario@pgic.local"}`);
+  console.log(`- inativo:  ${env.DEV_SEED_INACTIVE_LOGIN ?? "inativo"} / ${env.DEV_SEED_INACTIVE_EMAIL ?? "inativo@pgic.local"}`);
+  console.log(`- Senha padrao: ${env.DEV_SEED_DEFAULT_PASSWORD ?? env.DEV_SEED_ADMIN_PASSWORD ?? "Admin123!"}`);
   console.log("");
   console.log("Portas dos servicos:");
   for (const service of services) {
@@ -562,6 +593,9 @@ async function main(): Promise<void> {
   if (shouldRunMigrations) {
     await runMigrations(env);
   }
+
+  await buildSharedPackage(env);
+  await runDevSeed(env);
 
   for (const service of services) {
     const serviceUrl = `http://localhost:${env[service.portEnv]}`;

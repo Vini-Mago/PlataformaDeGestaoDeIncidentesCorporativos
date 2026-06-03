@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
+loadEnv({ path: path.resolve(process.cwd(), "../../.env.example") });
 loadEnv({ path: path.resolve(process.cwd(), "../../.env") });
 
 const app = express();
@@ -144,6 +145,7 @@ async function identityRequest(pathname: string, init: RequestInit = {}): Promis
       });
     } catch (error) {
       if (attempt >= maxAttempts) {
+        console.error("[bff] identity request failed", { url, error });
         throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -151,6 +153,25 @@ async function identityRequest(pathname: string, init: RequestInit = {}): Promis
   }
 
   throw new Error("identity request failed");
+}
+
+async function parseUpstreamJson<T>(response: globalThis.Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.error("[bff] upstream returned non-json response", {
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      bodyPreview: text.slice(0, 200),
+      error,
+    });
+    return null;
+  }
 }
 
 function parseJsonBody<T>(req: Request): T {
@@ -176,16 +197,16 @@ async function forwardAuthBody(req: Request, res: ExpressResponse, pathname: "/a
     method: "POST",
     body: JSON.stringify(requestBody),
   });
-  const payload = await upstream.json().catch(() => null) as {
+  const payload = await parseUpstreamJson<{
     user?: unknown;
     accessToken?: string;
     refreshToken?: string;
     message?: string;
     error?: string;
-  } | null;
+  }>(upstream);
 
   if (!upstream.ok || !payload?.accessToken) {
-    res.status(upstream.status).json(payload ?? { message: "Authentication failed" });
+    res.status(upstream.status).json(payload ?? { message: "Identity service returned an invalid auth response" });
     return;
   }
 
@@ -491,7 +512,8 @@ app.get("/auth/me", async (req, res) => {
 app.post("/auth/login", async (req, res) => {
   try {
     await forwardAuthBody(req, res, "/api/auth/login");
-  } catch {
+  } catch (error) {
+    console.error("[bff] failed to login", { identityBaseUrl, error });
     res.status(502).json({ message: "Failed to login" });
   }
 });
@@ -499,7 +521,8 @@ app.post("/auth/login", async (req, res) => {
 app.post("/auth/register", async (req, res) => {
   try {
     await forwardAuthBody(req, res, "/api/auth/register");
-  } catch {
+  } catch (error) {
+    console.error("[bff] failed to register", { identityBaseUrl, error });
     res.status(502).json({ message: "Failed to register" });
   }
 });

@@ -1,0 +1,74 @@
+@startuml FluxoNavegacao_PGIC
+title Fluxo de Navegacao - Plataforma de Gestao de Incidentes Corporativos
+
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor white
+  BorderColor black
+  FontColor black
+  StartColor white
+  EndColor white
+}
+skinparam diamond {
+  BackgroundColor white
+  BorderColor black
+  FontColor black
+}
+
+start
+:Usuario acessa a aplicacao;
+
+if (Rota inicial "/") then (sim)
+  :Redireciona para "/login";
+else (rota direta)
+  :Mantem rota solicitada;
+endif
+
+:AuthProvider valida sessao em "/auth/me";
+
+if (Sessao ativa?) then (nao)
+  :Exibe tela de acesso;
+
+  if (Primeiro acesso?) then (sim)
+    :Acessa "/register";
+    :Preenche cadastro;
+    :Registra e autentica;
+  else (nao)
+    :Acessa "/login";
+    :Entra com email/login e senha\nou Google OAuth;
+  endif
+
+  if (Autenticacao valida?) then (sim)
+    :Redireciona para "/dashboard";
+  else (nao)
+    :Exibe erro e permanece\nna tela de acesso;
+    stop
+  endif
+else (sim)
+  :Entra na area protegida;
+endif
+
+:Carrega layout autenticado\nSidebar + topbar + botao Sair;
+:Abre "/dashboard"\nIndicadores e ultimos registros;
+:Menu lateral permite navegar\nentre as rotas protegidas;
+:"/incidents"\nGestao de incidentes\nCriar, listar, anexar evidencias e vincular problema;
+:"/requests"\nCatalogo e requisicoes\nCriar, enviar, aprovar, rejeitar, iniciar e concluir;
+:"/problems"\nProblemas recorrentes\nListar, criar e atualizar causa raiz e plano de acao;
+:"/changes"\nChange management\nListar, atualizar e vincular incidentes ou problemas;
+:"/system"\nVisao operacional\nHealth checks, logs de integracao, DLQ e exportacao;
+:"*"\nRota desconhecida redireciona para "/dashboard";
+
+:Permanece no layout autenticado;
+
+if (Usuario clica em Sair?) then (sim)
+  :Executa logout;
+  :Redireciona para "/login";
+  stop
+else (nao)
+  :Continua navegando pelo menu;
+  stop
+endif
+
+@enduml
