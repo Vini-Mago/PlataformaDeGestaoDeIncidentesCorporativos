@@ -6,6 +6,7 @@ import { IncidentSection } from "./IncidentSection";
 import { ProblemSection } from "./ProblemSection";
 import { ChangeSection } from "./ChangeSection";
 import { ServiceRequestSection } from "./ServiceRequestSection";
+import { UserManagementSection } from "./UserManagementSection";
 import { fetchIncidents, type IncidentListItem } from "./api/incidents";
 import { fetchServiceRequests, type ServiceRequestListItem } from "./api/service-requests";
 import {
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/requests", label: "Requisições" },
   { to: "/problems", label: "Problemas" },
   { to: "/changes", label: "Mudanças" },
+  { to: "/users", label: "Usuários" },
   { to: "/system", label: "Sistema" },
 ];
 
@@ -399,16 +401,28 @@ function DashboardHome() {
           {latestIncidents.map((row) => (
             <tr key={row.id}>
               <td>{row.title}</td>
-              <td>{row.status}</td>
-              <td>{row.criticality}</td>
+              <td>
+                <span className={`status-badge status-${row.status.toLowerCase()}`}>
+                  {row.status}
+                </span>
+              </td>
+              <td>
+                <span className={`criticality-badge criticality-${row.criticality.toLowerCase()}`}>
+                  {row.criticality}
+                </span>
+              </td>
             </tr>
           ))}
         </DashboardTable>
         <DashboardTable title="Requisições recentes" empty="Sem requisições visíveis">
           {latestRequests.map((row) => (
             <tr key={row.id}>
-              <td>{row.id.slice(0, 8)}</td>
-              <td>{row.status}</td>
+              <td><span style={{ fontFamily: "monospace", color: "var(--primary-accent)" }}>{row.id.slice(0, 8)}</span></td>
+              <td>
+                <span className={`status-badge status-${row.status.toLowerCase()}`}>
+                  {row.status}
+                </span>
+              </td>
               <td>{row.assignedTeamId ?? "-"}</td>
             </tr>
           ))}
@@ -534,9 +548,17 @@ function SystemPage() {
                 <tbody>
                   {logs.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.direction}</td>
-                      <td>{row.httpStatus ?? "-"}</td>
-                      <td>{row.endpoint}</td>
+                      <td>
+                        <span className={`status-badge status-${row.direction.toLowerCase()}`}>
+                          {row.direction}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={row.httpStatus && row.httpStatus >= 400 ? "status-badge status-error" : "status-badge status-success"}>
+                          {row.httpStatus ?? "-"}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "var(--text-secondary)" }}>{row.endpoint}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -561,8 +583,12 @@ function SystemPage() {
                 <tbody>
                   {dlq.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.eventName}</td>
-                      <td>{row.reprocessedAt ? "Reprocessado" : "Pendente"}</td>
+                      <td><span style={{ fontWeight: 600 }}>{row.eventName}</span></td>
+                      <td>
+                        <span className={row.reprocessedAt ? "status-badge status-success" : "status-badge status-pending"}>
+                          {row.reprocessedAt ? "Reprocessado" : "Pendente"}
+                        </span>
+                      </td>
                       <td>
                         <button
                           type="button"
@@ -640,6 +666,7 @@ function AppRoutes() {
       <Route path="/requests" element={<ProtectedLayout><ModulePage title="Catálogo e requisições" eyebrow="RF-6"><ServiceRequestSection /></ModulePage></ProtectedLayout>} />
       <Route path="/problems" element={<ProtectedLayout><ModulePage title="Problemas recorrentes" eyebrow="RF-7"><ProblemSection /></ModulePage></ProtectedLayout>} />
       <Route path="/changes" element={<ProtectedLayout><ModulePage title="Change management" eyebrow="RF-7.3"><ChangeSection /></ModulePage></ProtectedLayout>} />
+      <Route path="/users" element={<ProtectedLayout><ModulePage title="Gestão de Acessos" eyebrow="Admin"><UserManagementSection /></ModulePage></ProtectedLayout>} />
       <Route path="/system" element={<ProtectedLayout><SystemPage /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

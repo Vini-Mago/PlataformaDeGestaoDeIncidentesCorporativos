@@ -115,6 +115,14 @@ export async function fetchChangeDetail(id: string): Promise<ChangeDetail> {
   return bffFetchJson<ChangeDetail>(`/problem-change/changes/${id}`);
 }
 
+export async function createChange(payload: { title: string; description: string; justification: string; changeType: string; risk: string }): Promise<{ id: string }> {
+  const body = await bffFetchJson<{ id: string } & Record<string, unknown>>("/problem-change/changes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return { id: body.id };
+}
+
 export type UpdateChangePayload = {
   status?: string;
   title?: string;

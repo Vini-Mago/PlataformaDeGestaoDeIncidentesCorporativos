@@ -7,7 +7,7 @@ import type {
   UserPermissionOverrideRecord,
 } from "../../../application/ports/authorization-repository.port";
 
-type RoleRow = { id: string; name: string; description: string | null };
+type RoleRow = { id: string; name: string; description: string | null; permissions?: Array<{ permissionId: string }> };
 type PermissionRow = {
   id: string;
   module: string;
@@ -217,10 +217,18 @@ export class PrismaAuthorizationRepository implements IAuthorizationRepository {
     });
   }
 
-  async listRoles(): Promise<RoleRecord[]> {
+  async listRoles(): Promise<Array<RoleRecord & { permissionIds: string[] }>> {
     const prisma = this.prisma as unknown as PrismaAuthorizationClientLike;
-    const rows = await prisma.roleModel.findMany({ orderBy: { name: "asc" } });
-    return (rows as RoleRow[]).map((row) => ({ id: row.id, name: row.name, description: row.description }));
+    const rows = await prisma.roleModel.findMany({
+      orderBy: { name: "asc" },
+      include: { permissions: true },
+    });
+    return (rows as RoleRow[]).map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      permissionIds: row.permissions?.map((rp) => rp.permissionId) ?? [],
+    }));
   }
 
   async listPermissions(): Promise<PermissionRecord[]> {

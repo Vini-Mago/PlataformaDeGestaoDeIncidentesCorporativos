@@ -26,6 +26,7 @@ type PrismaUserClientLike = {
   userModel: {
     upsert: (args: unknown) => Promise<unknown>;
     findUnique: (args: unknown) => Promise<unknown>;
+    findMany: () => Promise<unknown[]>;
   };
   outboxModel: {
     create: (args: unknown) => Promise<unknown>;
@@ -201,5 +202,11 @@ export class PrismaUserRepository implements IUserRepository {
       return this.findByEmail(normalized);
     }
     return this.findByLogin(normalized);
+  }
+
+  async findAll(): Promise<User[]> {
+    const prisma = this.prisma as unknown as PrismaUserClientLike;
+    const rows = await prisma.userModel.findMany();
+    return rows.filter(isUserRow).map(r => this.mapRowToUser(r));
   }
 }

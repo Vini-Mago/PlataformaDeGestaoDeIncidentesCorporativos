@@ -7,3 +7,4 @@ export * from "./http";
 export * from "./schemas";
 export * from "./types";
 export * from "./rabbitmq.constants";
+export * from "./rabbitmq.helpers";

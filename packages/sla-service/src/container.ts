@@ -12,6 +12,7 @@ import { GetCalendarUseCase } from "./application/use-cases/get-calendar.use-cas
 import { CreateSlaPolicyUseCase } from "./application/use-cases/create-sla-policy.use-case";
 import { ListSlaPoliciesUseCase } from "./application/use-cases/list-sla-policies.use-case";
 import { GetSlaPolicyUseCase } from "./application/use-cases/get-sla-policy.use-case";
+import { GetSlaAssignmentByTicketUseCase } from "./application/use-cases/get-sla-assignment-by-ticket.use-case";
 import {
   PrismaSlaAssignmentRepository,
   PrismaSlaOutboxWriter,
@@ -44,6 +45,7 @@ interface SlaCradle {
   createSlaPolicyUseCase: CreateSlaPolicyUseCase;
   listSlaPoliciesUseCase: ListSlaPoliciesUseCase;
   getSlaPolicyUseCase: GetSlaPolicyUseCase;
+  getSlaAssignmentByTicketUseCase: GetSlaAssignmentByTicketUseCase;
   slaAssignmentRepository: PrismaSlaAssignmentRepository;
   slaOutboxWriter: PrismaSlaOutboxWriter;
   handleIncidentCreatedForSlaUseCase: HandleIncidentCreatedForSlaUseCase;
@@ -125,6 +127,11 @@ export function createContainer(config: SlaContainerConfig) {
         new GetSlaPolicyUseCase(cradle.slaPolicyRepository)
     ).singleton(),
 
+    getSlaAssignmentByTicketUseCase: asFunction(
+      (cradle: SlaCradle) =>
+        new GetSlaAssignmentByTicketUseCase(cradle.slaAssignmentRepository)
+    ).singleton(),
+
     slaAssignmentRepository: asFunction(
       (cradle: SlaCradle) => new PrismaSlaAssignmentRepository(cradle.prisma)
     ).singleton(),
@@ -182,7 +189,8 @@ export function createContainer(config: SlaContainerConfig) {
           cradle.getCalendarUseCase,
           cradle.createSlaPolicyUseCase,
           cradle.listSlaPoliciesUseCase,
-          cradle.getSlaPolicyUseCase
+          cradle.getSlaPolicyUseCase,
+          cradle.getSlaAssignmentByTicketUseCase
         )
     ).singleton(),
 

@@ -13,6 +13,16 @@ export function canReadAllChanges(req: Request): boolean {
   return matchesJwtPermission(req.permissionKeys, "changes", "read", "all");
 }
 
+export function canUpdateAllProblems(req: Request): boolean {
+  if (req.userRole === "admin") return true;
+  return matchesJwtPermission(req.permissionKeys, "problems", "update", "all");
+}
+
+export function canUpdateAllChanges(req: Request): boolean {
+  if (req.userRole === "admin") return true;
+  return matchesJwtPermission(req.permissionKeys, "changes", "update", "all");
+}
+
 export function isProblemOwner(problem: Pick<Problem, "createdById">, userId: string): boolean {
   return problem.createdById === userId;
 }

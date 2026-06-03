@@ -36,6 +36,8 @@ import { asyncHandler } from "@pgic/shared";
 import {
   canReadAllChanges,
   canReadAllProblems,
+  canUpdateAllChanges,
+  canUpdateAllProblems,
   isChangeOwner,
   isProblemOwner,
 } from "./problem-change-access.helper";
@@ -97,6 +99,13 @@ export class ProblemChangeController {
 
   patchProblemHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    if (!canUpdateAllProblems(req)) {
+      const current = await this.getProblem.execute(id);
+      const uid = req.userId;
+      if (!uid || !isProblemOwner(current, uid)) {
+        throw new ProblemForbiddenError();
+      }
+    }
     const detail = await this.updateProblem.execute(id, req.body as UpdateProblemDto, req.userId);
     res.json(detail);
   });
@@ -166,6 +175,13 @@ export class ProblemChangeController {
 
   patchChangeHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    if (!canUpdateAllChanges(req)) {
+      const current = await this.getChange.execute(id);
+      const uid = req.userId;
+      if (!uid || !isChangeOwner(current, uid)) {
+        throw new ChangeForbiddenError();
+      }
+    }
     const detail = await this.updateChange.execute(id, req.body as UpdateChangeDto, req.userId);
     res.json(detail);
   });

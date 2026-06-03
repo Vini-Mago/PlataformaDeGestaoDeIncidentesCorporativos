@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CreateUserUseCase } from "../../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../../application/use-cases/get-user-by-id.use-case";
 import { UpdateUserUseCase } from "../../../application/use-cases/update-user.use-case";
+import { ListUsersUseCase } from "../../../application/use-cases/list-users.use-case";
 import type { CreateUserDto } from "../../../application/dtos/create-user.dto";
 import type { UpdateUserDto } from "../../../application/dtos/update-user.dto";
 import type { AuthenticatedRequest } from "@pgic/shared";
@@ -19,8 +20,22 @@ export class UserController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
-    private readonly updateUserUseCase: UpdateUserUseCase
+    private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly listUsersUseCase?: ListUsersUseCase
   ) {}
+
+  list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!this.listUsersUseCase) {
+        sendError(res, 500, "ListUsersUseCase not configured");
+        return;
+      }
+      const result = await this.listUsersUseCase.execute();
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

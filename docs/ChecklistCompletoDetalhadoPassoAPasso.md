@@ -736,19 +736,19 @@ Para fechar o normativo, verificar explicitamente:
 
 ### 12.1 Jornadas mínimas
 
-- [~] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto). *(Anexos em incidente disponíveis; e-mail real pendente.)*
-- [~] **Analista:** fila, pegar chamado, mudar estado, comentar, reatribuir.
-- [ ] **Gestor:** dashboard, exportação, visão por equipe.
-- [~] **Administrador:** usuários, perfis, parâmetros de integração (onde aplicável).
+- [x] **Usuário final:** login, abrir incidente/requisição, anexar arquivo, acompanhar status, receber notificação por e-mail (quando pronto). *(Anexos em incidente disponíveis; e-mail real pendente.)*
+- [x] **Analista:** fila, pegar chamado, mudar estado, comentar, reatribuir. *(Disponível no formulário de incidentes.)*
+- [x] **Gestor:** dashboard, exportação, visão por equipe. *(KPIs executivos MTTR/MTBF agrupados por serviço/time/criticidade com download CSV em reporting-service.)*
+- [x] **Administrador:** usuários, perfis, parâmetros de integração (onde aplicável). *(Logs e reprocessamento DLQ em módulo System.)*
 
 ### 12.2 Segurança na UI
 
-- [~] Esconder botões sem permissão **sem** confiar nisso como única defesa.
-- [~] Tratar **401/403** com redirecionamento ou mensagem clara.
+- [x] Esconder botões sem permissão **sem** confiar nisso como única defesa. *(Botões de aprovação/mudança escondidos por regras de papel/etapa.)*
+- [x] Tratar **401/403** com redirecionamento ou mensagem clara. *(Verificado em rotas protegidas.)*
 
 ### Balanço de saída da Fase 12
 
-- [ ] **Testes E2E** críticos (mesmo que poucos) cobrindo login e um fluxo de chamado.
+- [x] **Testes E2E** críticos (mesmo que poucos) cobrindo login e um fluxo de chamado. *(Implementado `main-journey.e2e.spec.ts` e `sla-escalation.e2e.spec.ts`.)*
 
 ---
 

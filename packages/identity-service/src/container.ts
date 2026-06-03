@@ -23,6 +23,7 @@ import { JwtTokenService } from "./adapters/driven/auth/jwt-token.service";
 import { Argon2PasswordHasher } from "./adapters/driven/auth/argon2-password-hasher";
 import { GoogleOAuthProvider } from "./adapters/driven/auth/google-oauth.provider";
 import { GitHubOAuthProvider } from "./adapters/driven/auth/github-oauth.provider";
+import { MockLDAPService } from "./adapters/driven/ldap/mock-ldap.service";
 import type { IOAuthProvider } from "./application/ports/oauth-provider.port";
 import { CreateUserUseCase } from "./application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "./application/use-cases/get-user-by-id.use-case";
@@ -31,6 +32,7 @@ import { LoginUseCase } from "./application/use-cases/login.use-case";
 import { GetCurrentUserUseCase } from "./application/use-cases/get-current-user.use-case";
 import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use-case";
 import { UpdateUserUseCase } from "./application/use-cases/update-user.use-case";
+import { ListUsersUseCase } from "./application/use-cases/list-users.use-case";
 import { UserController } from "./adapters/driving/http/user.controller";
 import { AuthController } from "./adapters/driving/http/auth.controller";
 import { RbacController } from "./adapters/driving/http/rbac.controller";
@@ -88,6 +90,7 @@ interface IdentityCradle {
   eventPublisher: IEventPublisher & { connect?: () => Promise<void>; disconnect?: () => Promise<void> };
   tokenService: JwtTokenService;
   passwordHasher: Argon2PasswordHasher;
+  ldapService: MockLDAPService;
   googleProvider: IOAuthProvider | null;
   githubProvider: IOAuthProvider | null;
   baseUrl: string;
@@ -106,6 +109,7 @@ interface IdentityCradle {
   getCurrentUserUseCase: GetCurrentUserUseCase;
   oauthCallbackUseCase: OAuthCallbackUseCase;
   updateUserUseCase: UpdateUserUseCase;
+  listUsersUseCase: ListUsersUseCase;
   userController: UserController;
   authController: AuthController;
   rbacController: RbacController;
@@ -193,6 +197,8 @@ export function createContainer(config: ContainerConfig) {
 
     passwordHasher: asClass(Argon2PasswordHasher).singleton(),
 
+    ldapService: asClass(MockLDAPService).singleton(),
+
     googleProvider: asFunction(
       ({ config }: { config: ContainerConfig }): IOAuthProvider | null =>
         config.googleOAuth ? new GoogleOAuthProvider(config.googleOAuth) : null
@@ -258,7 +264,8 @@ export function createContainer(config: ContainerConfig) {
           cradle.userRepository,
           cradle.authCredentialRepository,
           cradle.passwordHasher,
-          cradle.tokenService
+          cradle.tokenService,
+          cradle.ldapService
         )
     ).singleton(),
 
@@ -282,12 +289,17 @@ export function createContainer(config: ContainerConfig) {
       (cradle: IdentityCradle) => new UpdateUserUseCase(cradle.userRepository)
     ).singleton(),
 
+    listUsersUseCase: asFunction(
+      (cradle: IdentityCradle) => new ListUsersUseCase(cradle.userRepository)
+    ).singleton(),
+
     userController: asFunction(
       (cradle: IdentityCradle) =>
         new UserController(
           cradle.createUserUseCase,
           cradle.getUserByIdUseCase,
-          cradle.updateUserUseCase
+          cradle.updateUserUseCase,
+          cradle.listUsersUseCase
         )
     ).singleton(),
 

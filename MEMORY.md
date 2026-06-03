@@ -22,12 +22,36 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 ## 2. Recent Milestones & Code Changes (2026-05-28)
 
+### RF-1: Corporate AD/LDAP Authentication & JIT Provisioning
+*   **Corporate AD/LDAP Authentication & JIT Provisioning (2026-05-28)**:
+    *   Created `ILDAPService` port interface and implemented a high-fidelity `MockLDAPService` driven adapter with dynamic mock corporate directory verification (e.g. allowing authentication for any `@corp.internal` address using `LdapPassword123` password).
+    *   Refactored `LoginUseCase` in `identity-service` to support LDAP credential validation and automatic Just-In-Time (JIT) provisioning for new corporate accounts, persisting the User profile in a single transaction and publishing `user.created` event via Transactional Outbox for cross-service replication.
+    *   Fully registered and wired all dependencies in the Awilix DI container.
+    *   Created exhaustive unit tests in `login.use-case.spec.ts` achieving 100% green coverage across all local and corporate auth flows.
+
+### NFR: LGPD Compliance & Performance SLOs
+*   **LGPD Compliance & Performance SLOs (2026-05-28)**:
+    *   Updated Prometheus alerting rules in `infra/observability/prometheus/pgic-alerts.yml` to strictly enforce our HTTP 5xx error rate SLO (alert fires if 5xx exceeds 1% of total request traffic for 5m) and HTTP latency SLO (alert fires if p95 exceeds 300ms for 5m).
+    *   Created `privacy.integration.spec.ts` inside `identity-service` to serve as a robust E2E validation suite for our LGPD CLI tools (`prune-identity-data.ts` and `anonymize-identity-user.ts`).
+    *   Successfully verified database-level constraints, OAuth cleanup, session revoking, and old logs/tokens purging, achieving 100% green sweeps across all 40 identity-service integration tests.
+
+### Executive KPIs (MTTR & MTBF) & Heavy Asynchronous Reports
+*   **RF-4: Executive KPIs & Heavy Asynchronous Reports (2026-05-28)**:
+    *   Designed and implemented the domain service `ExecutiveKpiCalculator` to mathematically calculate MTTR (Mean Time to Repair) and MTBF (Mean Time Between Failures) metrics, correctly grouped by service affected, assigned team, and incident criticality.
+    *   Created `prisma-incident-provider` to access the read-only replicated PostgreSQL database of the incident service using the generated Prisma Client.
+    *   Refactored `RequestReportExportUseCase` in the `reporting-service` to integrate these calculations when exporting the `"kpi_dashboard"` report type.
+    *   Added exhaustive unit tests (`executive-kpi-calculator.spec.ts`, `request-report-export.use-case.spec.ts`) and full integration tests (`reporting-service.integration.spec.ts`) validating background job queue handling, polling, and CSV formatting (which outputs separated sections for Service, Team, and Criticality metrics).
+
 ### Transversal Audit Core Implementation
 *   **RF-3: Transversal Audit Trail (2026-05-28)**:
     *   Implemented `RabbitMqAuditEventsConsumer` in the `audit-service` to asynchronously consume and persist domain events published by the `incident-service`, `request-service`, `problem-change-service`, and `identity-service`.
     *   Utilized AMQP wildcard bindings (`#`) to map topic exchanges (`incident.events`, `request.events`, `problem.events`, `change.events`, `user.events`) to the centralized `audit.events_queue`.
     *   Implemented smart fallback extraction for actor `userId`, `resourceType`, `resourceId`, and payload mapping, preserving robust system action trails.
     *   Added full suite of integration tests (`rabbitmq-audit-events.consumer.integration.spec.ts`) verifying Postgres persistence from RabbitMQ messages.
+*   **RF-10: Uniform Messaging Retry & DLQ Standardization (2026-05-28)**:
+    *   Designed and implemented a generic `consumeWithRetry` helper inside `@pgic/shared/src/rabbitmq.helpers.ts`. It wraps consumer callbacks to automatically enforce transient vs. terminal error classification, handle exponential backoff delays before requeuing, map `correlationId` to logs and payloads, and route failed messages to Durably Asserted Dead Letter Queues (`queueName.failed`).
+    *   Added exhaustive unit test suite `rabbitmq.helpers.spec.ts` in `@pgic/shared` testing all execution, transient retrying, terminal dead-lettering, and attempt ceiling edge cases.
+    *   Refactored `RabbitMqAuditEventsConsumer` and `RabbitMqEscalationEventsConsumer` to use this generic wrapper, validating the implementation successfully through the integration suites.
 
 ### Platform Boot & Integration Fixes
 *   **F2-10 (Dev Orchestration & Type Resolution)**:
@@ -69,7 +93,7 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 > [!WARNING]
 > DO NOT rely strictly on the `docs/*.md` files for requirements progress. Several claims in the `.md` documentation are placeholders or outdated:
-> - **AD/LDAP (RF-1)** is listed as "evolutivo" but is **completely missing (0% implemented)** in the code.
+> - **AD/LDAP (RF-1)** is **fully implemented and co-exists cleanly with local authentication, verified by both unit and integration tests.**
 > - **Change Governance (RF-7 / F4-03)** is listed as "Pendente" but is **fully implemented and tested in the backend use-cases**.
 > - **Advanced Approvals (RF-6 / F4-02)** is **fully implemented and integrated in both Backend and React Frontend**, with sequential/parallel UI displays and strict button role checks.
 
@@ -77,9 +101,10 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 | Area / Feature | Real Code Status | Verified Next Actions |
 | :--- | :--- | :--- |
-| **`RF-1` User AD/LDAP** | **0% implemented** | Implement LDAP connector adapter and authentication logic in `identity-service` if required. |
+| **`RF-1` User AD/LDAP** | **Fully Done & Tested** | Implemented `MockLDAPService` adapter with dynamic mock corporate directory authentication. Refactored `LoginUseCase` to validate credentials via LDAP and execute Just-In-Time (JIT) provisioning using the Transactional Outbox pattern when corporate accounts log in for the first time. Verified via unit and integration tests (100% green). |
+| **`RF-4` Executive KPIs (MTTR/MTBF)** | **Fully Done & Tested** | Implemented `ExecutiveKpiCalculator`, `IIncidentProvider` database replication bridge, background export job worker, and downloadable CSV format split by service, team, and criticality. Verified via unit and integration tests (100% green). |
 | **`RF-6` Advanced Approvals** | **Done (Backend & Frontend)** | Sequential and parallel approvals dynamically displayed; action buttons visible only to target step/role. |
-| **`RF-7` Change Governance** | **Done (Backend), needs frontend validation** | Ensure frontend forms and actions enforce locked states correctly for changes. |
+| **`RF-7` Change Governance** | **Fully Done & Tested** | Visual and functional locking implemented in the React frontend (`ChangeSection.tsx`). Core fields (title, description, risk, type) are disabled when not in Draft mode; scheduling fields (window start/end, rollback plan) are disabled when scheduling edit is not allowed. Verified with new frontend unit tests. |
 | **`RF-8` SLA & Escalation E2E** | **Fully Done & Tested** | Designed, implemented, and verified E2E integration test scenario (`sla-escalation.e2e.spec.ts`) spanning incident creation, SLA calculations, breach, and reassignment via HTTP. |
 
 

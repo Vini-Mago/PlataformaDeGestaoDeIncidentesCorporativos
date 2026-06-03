@@ -4,6 +4,7 @@ import type { CreateEscalationRuleDto } from "../../../application/dtos/create-e
 import type { CreateEscalationRuleUseCase } from "../../../application/use-cases/create-escalation-rule.use-case";
 import type { ListEscalationRulesUseCase } from "../../../application/use-cases/list-escalation-rules.use-case";
 import type { GetEscalationRuleUseCase } from "../../../application/use-cases/get-escalation-rule.use-case";
+import type { GetEscalationHistoryByTicketUseCase } from "../../../application/use-cases/get-escalation-history-by-ticket.use-case";
 import { parseTicketTypeFilterOrThrow } from "../../../application/use-cases/list-escalation-rules.use-case";
 import { asyncHandler } from "@pgic/shared";
 
@@ -11,7 +12,8 @@ export class EscalationController {
   constructor(
     private readonly createEscalationRule: CreateEscalationRuleUseCase,
     private readonly listEscalationRules: ListEscalationRulesUseCase,
-    private readonly getEscalationRule: GetEscalationRuleUseCase
+    private readonly getEscalationRule: GetEscalationRuleUseCase,
+    private readonly getEscalationHistoryByTicket: GetEscalationHistoryByTicketUseCase
   ) {}
 
   createEscalationRuleHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -44,5 +46,15 @@ export class EscalationController {
     const { id } = req.params;
     const rule = await this.getEscalationRule.execute(id);
     res.json(rule);
+  });
+
+  getEscalationHistoryHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { ticketType, ticketId } = req.params;
+    if (!ticketType || !ticketId) {
+      res.status(400).json({ error: "Missing ticketType or ticketId" });
+      return;
+    }
+    const history = await this.getEscalationHistoryByTicket.execute(ticketId, ticketType);
+    res.json(history);
   });
 }

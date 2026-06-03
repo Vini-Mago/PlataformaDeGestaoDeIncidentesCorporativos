@@ -8,6 +8,7 @@ import type { GetCalendarUseCase } from "../../../application/use-cases/get-cale
 import type { CreateSlaPolicyUseCase } from "../../../application/use-cases/create-sla-policy.use-case";
 import type { ListSlaPoliciesUseCase } from "../../../application/use-cases/list-sla-policies.use-case";
 import type { GetSlaPolicyUseCase } from "../../../application/use-cases/get-sla-policy.use-case";
+import type { GetSlaAssignmentByTicketUseCase } from "../../../application/use-cases/get-sla-assignment-by-ticket.use-case";
 import { parseTicketTypeFilter } from "../../../application/use-cases/list-sla-policies.use-case";
 import { asyncHandler } from "@pgic/shared";
 
@@ -18,7 +19,8 @@ export class SlaController {
     private readonly getCalendar: GetCalendarUseCase,
     private readonly createSlaPolicy: CreateSlaPolicyUseCase,
     private readonly listSlaPolicies: ListSlaPoliciesUseCase,
-    private readonly getSlaPolicy: GetSlaPolicyUseCase
+    private readonly getSlaPolicy: GetSlaPolicyUseCase,
+    private readonly getSlaAssignmentByTicket: GetSlaAssignmentByTicketUseCase
   ) {}
 
   createCalendarHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -60,5 +62,19 @@ export class SlaController {
     const { id } = req.params;
     const policy = await this.getSlaPolicy.execute(id);
     res.json(policy);
+  });
+
+  getSlaAssignmentHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { ticketType, ticketId } = req.params;
+    if (!ticketType || !ticketId) {
+      res.status(400).json({ error: "Missing ticketType or ticketId" });
+      return;
+    }
+    const assignment = await this.getSlaAssignmentByTicket.execute(ticketId, ticketType);
+    if (!assignment) {
+      res.status(404).json({ error: "SLA assignment not found" });
+      return;
+    }
+    res.json(assignment);
   });
 }

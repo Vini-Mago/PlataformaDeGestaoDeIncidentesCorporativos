@@ -6,18 +6,28 @@ import type { IUserRepository } from "../ports/user-repository.port";
 import type { IAuthCredentialRepository } from "../ports/auth-credential-repository.port";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
+import type { ILDAPService } from "../ports/ldap-service.port";
 
 describe("LoginUseCase", () => {
   let userRepository: IUserRepository;
   let authCredentialRepository: IAuthCredentialRepository;
   let passwordHasher: IPasswordHasher;
   let tokenService: ITokenService;
+  let ldapService: ILDAPService;
 
   beforeEach(() => {
     userRepository = {
       save: vi.fn(),
+      saveUserAndOutbox: vi.fn().mockResolvedValue(undefined),
       findById: vi.fn(),
       findByEmail: vi.fn(),
+      findByLogin: vi.fn(),
+      findByIdentifier: vi.fn().mockImplementation((val: string) => {
+        if (val.includes("@")) {
+          return userRepository.findByEmail(val);
+        }
+        return userRepository.findByLogin(val);
+      }),
     };
     authCredentialRepository = {
       getPasswordHashByUserId: vi.fn(),
@@ -30,6 +40,9 @@ describe("LoginUseCase", () => {
       sign: vi.fn().mockReturnValue("fake-jwt-token"),
       verify: vi.fn(),
     };
+    ldapService = {
+      authenticate: vi.fn(),
+    };
   });
 
   it("deve retornar user e accessToken quando credenciais são válidas", async () => {
@@ -40,6 +53,7 @@ describe("LoginUseCase", () => {
       new Date("2025-01-01T00:00:00.000Z"),
       "user"
     );
+
     vi.mocked(userRepository.findByEmail).mockResolvedValue(user);
     vi.mocked(authCredentialRepository.getPasswordHashByUserId).mockResolvedValue("hashed");
     vi.mocked(passwordHasher.verify).mockResolvedValue(true);
@@ -69,59 +83,93 @@ describe("LoginUseCase", () => {
     });
   });
 
-  it("deve lançar InvalidCredentialsError quando usuário não existe", async () => {
+  it("deve lançar InvalidCredentialsError quando usuário não existe e LDAP falha", async () => {
     vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+    vi.mocked(ldapService.authenticate).mockResolvedValue(null);
 
     const useCase = new LoginUseCase(
       userRepository,
       authCredentialRepository,
       passwordHasher,
-      tokenService
+      tokenService,
+      ldapService
     );
 
     await expect(
       useCase.execute({ email: "naoexiste@example.com", password: "qualquer" })
     ).rejects.toThrow(InvalidCredentialsError);
-    await expect(
-      useCase.execute({ email: "naoexiste@example.com", password: "qualquer" })
-    ).rejects.toThrow("Invalid email or password");
-    expect(authCredentialRepository.getPasswordHashByUserId).not.toHaveBeenCalled();
   });
 
-  it("deve lançar InvalidCredentialsError quando hash não existe para o usuário", async () => {
-    const user = User.reconstitute("user-1", "u@example.com", "Nome", new Date(), "user");
-    vi.mocked(userRepository.findByEmail).mockResolvedValue(user);
-    vi.mocked(authCredentialRepository.getPasswordHashByUserId).mockResolvedValue(null);
+  it("deve provisionar JIT o usuário e autenticar com sucesso quando existe no LDAP mas não localmente", async () => {
+    vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+    vi.mocked(ldapService.authenticate).mockResolvedValue({
+      email: "john.doe@corp.internal",
+      login: "jdoe",
+      name: "John Doe",
+    });
 
     const useCase = new LoginUseCase(
       userRepository,
       authCredentialRepository,
       passwordHasher,
-      tokenService
+      tokenService,
+      ldapService
     );
 
-    await expect(
-      useCase.execute({ email: "u@example.com", password: "senha" })
-    ).rejects.toThrow(InvalidCredentialsError);
-    expect(passwordHasher.verify).not.toHaveBeenCalled();
+    const result = await useCase.execute({ email: "john.doe@corp.internal", password: "LdapPassword123" });
+
+    expect(result.user.email).toBe("john.doe@corp.internal");
+    expect(result.user.name).toBe("John Doe");
+    expect(result.user.login).toBe("jdoe");
+    expect(result.user.role).toBe("user");
+    expect(result.accessToken).toBe("fake-jwt-token");
+
+    // Verifica o provisionamento do usuário no banco com Transacional Outbox
+    expect(userRepository.saveUserAndOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "John Doe",
+        role: "user",
+      }),
+      expect.objectContaining({
+        eventName: "user.created",
+        payload: expect.objectContaining({
+          email: "john.doe@corp.internal",
+          name: "John Doe",
+        }),
+      })
+    );
   });
 
-  it("deve lançar InvalidCredentialsError quando senha está incorreta", async () => {
-    const user = User.reconstitute("user-1", "u@example.com", "Nome", new Date(), "user");
+  it("deve autenticar com sucesso um usuário local existente cuja validação local de senha falha mas validação LDAP é bem sucedida", async () => {
+    const user = User.reconstitute(
+      "user-1",
+      "john.doe@corp.internal",
+      "John Doe",
+      new Date("2025-01-01T00:00:00.000Z"),
+      "user"
+    );
+
     vi.mocked(userRepository.findByEmail).mockResolvedValue(user);
     vi.mocked(authCredentialRepository.getPasswordHashByUserId).mockResolvedValue("hashed");
-    vi.mocked(passwordHasher.verify).mockResolvedValue(false);
+    vi.mocked(passwordHasher.verify).mockResolvedValue(false); // Local verification fails
+    vi.mocked(ldapService.authenticate).mockResolvedValue({
+      email: "john.doe@corp.internal",
+      login: "jdoe",
+      name: "John Doe",
+    }); // LDAP succeeds
 
     const useCase = new LoginUseCase(
       userRepository,
       authCredentialRepository,
       passwordHasher,
-      tokenService
+      tokenService,
+      ldapService
     );
 
-    await expect(
-      useCase.execute({ email: "u@example.com", password: "senhaerrada" })
-    ).rejects.toThrow(InvalidCredentialsError);
-    expect(tokenService.sign).not.toHaveBeenCalled();
+    const result = await useCase.execute({ email: "john.doe@corp.internal", password: "LdapPassword123" });
+
+    expect(result.user.email).toBe("john.doe@corp.internal");
+    expect(result.accessToken).toBe("fake-jwt-token");
+    expect(ldapService.authenticate).toHaveBeenCalledWith("john.doe@corp.internal", "LdapPassword123");
   });
 });

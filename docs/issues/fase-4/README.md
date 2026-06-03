@@ -21,6 +21,6 @@ Fonte: `docs/REQUISITOS_PARCIAIS_E_PLANO.md`
 | Item | Status |
 |---|---|
 | `F4-01` Fechamento Incidentes + SLA/Escalonamento | Parcial avançado — regra de domínio e testes de escalonamento reforçados; falta E2E cross-service |
-| `F4-02` Aprovações avançadas em requisições | Feito técnico no backend (`request-service`); falta evidência completa de frontend em homologação |
-| `F4-03` Governança de mudanças | Pendente |
+| `F4-02` Aprovações avançadas em requisições | Concluído — Backend finalizado e evidência visual implementada no frontend (`ServiceRequestSection.tsx`) |
+| `F4-03` Governança de mudanças | Concluído — RBAC por ação crítica aplicado no controller e permissões validadas na camada REST |
 | `F4-04` Auditoria final e atualização de status | Pendente |

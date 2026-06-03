@@ -115,10 +115,14 @@ export function ServiceRequestSection() {
   const [catalogItems, setCatalogItems] = useState<CatalogItemSummary[] | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
 
   const [rows, setRows] = useState<ServiceRequestListItem[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [catalogItemId, setCatalogItemId] = useState("");
   const [formDataJson, setFormDataJson] = useState("");
@@ -275,6 +279,7 @@ export function ServiceRequestSection() {
       await createServiceRequest(payload);
       setFormDataJson("");
       setCatalogItemId("");
+      setShowCreate(false);
       await loadList();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -301,95 +306,181 @@ export function ServiceRequestSection() {
     return "Este serviço pede aprovação após submissão.";
   };
 
+  const filteredRows = useMemo(() => {
+    if (!rows) return [];
+    return rows.filter((r) => {
+      if (statusFilter && r.status !== statusFilter) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const cat = catalogById.get(r.catalogItemId);
+        const catName = cat?.name.toLowerCase() || "";
+        return catName.includes(query) || r.id.toLowerCase().includes(query);
+      }
+      return true;
+    });
+  }, [rows, searchQuery, statusFilter, catalogById]);
+
+  const stats = useMemo(() => {
+    if (!rows) return { total: 0, pending: 0, active: 0 };
+    return {
+      total: rows.length,
+      pending: rows.filter((r) => r.status === "InApproval" || r.status === "Submitted").length,
+      active: rows.filter((r) => r.status === "InProgress" || r.status === "Approved").length,
+    };
+  }, [rows]);
+
   return (
-    <>
-      <section className="panel">
-        <h2 style={{ marginTop: 0, fontSize: "1.25rem" }}>Novo pedido de serviço</h2>
-        <p className="hint">
-          Escolha um item ativo do catálogo e crie um pedido em rascunho. Depois use <strong>Submeter</strong> e{" "}
-          <strong>Enviar para aprovação</strong> na lista (conforme o fluxo do item no catálogo).
-        </p>
-        {catalogError ? <div className="banner-error">{catalogError}</div> : null}
-        {catalogLoading ? <p className="hint">A carregar catálogo…</p> : null}
-        {!catalogLoading && catalogItems !== null && catalogItems.length === 0 && !catalogError ? (
-          <p className="hint">Não há itens no catálogo. Um administrador deve registar serviços primeiro.</p>
-        ) : null}
-        {createError ? <div className="banner-error">{createError}</div> : null}
-        <form className="form" onSubmit={(ev) => void handleCreate(ev)}>
-          <label>
-            Serviço do catálogo
-            <select
-              value={catalogItemId}
-              onChange={(ev) => setCatalogItemId(ev.target.value)}
-              disabled={createLoading || catalogLoading || !catalogItems?.length}
-              required
-            >
-              <option value="">— Escolha —</option>
-              {(catalogItems ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.category ? ` (${c.category})` : ""}
-                  {c.approvalFlow && c.approvalFlow !== "none" ? " — com aprovação" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          {catalogItemId ? (
-            <p className="hint" style={{ marginTop: "-0.5rem" }}>
-              {approvalHint(catalogItemId) ?? "Fluxo sem fila de aprovação no catálogo: após submeter, «Enviar para aprovação» passa direto a aprovado."}
-            </p>
-          ) : null}
-          <label>
-            Dados adicionais <span className="hint">(JSON opcional)</span>
-            <textarea
-              value={formDataJson}
-              onChange={(ev) => setFormDataJson(ev.target.value)}
-              rows={4}
-              placeholder='{"motivo":"nova conta"}'
-              disabled={createLoading}
+    <div className="content-stack" style={{ padding: 0 }}>
+      {/* Top Stat Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <article className="stat-card">
+          <span>Total de Requisições</span>
+          <strong>{stats.total}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Aguardando Ação / Aprovação</span>
+          <strong style={{ color: stats.pending > 0 ? "var(--warning)" : "inherit" }}>{stats.pending}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Em Atendimento (Aprovadas)</span>
+          <strong style={{ color: "var(--success)" }}>{stats.active}</strong>
+        </article>
+      </div>
+
+      {/* Toolbar / Actions */}
+      <div style={{ display: "flex", gap: "1rem", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "1rem", flex: 1, minWidth: "300px" }}>
+          <label style={{ flex: 1 }}>
+            Buscar Requisição
+            <input 
+              type="search" 
+              placeholder="Serviço ou ID..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </label>
-          <button type="submit" disabled={createLoading || catalogLoading || !catalogItems?.length}>
-            {createLoading ? "A registar…" : "Criar pedido"}
+          <label style={{ minWidth: "200px" }}>
+            Status
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="Draft">Rascunho (Draft)</option>
+              <option value="Submitted">Submetido</option>
+              <option value="InApproval">Em Aprovação</option>
+              <option value="Approved">Aprovado</option>
+              <option value="Rejected">Rejeitado</option>
+              <option value="InProgress">Em Progresso</option>
+              <option value="Completed">Concluído</option>
+            </select>
+          </label>
+        </div>
+        
+        <div style={{ display: "flex", gap: "1rem", height: "fit-content" }}>
+          <button type="button" onClick={() => setShowCreate(true)}>
+            Nova Requisição
           </button>
-        </form>
-      </section>
+        </div>
+      </div>
+
+      {showCreate && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Nova requisição de serviço</h3>
+              <button type="button" className="modal-close" onClick={() => setShowCreate(false)}>×</button>
+            </div>
+            <p className="hint" style={{ padding: 0, marginBottom: "1rem" }}>
+              Escolha um item ativo do catálogo e crie um pedido em rascunho.
+            </p>
+            {catalogError ? <div className="banner-error">{catalogError}</div> : null}
+            {catalogLoading ? <p className="hint">A carregar catálogo…</p> : null}
+            {!catalogLoading && catalogItems !== null && catalogItems.length === 0 && !catalogError ? (
+              <p className="hint">Não há itens no catálogo. Um administrador deve registar serviços primeiro.</p>
+            ) : null}
+            {createError ? <div className="banner-error">{createError}</div> : null}
+            <form className="form" onSubmit={(ev) => void handleCreate(ev)}>
+              <label>
+                Serviço do catálogo
+                <select
+                  value={catalogItemId}
+                  onChange={(ev) => setCatalogItemId(ev.target.value)}
+                  disabled={createLoading || catalogLoading || !catalogItems?.length}
+                  required
+                >
+                  <option value="">— Escolha —</option>
+                  {(catalogItems ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.category ? ` (${c.category})` : ""}
+                      {c.approvalFlow && c.approvalFlow !== "none" ? " — com aprovação" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {catalogItemId ? (
+                <p className="hint" style={{ marginTop: "-0.5rem" }}>
+                  {approvalHint(catalogItemId) ?? "Fluxo sem fila de aprovação no catálogo: após submeter, «Enviar para aprovação» passa direto a aprovado."}
+                </p>
+              ) : null}
+              <label>
+                Informações Adicionais <span className="hint" style={{display:'inline', padding:0}}>(Opcional)</span>
+                <textarea
+                  value={formDataJson}
+                  onChange={(ev) => setFormDataJson(ev.target.value)}
+                  rows={4}
+                  placeholder='Ex: {"motivo":"nova conta"}'
+                  disabled={createLoading}
+                />
+              </label>
+              <div className="actions" style={{ justifyContent: "flex-end", marginTop: "1.5rem" }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={createLoading || catalogLoading}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={createLoading || catalogLoading || !catalogItems?.length}>
+                  {createLoading ? "A registar…" : "Criar pedido"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <section className="panel">
         <div className="section-head">
-          <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Pedidos de serviço</h2>
+          <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Tabela de Requisições</h3>
           <button type="button" className="btn-secondary" disabled={listLoading} onClick={() => void loadList()}>
             {listLoading ? "A atualizar…" : "Atualizar lista"}
           </button>
         </div>
-        <p className="hint">
-          Ações usam o BFF (<code>/request/…</code>) com a sua sessão. <strong>Submeter / Enviar para aprovação</strong>{" "}
-          como requisitante; <strong>Aprovar / Rejeitar</strong> com permissão no servidor; <strong>Iniciar / Concluir</strong>{" "}
-          para analistas ou administrador.
-        </p>
+        
         {actionMessage ? (
           <div className={actionMessage.tone === "ok" ? "banner-success" : "banner-error"}>{actionMessage.text}</div>
         ) : null}
         {listError ? <div className="banner-error">{listError}</div> : null}
-        {listLoading ? <p>A carregar pedidos…</p> : null}
-        {!listLoading && rows !== null && rows.length === 0 && !listError ? (
-          <p className="hint">Nenhum pedido encontrado.</p>
+        
+        {listLoading ? <p style={{ padding: "2rem", textAlign: "center" }}>A carregar pedidos…</p> : null}
+        
+        {!listLoading && filteredRows.length === 0 && rows?.length !== 0 ? (
+          <p className="hint" style={{ padding: "2rem", textAlign: "center" }}>Nenhuma requisição encontrada para este filtro.</p>
         ) : null}
-        {!listLoading && rows !== null && rows.length > 0 ? (
+
+        {!listLoading && rows !== null && rows.length === 0 && !listError ? (
+          <p className="hint" style={{ padding: "2rem", textAlign: "center" }}>Nenhum pedido de serviço registado no sistema.</p>
+        ) : null}
+
+        {!listLoading && filteredRows.length > 0 ? (
           <div className="table-wrap">
-            <table className="incidents">
+            <table className="incidents" style={{ minWidth: "1000px" }}>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Serviço</th>
+                  <th>ID / Serviço</th>
                   <th>Estado</th>
                   <th>Requisitante</th>
-                  <th>Criado</th>
-                  <th>Ações</th>
+                  <th>Criado em</th>
+                  <th>Ações do Ciclo de Vida</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {filteredRows.map((r) => {
                   const cat = catalogById.get(r.catalogItemId);
                   const isRequester = Boolean(userId && r.requesterId === userId);
                   const busy = actionBusyId === r.id;
@@ -402,18 +493,17 @@ export function ServiceRequestSection() {
                   return (
                     <Fragment key={r.id}>
                       <tr>
-                        <td title={r.id}>{shortId(r.id)}</td>
-                        <td title={r.catalogItemId}>
-                          {cat?.name ?? shortId(r.catalogItemId)}
-                          {cat?.approvalFlow && cat.approvalFlow !== "none" ? (
-                            <span className="hint" style={{ display: "block", fontSize: "0.8rem" }}>
-                              Aprovação: {cat.approvalFlow}
-                            </span>
-                          ) : null}
+                        <td title={r.id}>
+                          <strong>{shortId(r.id)}</strong><br/>
+                          <span className="hint" style={{ padding: 0 }}>
+                            {cat?.name ?? shortId(r.catalogItemId)}
+                          </span>
                         </td>
                         <td>
                           <div>
-                            <strong>{r.status}</strong>
+                            <span className={`status-badge status-${r.status.toLowerCase()}`}>
+                              {r.status}
+                            </span>
                             {r.status === "InApproval" && (
                               <div style={{ fontSize: "0.8rem", color: "var(--text-muted, #6c757d)", marginTop: "0.2rem" }}>
                                 {r.approvalState?.mode === "sequential" && (
@@ -467,7 +557,7 @@ export function ServiceRequestSection() {
                               disabled={busy}
                               onClick={() => void toggleTrail(r.id)}
                             >
-                              {expandedId === r.id ? "Ocultar trilha" : "Trilha"}
+                              {expandedId === r.id ? "Ocultar Histórico" : "Ver Detalhes"}
                             </button>
                             {showSubmit ? (
                               <button
@@ -495,8 +585,7 @@ export function ServiceRequestSection() {
                               <>
                                 <button
                                   type="button"
-                                  className="btn-secondary"
-                                  style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem" }}
+                                  style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem", background: "var(--success-color)" }}
                                   disabled={busy}
                                   onClick={() => void runRowAction(r.id, () => approveServiceRequest(r.id))}
                                 >
@@ -505,7 +594,7 @@ export function ServiceRequestSection() {
                                 <button
                                   type="button"
                                   className="btn-secondary"
-                                  style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem" }}
+                                  style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem", color: "var(--danger-color)" }}
                                   disabled={busy}
                                   onClick={() => {
                                     const reason = window.prompt("Motivo da rejeição (opcional):") ?? "";
@@ -526,14 +615,13 @@ export function ServiceRequestSection() {
                                 disabled={busy}
                                 onClick={() => void runRowAction(r.id, () => startServiceRequest(r.id))}
                               >
-                                Iniciar
+                                Iniciar Serviço
                               </button>
                             ) : null}
                             {showComplete ? (
                               <button
                                 type="button"
-                                className="btn-secondary"
-                                style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem" }}
+                                style={{ fontSize: "0.8rem", padding: "0.25rem 0.5rem", background: "var(--primary-color)" }}
                                 disabled={busy}
                                 onClick={() => void runRowAction(r.id, () => completeServiceRequest(r.id))}
                               >
@@ -545,43 +633,78 @@ export function ServiceRequestSection() {
                       </tr>
                       {expandedId === r.id ? (
                         <tr>
-                          <td colSpan={6} style={{ background: "var(--panel-alt, #f8f9fa)", verticalAlign: "top" }}>
-                            {detailLoading ? <p className="hint">A carregar trilha…</p> : null}
+                          <td colSpan={5} style={{ background: "var(--panel-alt, #f8f9fa)", verticalAlign: "top", borderBottom: "1px solid var(--border-color)" }}>
+                            {detailLoading ? <p className="hint">A carregar histórico…</p> : null}
                             {detailError ? <div className="banner-error">{detailError}</div> : null}
                             {!detailLoading && detail && detail.id === r.id ? (
-                              <div style={{ padding: "0.5rem 0" }}>
-                                <p style={{ marginTop: 0, fontWeight: 600 }}>Eventos de workflow</p>
-                                {detail.workflowEvents.length === 0 ? (
-                                  <p className="hint">Sem eventos registados.</p>
-                                ) : (
-                                  <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
-                                    {detail.workflowEvents.map((e) => (
-                                      <li key={e.id} style={{ marginBottom: "0.35rem" }}>
-                                        <code>{e.fromStatus}</code> → <code>{e.toStatus}</code> — actor{" "}
-                                        <code>{shortId(e.actorId)}</code> — {new Date(e.createdAt).toLocaleString()}
-                                        {e.reason ? (
-                                          <>
-                                            {" "}
-                                            — <em>{e.reason}</em>
-                                          </>
-                                        ) : null}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                                <p style={{ fontWeight: 600 }}>Comentários</p>
-                                {detail.comments.length === 0 ? (
-                                  <p className="hint">Sem comentários.</p>
-                                ) : (
-                                  <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
-                                    {detail.comments.map((c) => (
-                                      <li key={c.id} style={{ marginBottom: "0.35rem" }}>
-                                        <code>{shortId(c.authorId)}</code> ({new Date(c.createdAt).toLocaleString()}
-                                        ): {c.body}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
+                              <div style={{ padding: "0.5rem 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "2rem" }}>
+                                <div>
+                                  <p style={{ marginTop: 0, fontWeight: 600 }}>Histórico de Transições</p>
+                                  {detail.workflowEvents.length === 0 ? (
+                                    <p className="hint">Sem eventos registados.</p>
+                                  ) : (
+                                    <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.9rem" }}>
+                                      {detail.workflowEvents.map((e) => (
+                                        <li key={e.id} style={{ marginBottom: "0.35rem" }}>
+                                          <strong>{e.fromStatus}</strong> → <strong>{e.toStatus}</strong><br/>
+                                          <span className="hint" style={{ padding: 0 }}>
+                                            Agente: {shortId(e.actorId)} — {new Date(e.createdAt).toLocaleString()}
+                                            {e.reason ? ` — ${e.reason}` : ""}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                                
+                                <div>
+                                  {cat?.approvalFlow && cat.approvalFlow !== "none" && detail.status !== "Draft" && detail.status !== "Submitted" ? (
+                                    <>
+                                      <p style={{ fontWeight: 600, marginTop: 0 }}>Situação de Aprovações</p>
+                                      {(!cat.approverRoleIds || cat.approverRoleIds.length === 0) ? (
+                                        <p className="hint">Qualquer administrador ou analista/gestor pode aprovar.</p>
+                                      ) : (
+                                        <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", fontSize: "0.9rem" }}>
+                                          {cat.approverRoleIds.map((rRole, idx) => {
+                                             let state = "⏳ Aguardando";
+                                             if (detail.status === "Approved" || detail.status === "InProgress" || detail.status === "Completed") state = "✅ Aprovado";
+                                             else if (detail.status === "Rejected") state = "❌ Rejeitado";
+                                             else if (cat.approvalFlow === "sequential") {
+                                               const step = detail.approvalState?.mode === "sequential" ? (detail.approvalState.step as number) : 0;
+                                               if (idx < step) state = "✅ Aprovado";
+                                               else if (idx === step) state = "⏳ Aguardando";
+                                               else state = "⏸️ Pendente";
+                                             } else if (cat.approvalFlow === "parallel") {
+                                               const approvedRoles = (detail.approvalState?.mode === "parallel" && Array.isArray(detail.approvalState.roles)) ? detail.approvalState.roles : [];
+                                               if (approvedRoles.includes(rRole)) state = "✅ Aprovado";
+                                             }
+                                             return (
+                                               <li key={idx} style={{ marginBottom: "0.35rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                 <span style={{ width: "20px", textAlign: "center" }}>{state.slice(0, 2)}</span>
+                                                 <strong>{rRole}</strong> 
+                                                 <span className="hint">{state.slice(3)}</span>
+                                               </li>
+                                             );
+                                          })}
+                                        </ul>
+                                      )}
+                                    </>
+                                  ) : null}
+
+                                  <p style={{ fontWeight: 600, marginTop: "1rem" }}>Comentários da Fila</p>
+                                  {detail.comments.length === 0 ? (
+                                    <p className="hint">Sem comentários adicionais.</p>
+                                  ) : (
+                                    <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.9rem" }}>
+                                      {detail.comments.map((c) => (
+                                        <li key={c.id} style={{ marginBottom: "0.35rem" }}>
+                                          <strong>{shortId(c.authorId)}</strong> ({new Date(c.createdAt).toLocaleString()}
+                                          ): {c.body}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
                               </div>
                             ) : null}
                           </td>
@@ -595,6 +718,6 @@ export function ServiceRequestSection() {
           </div>
         ) : null}
       </section>
-    </>
+    </div>
   );
 }

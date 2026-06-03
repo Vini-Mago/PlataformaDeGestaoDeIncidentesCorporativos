@@ -13,4 +13,5 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findByLogin(login: string): Promise<User | null>;
   findByIdentifier(identifier: string): Promise<User | null>;
+  findAll(): Promise<User[]>;
 }

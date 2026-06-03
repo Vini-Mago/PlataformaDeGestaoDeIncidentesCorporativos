@@ -149,14 +149,14 @@ Conforme **AnaliseRequisitos.md**, a PGIC exige gestão de usuários compatível
 
 ### 5.5 Integrações externas (RF-9.x) — *integration-service*
 
-- [~] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1). *(Webhook monitoring v1 + outbox + incident ingest; mapeamento severidade→criticidade.)*
+- [x] **Entrada** — webhooks/API com autenticação, validação, mapeamento configurável, respostas HTTP corretas para erro (RF-9.1). *(Webhook monitoring v1 + outbox + incident ingest; mapeamento severidade→criticidade.)*
 - [x] **Saída** — envio para ERP/CRM/diretório com timeout, retry, não bloqueio do fluxo principal (RF-9.2). *(Implementado em `integration-service`: `POST /api/outbound/v1/deliver` + processamento assíncrono com timeout, retry e DLQ no relay.)*
-- [~] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` expõe metadados; `integration_dlq` tem listagem e reprocessamento via API; mascaramento segue responsabilidade do payload summary.)*
+- [x] **Logs** de integração mascarando dados sensíveis; inspeção e reprocessamento de DLQ (RF-9.3). *( `integration_logs` expõe metadados; `integration_dlq` tem listagem e reprocessamento via API; mascaramento de dados sensíveis implementado via `maskSensitivePayload`.)*
 - [x] **Segurança em ingestão** — assinatura HMAC, rate limit, tamanho máximo de payload, allowlist opcional (*MICROSERVICES_LIST.md*). *(API key + HMAC opcional + rate limit + limite JSON 256kb + allowlist IP por env.)*
 
 ### 5.6 Processamento assíncrono (RF-10.x)
 
-- [~] **Jobs em background** para relatórios, KPIs, e-mails em massa, sincronizações (RF-10.1). *(Relays outbox e workers parciais; jobs de relatório pesado não generalizados.)*
+- [x] **Jobs em background** para relatórios, KPIs, e-mails em massa, sincronizações (RF-10.1). *(Jobs de relatórios pesados e de KPIs executivos de MTTR/MTBF totalmente integrados ao reporting-service com processamento em segundo plano.)*
 - [x] **Retry** com backoff e **DLQ** após N falhas; ferramenta ou API para reprocessar (RF-10.2). *(No `integration-service`, relay outbound com `maxAttempts`, backoff exponencial (`backoffMs`) e fallback para `integration_dlq`; reprocessamento via `POST /api/integration-dlq/:id/reprocess`.)*
 - [x] **Outbox pattern** onde eventos devem ser consistentes com o estado transacional (recomendação em *MICROSERVICES_LIST.md*).
 

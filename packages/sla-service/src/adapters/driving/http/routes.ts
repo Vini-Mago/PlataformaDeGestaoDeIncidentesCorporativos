@@ -38,5 +38,7 @@ export function createRoutes(
   router.get("/sla-policies", authMiddleware, readSla, controller.listSlaPoliciesHandler as RequestHandler);
   router.get("/sla-policies/:id", authMiddleware, readSla, validateIdParam, controller.getSlaPolicyHandler as RequestHandler);
 
+  router.get("/assignments/ticket/:ticketType/:ticketId", authMiddleware, readSla, controller.getSlaAssignmentHandler as RequestHandler);
+
   return router;
 }

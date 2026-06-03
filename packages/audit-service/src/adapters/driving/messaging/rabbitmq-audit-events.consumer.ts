@@ -1,5 +1,5 @@
 import amqp from "amqplib";
-import { logger } from "@pgic/shared";
+import { logger, consumeWithRetry } from "@pgic/shared";
 import {
   EXCHANGE_INCIDENT_EVENTS,
   EXCHANGE_REQUEST_EVENTS,
@@ -33,97 +33,84 @@ export class RabbitMqAuditEventsConsumer {
   ) {}
 
   private async handleMessage(msg: amqp.ConsumeMessage | null): Promise<void> {
-    if (!msg) return;
+    if (!msg || !this.channel) return;
 
-    try {
-      const content = msg.content.toString();
-      const envelope = JSON.parse(content) as { type?: string; payload?: Record<string, unknown> };
+    await consumeWithRetry(
+      this.channel,
+      msg,
+      async (payload: any, envelope: any) => {
+        const eventType = envelope?.type || envelope?.eventName;
+        if (typeof eventType !== "string" || !eventType) {
+          throw new Error("Audit consumer: Invalid envelope, missing eventType"); // Terminal error
+        }
 
-      if (!envelope || typeof envelope !== "object" || !envelope.type || !envelope.payload) {
-        logger.warn({ envelope, content }, "Audit consumer: Invalid envelope structure. Dropping message.");
-        this.channel?.nack(msg, false, false);
-        return;
-      }
+        // 1. Identify resourceType and extract it
+        let resourceType: string;
+        if (eventType.startsWith("incident.")) {
+          resourceType = "incident";
+        } else if (eventType.startsWith("request.")) {
+          resourceType = "request";
+        } else if (eventType.startsWith("problem.")) {
+          resourceType = "problem";
+        } else if (eventType.startsWith("change.")) {
+          resourceType = "change";
+        } else if (eventType.startsWith("user.")) {
+          resourceType = "user";
+        } else {
+          resourceType = eventType.split(".")[0] || "unknown";
+        }
 
-      const eventType = envelope.type;
-      const payload = envelope.payload;
+        // 2. Extract resourceId
+        let resourceId: string | undefined;
+        if (payload.incidentId && typeof payload.incidentId === "string") {
+          resourceId = payload.incidentId;
+        } else if (payload.serviceRequestId && typeof payload.serviceRequestId === "string") {
+          resourceId = payload.serviceRequestId;
+        } else if (payload.problemId && typeof payload.problemId === "string") {
+          resourceId = payload.problemId;
+        } else if (payload.changeId && typeof payload.changeId === "string") {
+          resourceId = payload.changeId;
+        } else if (payload.userId && typeof payload.userId === "string") {
+          resourceId = payload.userId;
+        } else if (payload.id && typeof payload.id === "string") {
+          resourceId = payload.id;
+        }
 
-      // 1. Identify resourceType and extract it
-      let resourceType = "unknown";
-      if (eventType.startsWith("incident.")) {
-        resourceType = "incident";
-      } else if (eventType.startsWith("request.")) {
-        resourceType = "request";
-      } else if (eventType.startsWith("problem.")) {
-        resourceType = "problem";
-      } else if (eventType.startsWith("change.")) {
-        resourceType = "change";
-      } else if (eventType.startsWith("user.")) {
-        resourceType = "user";
-      } else {
-        resourceType = eventType.split(".")[0] || "unknown";
-      }
+        // Ensure resourceId is a valid UUID
+        if (resourceId && !isValidUuid(resourceId)) {
+          resourceId = undefined;
+        }
 
-      // 2. Extract resourceId
-      let resourceId: string | undefined;
-      if (payload.incidentId && typeof payload.incidentId === "string") {
-        resourceId = payload.incidentId;
-      } else if (payload.serviceRequestId && typeof payload.serviceRequestId === "string") {
-        resourceId = payload.serviceRequestId;
-      } else if (payload.problemId && typeof payload.problemId === "string") {
-        resourceId = payload.problemId;
-      } else if (payload.changeId && typeof payload.changeId === "string") {
-        resourceId = payload.changeId;
-      } else if (payload.userId && typeof payload.userId === "string") {
-        resourceId = payload.userId;
-      } else if (payload.id && typeof payload.id === "string") {
-        resourceId = payload.id;
-      }
+        // 3. Extract userId (the actor/operator)
+        let userId: string | undefined;
+        if (payload.actorId && typeof payload.actorId === "string") {
+          userId = payload.actorId;
+        } else if (payload.changedById && typeof payload.changedById === "string") {
+          userId = payload.changedById;
+        } else if (payload.createdById && typeof payload.createdById === "string") {
+          userId = payload.createdById;
+        } else if (payload.requesterId && typeof payload.requesterId === "string") {
+          userId = payload.requesterId;
+        } else if (payload.userId && typeof payload.userId === "string") {
+          userId = payload.userId;
+        }
 
-      // Ensure resourceId is a valid UUID
-      if (resourceId && !isValidUuid(resourceId)) {
-        resourceId = undefined;
-      }
+        // If no valid UUID is found for the actor, fallback to the system user ID
+        if (!userId || !isValidUuid(userId)) {
+          userId = SYSTEM_USER_ID;
+        }
 
-      // 3. Extract userId (the actor/operator)
-      let userId: string | undefined;
-      if (payload.actorId && typeof payload.actorId === "string") {
-        userId = payload.actorId;
-      } else if (payload.changedById && typeof payload.changedById === "string") {
-        userId = payload.changedById;
-      } else if (payload.createdById && typeof payload.createdById === "string") {
-        userId = payload.createdById;
-      } else if (payload.requesterId && typeof payload.requesterId === "string") {
-        userId = payload.requesterId;
-      } else if (payload.userId && typeof payload.userId === "string") {
-        userId = payload.userId;
-      }
-
-      // If no valid UUID is found for the actor, fallback to the system user ID
-      if (!userId || !isValidUuid(userId)) {
-        userId = SYSTEM_USER_ID;
-      }
-
-      // 4. Create the audit entry
-      await this.createAuditEntryUseCase.execute({
-        userId,
-        action: eventType,
-        resourceType,
-        resourceId: resourceId || null,
-        metadata: payload,
-      });
-
-      logger.info(
-        { eventType, resourceType, resourceId, userId },
-        "Audit consumer: Successfully persisted audit entry for event"
-      );
-
-      this.channel?.ack(msg);
-    } catch (err) {
-      logger.error({ err, msgContent: msg.content.toString() }, "Audit consumer: Processing failed");
-      // Requeue is false to prevent infinite loop of poison pills
-      this.channel?.nack(msg, false, false);
-    }
+        // 4. Create the audit entry
+        await this.createAuditEntryUseCase.execute({
+          userId,
+          action: eventType,
+          resourceType,
+          resourceId: resourceId || null,
+          metadata: payload,
+        });
+      },
+      { queueName: this.queueName, maxAttempts: 3 }
+    );
   }
 
   async start(): Promise<void> {

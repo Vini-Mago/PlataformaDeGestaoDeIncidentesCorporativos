@@ -5,6 +5,7 @@ import { PrismaEscalationRuleRepository } from "./adapters/driven/persistence/pr
 import { CreateEscalationRuleUseCase } from "./application/use-cases/create-escalation-rule.use-case";
 import { ListEscalationRulesUseCase } from "./application/use-cases/list-escalation-rules.use-case";
 import { GetEscalationRuleUseCase } from "./application/use-cases/get-escalation-rule.use-case";
+import { GetEscalationHistoryByTicketUseCase } from "./application/use-cases/get-escalation-history-by-ticket.use-case";
 import { EscalationController } from "./adapters/driving/http/escalation.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -29,6 +30,7 @@ interface EscalationCradle {
   createEscalationRuleUseCase: CreateEscalationRuleUseCase;
   listEscalationRulesUseCase: ListEscalationRulesUseCase;
   getEscalationRuleUseCase: GetEscalationRuleUseCase;
+  getEscalationHistoryByTicketUseCase: GetEscalationHistoryByTicketUseCase;
   escalationController: EscalationController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -87,12 +89,18 @@ export function createContainer(config: EscalationContainerConfig) {
         new GetEscalationRuleUseCase(cradle.escalationRuleRepository)
     ).singleton(),
 
+    getEscalationHistoryByTicketUseCase: asFunction(
+      (cradle: EscalationCradle) =>
+        new GetEscalationHistoryByTicketUseCase(cradle.escalationHistoryRepository)
+    ).singleton(),
+
     escalationController: asFunction(
       (cradle: EscalationCradle) =>
         new EscalationController(
           cradle.createEscalationRuleUseCase,
           cradle.listEscalationRulesUseCase,
-          cradle.getEscalationRuleUseCase
+          cradle.getEscalationRuleUseCase,
+          cradle.getEscalationHistoryByTicketUseCase
         )
     ).singleton(),
 

@@ -1,7 +1,8 @@
-import { PrismaClient } from "../../../../generated/prisma-client/index";
+import type { PrismaClient } from "../../../../generated/prisma-client/index";
 import type {
   CreateEscalationHistoryInput,
   IEscalationHistoryRepository,
+  EscalationHistoryRecord,
 } from "../../../application/ports/escalation-history-repository.port";
 
 export class PrismaEscalationHistoryRepository implements IEscalationHistoryRepository {
@@ -36,5 +37,21 @@ export class PrismaEscalationHistoryRepository implements IEscalationHistoryRepo
       },
     });
     return count > 0;
+  }
+
+  async findByTicket(ticketId: string, ticketType: string): Promise<EscalationHistoryRecord[]> {
+    const rows = await this.prisma.escalationHistoryModel.findMany({
+      where: { ticketId, ticketType },
+      orderBy: { triggeredAt: "desc" },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      ruleId: r.ruleId,
+      ticketId: r.ticketId,
+      ticketType: r.ticketType,
+      actionExecuted: r.actionExecuted,
+      payload: (r.payload as object) ?? null,
+      triggeredAt: r.triggeredAt,
+    }));
   }
 }

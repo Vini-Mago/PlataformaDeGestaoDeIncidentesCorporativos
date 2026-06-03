@@ -30,5 +30,12 @@ export function createRoutes(
     controller.getEscalationRuleHandler as RequestHandler
   );
 
+  router.get(
+    "/history/ticket/:ticketType/:ticketId",
+    authMiddleware,
+    readEscalation,
+    controller.getEscalationHistoryHandler as RequestHandler
+  );
+
   return router;
 }

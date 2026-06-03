@@ -7,3 +7,6 @@ export * from "./incident-domain-event.contract";
 export * from "./integration-incident-ingest.contract";
 export * from "./sla-domain-event.contract";
 export * from "./problem-change-domain-event.contract";
+export * from "./reporting-domain-event.contract";
+export * from "./integration-outbound-dispatch.contract";
+export * from "./notification-domain-event.contract";

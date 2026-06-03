@@ -69,7 +69,10 @@ export function createRoutes(
   router.patch(
     "/problems/:id",
     authMiddleware,
-    requireJwtPermission("problems", "update", "all"),
+    requireAnyJwtPermission([
+      { module: "problems", action: "update", scope: "all" },
+      { module: "problems", action: "update", scope: "own" },
+    ]),
     validateIdParam,
     validateUpdateProblem,
     controller.patchProblemHandler as RequestHandler
@@ -124,7 +127,10 @@ export function createRoutes(
   router.patch(
     "/changes/:id",
     authMiddleware,
-    requireJwtPermission("changes", "update", "all"),
+    requireAnyJwtPermission([
+      { module: "changes", action: "update", scope: "all" },
+      { module: "changes", action: "update", scope: "own" },
+    ]),
     validateIdParam,
     validateUpdateChange,
     controller.patchChangeHandler as RequestHandler

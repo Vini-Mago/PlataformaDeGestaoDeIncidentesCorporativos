@@ -91,6 +91,14 @@ jobs:
       - name: Create databases and apply migrations
         run: pnpm db:migrate:deploy
 
+      - name: Gitleaks (Secret Scanning)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Security Audit (Dependencies)
+        run: pnpm audit --prod --audit-level=high
+
       - name: Unit tests
         run: pnpm test
 

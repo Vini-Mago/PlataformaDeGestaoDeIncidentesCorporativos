@@ -3,6 +3,7 @@ import { PrismaClient } from "../generated/prisma-client/index";
 import { createAuthMiddleware, JwtTokenVerifier } from "@pgic/shared";
 import { PrismaReportDefinitionRepository } from "./adapters/driven/persistence/prisma-report-definition.repository";
 import { PrismaReportExportJobRepository } from "./adapters/driven/persistence/prisma-report-export-job.repository";
+import { PrismaIncidentProvider } from "./adapters/driven/persistence/prisma-incident-provider";
 import { CreateReportDefinitionUseCase } from "./application/use-cases/create-report-definition.use-case";
 import { ListReportDefinitionsUseCase } from "./application/use-cases/list-report-definitions.use-case";
 import { GetReportDefinitionUseCase } from "./application/use-cases/get-report-definition.use-case";
@@ -12,9 +13,11 @@ import { DownloadReportExportJobUseCase } from "./application/use-cases/download
 import { ReportingController } from "./adapters/driving/http/reporting.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
+import type { IIncidentProvider } from "./application/ports/incident-provider.port";
 
 export interface ReportingContainerConfig {
   databaseUrl: string;
+  incidentDatabaseUrl: string;
   jwtSecret: string;
 }
 
@@ -23,6 +26,7 @@ interface ReportingCradle {
   prisma: PrismaClient;
   reportDefinitionRepository: PrismaReportDefinitionRepository;
   reportExportJobRepository: PrismaReportExportJobRepository;
+  incidentProvider: IIncidentProvider;
   createReportDefinitionUseCase: CreateReportDefinitionUseCase;
   listReportDefinitionsUseCase: ListReportDefinitionsUseCase;
   getReportDefinitionUseCase: GetReportDefinitionUseCase;
@@ -54,6 +58,10 @@ export function createContainer(config: ReportingContainerConfig) {
       (cradle: ReportingCradle) => new PrismaReportExportJobRepository(cradle.prisma)
     ).singleton(),
 
+    incidentProvider: asFunction(
+      (cradle: ReportingCradle) => new PrismaIncidentProvider(cradle.config.incidentDatabaseUrl)
+    ).singleton(),
+
     createReportDefinitionUseCase: asFunction(
       (cradle: ReportingCradle) =>
         new CreateReportDefinitionUseCase(cradle.reportDefinitionRepository)
@@ -68,17 +76,21 @@ export function createContainer(config: ReportingContainerConfig) {
       (cradle: ReportingCradle) =>
         new GetReportDefinitionUseCase(cradle.reportDefinitionRepository)
     ).singleton(),
+
     requestReportExportUseCase: asFunction(
       (cradle: ReportingCradle) =>
         new RequestReportExportUseCase(
           cradle.reportExportJobRepository,
-          cradle.reportDefinitionRepository
+          cradle.reportDefinitionRepository,
+          cradle.incidentProvider
         )
     ).singleton(),
+
     getReportExportJobUseCase: asFunction(
       (cradle: ReportingCradle) =>
         new GetReportExportJobUseCase(cradle.reportExportJobRepository)
     ).singleton(),
+
     downloadReportExportJobUseCase: asFunction(
       (cradle: ReportingCradle) =>
         new DownloadReportExportJobUseCase(cradle.reportExportJobRepository)
@@ -124,6 +136,9 @@ export function createContainer(config: ReportingContainerConfig) {
     async disconnect(): Promise<void> {
       try {
         await c.prisma.$disconnect();
+        if (c.incidentProvider && typeof c.incidentProvider.disconnect === "function") {
+          await c.incidentProvider.disconnect();
+        }
       } catch (err) {
         console.error("Error disconnecting Prisma client", err);
       }

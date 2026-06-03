@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "./auth";
 import {
   fetchProblemsList,
@@ -14,6 +14,11 @@ export function ProblemSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [selectedId, setSelectedId] = useState("");
   const [rootCause, setRootCause] = useState("");
@@ -48,18 +53,14 @@ export function ProblemSection() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    const p = rows?.find((r) => r.id === selectedId);
-    if (p) {
-      setRootCause(p.rootCause ?? "");
-      setActionPlan(p.actionPlan ?? "");
-      setStatus((p.status as (typeof STATUSES)[number]) ?? "Open");
-    } else {
-      setRootCause("");
-      setActionPlan("");
-      setStatus("Open");
-    }
-  }, [selectedId, rows]);
+  const handleOpenEdit = (p: ProblemRecord) => {
+    setSelectedId(p.id);
+    setRootCause(p.rootCause ?? "");
+    setActionPlan(p.actionPlan ?? "");
+    setStatus((p.status as (typeof STATUSES)[number]) ?? "Open");
+    setShowEdit(true);
+    setSaveError(null);
+  };
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,6 +77,7 @@ export function ProblemSection() {
     setSaveLoading(true);
     try {
       await updateProblem(selectedId, payload);
+      setShowEdit(false);
       await load();
     } catch (err) {
       setSaveError(
@@ -86,101 +88,199 @@ export function ProblemSection() {
     }
   };
 
-  return (
-    <section className="panel">
-      <div className="section-head">
-        <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Problemas (RF-7.2)</h2>
-        <button type="button" className="btn-secondary" disabled={loading} onClick={() => void load()}>
-          {loading ? "A atualizar…" : "Atualizar"}
-        </button>
-      </div>
-      <p className="hint">
-        Causa raiz, plano de ação e estado via <code>PATCH /problem-change/problems/:id</code>. Exige permissão{" "}
-        <code>problems:update:all</code>.
-      </p>
-      {hint ? <p className="hint">{hint}</p> : null}
-      {error ? <div className="banner-error">{error}</div> : null}
-      {loading ? <p>A carregar…</p> : null}
-      {!loading && rows !== null && rows.length === 0 && !error ? (
-        <p className="hint">Nenhum problema registado.</p>
-      ) : null}
-      {!loading && rows !== null && rows.length > 0 ? (
-        <div className="table-wrap">
-          <table className="incidents">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Estado</th>
-                <th>Causa raiz</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.title}</td>
-                  <td>{r.status}</td>
-                  <td>{r.rootCause ? `${r.rootCause.slice(0, 80)}${r.rootCause.length > 80 ? "…" : ""}` : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+  const filteredRows = useMemo(() => {
+    if (!rows) return [];
+    return rows.filter((r) => {
+      if (statusFilter && r.status !== statusFilter) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return r.title.toLowerCase().includes(query) || (r.description?.toLowerCase().includes(query));
+      }
+      return true;
+    });
+  }, [rows, searchQuery, statusFilter]);
 
-      {!loading && rows !== null && rows.length > 0 ? (
-        <div className="nested-panel">
-          <h3 style={{ marginTop: 0, fontSize: "1.05rem" }}>Editar problema</h3>
-          {saveError ? <div className="banner-error">{saveError}</div> : null}
-          <form className="form" onSubmit={(ev) => void handleSave(ev)}>
-            <label>
-              Problema
-              <select value={selectedId} onChange={(ev) => setSelectedId(ev.target.value)} disabled={saveLoading}>
-                <option value="">— Escolha —</option>
-                {rows.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Estado
-              <select
-                value={status}
-                onChange={(ev) => setStatus(ev.target.value as (typeof STATUSES)[number])}
-                disabled={saveLoading || !selectedId}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Causa raiz
-              <textarea
-                value={rootCause}
-                onChange={(ev) => setRootCause(ev.target.value)}
-                rows={4}
-                disabled={saveLoading || !selectedId}
-              />
-            </label>
-            <label>
-              Plano de ação
-              <textarea
-                value={actionPlan}
-                onChange={(ev) => setActionPlan(ev.target.value)}
-                rows={4}
-                disabled={saveLoading || !selectedId}
-              />
-            </label>
-            <button type="submit" disabled={saveLoading || !selectedId}>
-              {saveLoading ? "A guardar…" : "Guardar"}
-            </button>
-          </form>
+  const stats = useMemo(() => {
+    if (!rows) return { total: 0, open: 0, resolved: 0 };
+    return {
+      total: rows.length,
+      open: rows.filter((r) => r.status === "Open" || r.status === "InAnalysis").length,
+      resolved: rows.filter((r) => r.status === "Resolved" || r.status === "Closed").length,
+    };
+  }, [rows]);
+
+  return (
+    <div className="content-stack" style={{ padding: 0 }}>
+      {/* Top Stat Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <article className="stat-card">
+          <span>Total de Problemas</span>
+          <strong>{stats.total}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Em Análise / Abertos</span>
+          <strong style={{ color: stats.open > 0 ? "var(--warning)" : "inherit" }}>{stats.open}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Resolvidos / Fechados</span>
+          <strong style={{ color: "var(--success)" }}>{stats.resolved}</strong>
+        </article>
+      </div>
+
+      {/* Toolbar / Actions */}
+      <div style={{ display: "flex", gap: "1rem", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "1rem", flex: 1, minWidth: "300px" }}>
+          <label style={{ flex: 1 }}>
+            Buscar Problema
+            <input 
+              type="search" 
+              placeholder="Título ou descrição..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </label>
+          <label style={{ minWidth: "200px" }}>
+            Status
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">Todos</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
         </div>
-      ) : null}
-    </section>
+      </div>
+
+      {showEdit && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Editar Problema</h3>
+              <button type="button" className="modal-close" onClick={() => setShowEdit(false)}>×</button>
+            </div>
+            {saveError ? <div className="banner-error">{saveError}</div> : null}
+            <form className="form" onSubmit={(ev) => void handleSave(ev)}>
+              <div className="form-grid-2">
+                <label>
+                  Estado
+                  <select
+                    value={status}
+                    onChange={(ev) => setStatus(ev.target.value as (typeof STATUSES)[number])}
+                    disabled={saveLoading || !selectedId}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label>
+                Causa raiz <span className="hint" style={{display:'inline', padding:0}}>(Diagnóstico)</span>
+                <textarea
+                  value={rootCause}
+                  onChange={(ev) => setRootCause(ev.target.value)}
+                  rows={4}
+                  disabled={saveLoading || !selectedId}
+                  placeholder="Descreva a causa raiz encontrada..."
+                />
+              </label>
+              <label>
+                Plano de ação <span className="hint" style={{display:'inline', padding:0}}>(Resolução definitiva)</span>
+                <textarea
+                  value={actionPlan}
+                  onChange={(ev) => setActionPlan(ev.target.value)}
+                  rows={4}
+                  disabled={saveLoading || !selectedId}
+                  placeholder="Descreva o plano de ação..."
+                />
+              </label>
+              <div className="actions" style={{ justifyContent: "flex-end", marginTop: "1.5rem" }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowEdit(false)} disabled={saveLoading}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={saveLoading || !selectedId}>
+                  {saveLoading ? "A guardar…" : "Guardar Alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <section className="panel">
+        <div className="section-head">
+          <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Tabela de Problemas</h3>
+          <button type="button" className="btn-secondary" disabled={loading} onClick={() => void load()}>
+            {loading ? "A atualizar…" : "Atualizar lista"}
+          </button>
+        </div>
+        
+        {hint ? <p className="hint">{hint}</p> : null}
+        {error ? <div className="banner-error">{error}</div> : null}
+        
+        {loading ? <p style={{ padding: "2rem", textAlign: "center" }}>A carregar problemas…</p> : null}
+        
+        {!loading && filteredRows.length === 0 && rows?.length !== 0 ? (
+          <p className="hint" style={{ padding: "2rem", textAlign: "center" }}>Nenhum problema encontrado para este filtro.</p>
+        ) : null}
+
+        {!loading && rows !== null && rows.length === 0 && !error ? (
+          <p className="hint" style={{ padding: "2rem", textAlign: "center" }}>Nenhum problema registado no sistema.</p>
+        ) : null}
+
+        {!loading && filteredRows.length > 0 ? (
+          <div className="table-wrap">
+            <table className="incidents" style={{ minWidth: "900px" }}>
+              <thead>
+                <tr>
+                  <th>Título / Descrição</th>
+                  <th>Estado</th>
+                  <th>Causa raiz</th>
+                  <th>Plano de Ação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ maxWidth: "300px" }}>
+                      <strong>{r.title}</strong><br/>
+                      <small className="hint" style={{ padding: 0 }}>
+                        {r.description ? `${r.description.slice(0, 100)}${r.description.length > 100 ? "…" : ""}` : "—"}
+                      </small>
+                    </td>
+                    <td>
+                      <span className={`status-badge status-${r.status.toLowerCase()}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td style={{ maxWidth: "200px" }}>
+                      <small>
+                        {r.rootCause ? `${r.rootCause.slice(0, 80)}${r.rootCause.length > 80 ? "…" : ""}` : <span className="hint">Pendente</span>}
+                      </small>
+                    </td>
+                    <td style={{ maxWidth: "200px" }}>
+                      <small>
+                        {r.actionPlan ? `${r.actionPlan.slice(0, 80)}${r.actionPlan.length > 80 ? "…" : ""}` : <span className="hint">Pendente</span>}
+                      </small>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ fontSize: "0.85rem", padding: "0.25rem 0.5rem" }}
+                        onClick={() => handleOpenEdit(r)}
+                      >
+                        Investigar / Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+    </div>
   );
 }

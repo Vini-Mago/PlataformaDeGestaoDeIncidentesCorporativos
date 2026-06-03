@@ -10,6 +10,7 @@ export interface RoleRecord {
   id: string;
   name: string;
   description: string | null;
+  permissionIds: string[];
 }
 
 export interface UserPermissionOverrideRecord {

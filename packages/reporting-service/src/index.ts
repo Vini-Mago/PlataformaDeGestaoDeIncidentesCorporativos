@@ -23,6 +23,16 @@ if (isProduction && !process.env.REPORTING_DATABASE_URL) {
 const databaseUrl = isProduction
   ? process.env.REPORTING_DATABASE_URL!
   : (process.env.REPORTING_DATABASE_URL ?? "postgresql://pgic:pgic@localhost:5432/reporting_service");
+
+if (isProduction && !process.env.INCIDENT_DATABASE_URL) {
+  logger.error("INCIDENT_DATABASE_URL must be set in production");
+  process.exit(1);
+}
+
+const incidentDatabaseUrl = isProduction
+  ? process.env.INCIDENT_DATABASE_URL!
+  : (process.env.INCIDENT_DATABASE_URL ?? "postgresql://pgic:pgic@localhost:5432/incident_service");
+
 if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
   logger.error("JWT_SECRET must be set and at least 32 characters in production");
   process.exit(1);
@@ -33,6 +43,7 @@ const baseUrl = process.env.REPORTING_SERVICE_URL ?? `http://localhost:${port}`;
 async function bootstrap() {
   const container = createContainer({
     databaseUrl,
+    incidentDatabaseUrl,
     jwtSecret,
   });
 

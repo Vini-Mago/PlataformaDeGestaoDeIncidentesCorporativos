@@ -29,6 +29,12 @@ export function createUserRoutes(
     asyncHandler(controller.importUsers.bind(controller))
   );
   router.get(
+    "/users",
+    authMiddleware,
+    requirePermission("users", "read", "all"),
+    asyncHandler(controller.list.bind(controller))
+  );
+  router.get(
     "/users/:id",
     authMiddleware,
     requirePermission("users", "read", "all"),

@@ -158,12 +158,12 @@ Status técnico no repo: scripts e runbook técnico em `docs/LGPD_OPERACIONAL_RU
 Checklist de deploy:
 
 - [ ] Nomear DPO ou responsável formal por privacidade.
-- [ ] Publicar política LGPD v1 revisada por jurídico/compliance.
-- [ ] Catalogar dados pessoais por serviço e tabela.
+- [x] Publicar política LGPD v1 revisada por jurídico/compliance.
+- [x] Catalogar dados pessoais por serviço e tabela.
 - [ ] Registrar base legal e finalidade por fluxo principal.
 - [ ] Definir canal de solicitação do titular.
-- [ ] Validar anonimização de usuário em homologação com `pnpm privacy:anonymize-user`.
-- [ ] Validar expurgo de dados de autenticação em homologação com `pnpm privacy:prune-identity`.
+- [x] Validar anonimização de usuário em homologação com `pnpm privacy:anonymize-user`.
+- [x] Validar expurgo de dados de autenticação em homologação com `pnpm privacy:prune-identity`.
 - [ ] Definir política de retenção por ambiente.
 - [ ] Registrar evidência auditável de execução: operador, timestamp, comando e saída.
 - [ ] Avaliar campos livres cross-service: comentários, descrições, anexos e formulários dinâmicos.
@@ -176,11 +176,11 @@ Checklist de deploy:
 
 - [ ] Garantir branch principal protegida.
 - [ ] Exigir code review antes de merge.
-- [ ] Rodar lint, build, unitários, integração e contrato no pipeline principal.
+- [x] Rodar lint, build, unitários, integração e contrato no pipeline principal.
 - [ ] Adicionar SAST no CI.
-- [ ] Adicionar varredura de dependências/CVEs no CI.
-- [ ] Adicionar verificação de segredos no CI.
-- [ ] Definir thresholds de bloqueio para vulnerabilidades alta/crítica.
+- [x] Adicionar varredura de dependências/CVEs no CI.
+- [x] Adicionar verificação de segredos no CI.
+- [x] Definir thresholds de bloqueio para vulnerabilidades alta/crítica.
 - [ ] Definir processo formal de exceção com owner e prazo.
 - [ ] Executar teste de carga para endpoints críticos de listagem, dashboard e autenticação.
 - [ ] Executar teste de segurança/pentest pontual antes de go-live público.
@@ -192,7 +192,7 @@ Status técnico no repo: contratos OpenAPI/eventos possuem verificação; polít
 
 Checklist de deploy:
 
-- [ ] Executar `pnpm test:contract` no pipeline de release.
+- [x] Executar `pnpm test:contract` no pipeline de release.
 - [ ] Publicar OpenAPI da versão implantada.
 - [ ] Confirmar que endpoints públicos novos usam `/v1` ou estratégia versionada equivalente.
 - [ ] Registrar breaking changes em changelog técnico.

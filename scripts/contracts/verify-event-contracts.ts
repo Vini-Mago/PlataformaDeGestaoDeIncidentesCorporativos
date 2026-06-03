@@ -22,6 +22,12 @@ const {
   requestDomainEventEnvelopeSchema,
   slaDomainEventEnvelopeSchema,
   userDomainEventEnvelopeSchema,
+  REPORTING_EXPORTED_EVENT,
+  reportingExportedEnvelopeSchema,
+  INTEGRATION_OUTBOUND_DISPATCH_EVENT,
+  integrationOutboundDispatchEnvelopeSchema,
+  NOTIFICATION_EMAIL_SENT_EVENT,
+  notificationEmailSentEnvelopeSchema,
 } = require("../../packages/shared/src");
 
 const VALID_PAYLOAD = {
@@ -223,6 +229,41 @@ function main(): void {
     },
   });
   assert(userUpdatedParsed.success, "Expected valid user.updated contract");
+
+  const reportingExportedParsed = reportingExportedEnvelopeSchema.safeParse({
+    type: REPORTING_EXPORTED_EVENT,
+    payload: {
+      jobId: "66666666-6666-4666-8666-666666666666",
+      reportType: "kpi_dashboard",
+      requestedById: VALID_PAYLOAD.requesterId,
+      fileUrl: "http://example.com/report.csv",
+      occurredAt: new Date().toISOString(),
+    },
+  });
+  assert(reportingExportedParsed.success, `Expected valid reporting.exported contract: ${reportingExportedParsed.error?.message}`);
+
+  const integrationOutboundParsed = integrationOutboundDispatchEnvelopeSchema.safeParse({
+    type: INTEGRATION_OUTBOUND_DISPATCH_EVENT,
+    payload: {
+      deliveryId: "77777777-7777-4777-8777-777777777777",
+      endpoint: "https://webhook.site/abc",
+      method: "POST",
+      externalId: "ext-123",
+      occurredAt: new Date().toISOString(),
+    },
+  });
+  assert(integrationOutboundParsed.success, `Expected valid integration.outbound_dispatch contract: ${integrationOutboundParsed.error?.message}`);
+
+  const notificationEmailParsed = notificationEmailSentEnvelopeSchema.safeParse({
+    type: NOTIFICATION_EMAIL_SENT_EVENT,
+    payload: {
+      notificationId: "88888888-8888-4888-8888-888888888888",
+      recipient: "user@example.com",
+      subject: "Test email",
+      occurredAt: new Date().toISOString(),
+    },
+  });
+  assert(notificationEmailParsed.success, `Expected valid notification.email_sent contract: ${notificationEmailParsed.error?.message}`);
 
   console.log("RabbitMQ event contract checks passed.");
 }

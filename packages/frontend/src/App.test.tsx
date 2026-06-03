@@ -290,6 +290,85 @@ describe("dashboard and module pages", () => {
     expect(await screen.findByRole("heading", { name: "Change management" })).toBeInTheDocument();
     expect(screen.getAllByText("Deploy API").length).toBeGreaterThan(0);
   });
+
+  it("opens the changes page, selects a change and verifies that locked states are correctly enforced in the UI", async () => {
+    installFetchMock(authenticatedRoutes([
+      {
+        match: "/problem-change/changes",
+        body: [
+          { id: "ch-draft", title: "Deploy API Draft", status: "Draft", risk: "Medium" },
+          { id: "ch-inprogress", title: "Deploy API InProgress", status: "InProgress", risk: "High" },
+        ],
+      },
+      {
+        match: "/problem-change/changes/ch-draft",
+        body: {
+          id: "ch-draft",
+          title: "Deploy API Draft",
+          description: "Desc Draft",
+          justification: "Just Draft",
+          changeType: "Normal",
+          risk: "Medium",
+          status: "Draft",
+          windowStart: null,
+          windowEnd: null,
+          rollbackPlan: null,
+          createdById: "user-1",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          completedAt: null,
+          linkedIncidentIds: [],
+          linkedProblemIds: [],
+        },
+      },
+      {
+        match: "/problem-change/changes/ch-inprogress",
+        body: {
+          id: "ch-inprogress",
+          title: "Deploy API InProgress",
+          description: "Desc InProgress",
+          justification: "Just InProgress",
+          changeType: "Normal",
+          risk: "High",
+          status: "InProgress",
+          windowStart: new Date().toISOString(),
+          windowEnd: new Date().toISOString(),
+          rollbackPlan: "Rollback step",
+          createdById: "user-1",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          completedAt: null,
+          linkedIncidentIds: [],
+          linkedProblemIds: [],
+        },
+      },
+    ]));
+
+    renderAt("/changes");
+
+    expect(await screen.findByRole("heading", { name: "Change management" })).toBeInTheDocument();
+    expect(screen.getAllByText("Deploy API Draft").length).toBeGreaterThan(0);
+
+    // Select the Draft change
+    const select = screen.getByLabelText("Mudança");
+    await userEvent.selectOptions(select, "ch-draft");
+
+    // For Draft: core fields must be enabled (the fieldset containing them must NOT be disabled)
+    // and scheduling fields must be enabled
+    const titleInput = await screen.findByLabelText("Título");
+    expect(titleInput).not.toBeDisabled();
+    expect(screen.getByLabelText("Início da janela (local)")).not.toBeDisabled();
+
+    // Select the InProgress change
+    await userEvent.selectOptions(select, "ch-inprogress");
+
+    // For InProgress: core fields must be disabled, scheduling fields must be disabled
+    // wait for detail to update
+    const titleInputInProgress = await screen.findByLabelText("Título");
+    expect(titleInputInProgress).toBeDisabled();
+    expect(screen.getByLabelText("Início da janela (local)")).toBeDisabled();
+    expect(screen.getByLabelText("Plano de rollback")).toBeDisabled();
+  });
 });
 
 describe("system page", () => {

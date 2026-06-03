@@ -1,5 +1,7 @@
 import type { IReportDefinitionRepository } from "../ports/report-definition-repository.port";
 import type { IReportExportJobRepository } from "../ports/report-export-job-repository.port";
+import type { IIncidentProvider } from "../ports/incident-provider.port";
+import { ExecutiveKpiCalculator, type ExecutiveKpisGrouped } from "../../domain/services/executive-kpi-calculator";
 import type { ReportExportJob } from "../../domain/entities/report-export-job.entity";
 
 const DEFAULT_EXPORT_JOB_TIMEOUT_MS = 30_000;
@@ -40,6 +42,67 @@ function reportDefinitionsToCsv(
   return [header.join(","), ...rows].join("\n");
 }
 
+function executiveKpisToCsv(kpis: ExecutiveKpisGrouped): string {
+  const lines: string[] = [];
+
+  // Service Metrics
+  lines.push("--- METRICS BY SERVICE ---");
+  lines.push("Service,Total Incidents,Resolved Incidents,MTTR (Hours),MTBF (Hours)");
+  for (const [service, metrics] of Object.entries(kpis.byService)) {
+    lines.push(
+      [
+        service,
+        metrics.totalIncidents,
+        metrics.resolvedIncidents,
+        metrics.mttrHours,
+        metrics.mtbfHours,
+      ]
+        .map(csvEscape)
+        .join(",")
+    );
+  }
+
+  lines.push("");
+
+  // Team Metrics
+  lines.push("--- METRICS BY ASSIGNED TEAM ---");
+  lines.push("Team ID,Total Incidents,Resolved Incidents,MTTR (Hours),MTBF (Hours)");
+  for (const [team, metrics] of Object.entries(kpis.byTeam)) {
+    lines.push(
+      [
+        team,
+        metrics.totalIncidents,
+        metrics.resolvedIncidents,
+        metrics.mttrHours,
+        metrics.mtbfHours,
+      ]
+        .map(csvEscape)
+        .join(",")
+    );
+  }
+
+  lines.push("");
+
+  // Criticality Metrics
+  lines.push("--- METRICS BY CRITICALITY ---");
+  lines.push("Criticality,Total Incidents,Resolved Incidents,MTTR (Hours),MTBF (Hours)");
+  for (const [criticality, metrics] of Object.entries(kpis.byCriticality)) {
+    lines.push(
+      [
+        criticality,
+        metrics.totalIncidents,
+        metrics.resolvedIncidents,
+        metrics.mttrHours,
+        metrics.mtbfHours,
+      ]
+        .map(csvEscape)
+        .join(",")
+    );
+  }
+
+  return lines.join("\n");
+}
+
 export class RequestReportExportUseCase {
   private readonly pendingTasks: ExportTask[] = [];
   private running = false;
@@ -47,6 +110,7 @@ export class RequestReportExportUseCase {
   constructor(
     private readonly exportJobRepository: IReportExportJobRepository,
     private readonly reportDefinitionRepository: IReportDefinitionRepository,
+    private readonly incidentProvider?: IIncidentProvider,
     private readonly config: { exportJobTimeoutMs?: number; maxPendingJobs?: number } = {}
   ) {}
 
@@ -116,6 +180,23 @@ export class RequestReportExportUseCase {
 
   private async processInBackground(jobId: string, reportType?: string): Promise<void> {
     await this.exportJobRepository.updateStatus(jobId, "processing");
+
+    if (reportType === "kpi_dashboard") {
+      if (!this.incidentProvider) {
+        throw new Error("Incident provider is required to generate KPI Dashboard reports");
+      }
+      const incidents = await this.incidentProvider.fetchIncidents();
+      const kpis = ExecutiveKpiCalculator.calculate(incidents);
+      const content = executiveKpisToCsv(kpis);
+      await this.exportJobRepository.updateStatus(jobId, "completed", {
+        fileContent: content,
+        fileName: `executive-kpi-report-${Date.now()}.csv`,
+        errorMessage: null,
+        completedAt: new Date(),
+      });
+      return;
+    }
+
     const list = await this.reportDefinitionRepository.list({
       reportType: reportType ?? undefined,
     });

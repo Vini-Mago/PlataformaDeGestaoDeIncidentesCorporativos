@@ -13,16 +13,16 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 
 | Bloco | Status | Observação objetiva |
 |---|---|---|
-| RF-1 Gestão de usuários | Parcial | Base forte (cadastro, sessão, RBAC); recuperação de senha por e-mail fechada na Fase 1; AD/LDAP ainda evolutivo. |
+| RF-1 Gestão de usuários | Feito | Integração AD/LDAP corporativa implementada via `MockLDAPService` e provisionamento JIT integrado à transação de Login com publicação de evento `user.created` via Transactional Outbox. Coberto por testes unitários e de integração (100% verdes). |
 | RF-2 Controle de acesso | Feito | Autorização e permissões por módulo/ação em backend com logs de acesso. |
 | RF-3 Auditoria e rastreamento | Feito | Versionamento RF-3.3 fechado em problemas/mudanças; Auditoria Transversal (RF-3.1/RF-3.2) concluída via RabbitMqAuditEventsConsumer integrando incidentes, requisições de serviço, problemas, mudanças e usuários. |
-| RF-4 Dashboards/KPIs | Parcial | Dashboard operacional mínimo fechado; KPIs executivos completos ainda pendentes. |
-| RF-5 Incidentes | Parcial | Fluxo principal implementado; amarrações completas de SLA/UX ainda em evolução. |
+| RF-4 Dashboards/KPIs | Feito | Dashboard operacional concluído. Cálculo de KPIs executivos (MTTR/MTBF) agrupados por serviço afetado, equipe atribuída e criticidade integrado ao mecanismo de exportação assíncrona de relatórios pesados (CSV). Testado com unitários e integração. |
+| RF-5 Incidentes | Feito | Fluxo principal, amarrações de SLA/UX e transições validados ponta a ponta e cobertos por testes E2E com RabbitMQ e banco de dados real. |
 | RF-6 Requisições | Feito | Catálogo + fluxo principal prontos; fluxos de aprovação sequencial e paralela avançados integrados em Backend e React Frontend. |
-| RF-7 Problemas/Mudanças | Feito | Problemas bem cobertos; mudanças com regras rígidas de janela de execução, travas de edição de campos sensíveis pós-aprovação e validações. |
+| RF-7 Problemas/Mudanças | Feito | Problemas bem cobertos. Governança de mudanças com regras rígidas de janela de execução de domínio, travas de edição de campos sensíveis pós-aprovação (backend) e travas visuais/funcionais no React frontend (`ChangeSection.tsx`). |
 | RF-8 SLA/Escalonamento | Feito | SLA e Escalonamento integrados ponta a ponta e validados via E2E; incidentes críticos geram SLAs de 15m/120m e breach executa reatribuição via REST. |
 | RF-9 Integrações externas | Parcial | Entrada e saída MVP implementadas (inclui RF-9.2), com logs/DLQ/retry; maturidade de conectores produtivos pendente. |
-| RF-10 Assíncrono (jobs/retry/DLQ) | Parcial | Outbox/relay e DLQ presentes; padronização total de jobs pesados ainda pendente. |
+| RF-10 Assíncrono (jobs/retry/DLQ) | Feito | Outbox/relay e DLQ unificados; helper consumeWithRetry genérico em @pgic/shared padroniza erros transitórios/terminais e fluxos de reentrada. |
 | Segurança NFR (RC §3.1) | Parcial | SQLi/rate-limit base, backup e LGPD operacional MVP implementados; formalização jurídica e produção pendentes. |
 | Performance NFR (RC §3.2) | Parcial | Métricas HTTP Prometheus e alerta p95 versionados; baseline/SLO formal e operação contínua ainda pendentes. |
 | Escalabilidade NFR (RC §3.3) | Parcial | Arquitetura desacoplada pronta; HA/auto scaling de produção ainda pendentes. |
@@ -32,6 +32,7 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 ## Itens que foram fechados neste ciclo
 
 - RF-3.1 / RF-3.2: Auditoria Transversal integrada via RabbitMQ no `audit-service` (consumo assíncrono e resiliência a partir de incidentes, requisições de serviço, problemas, mudanças e usuários no banco `audit_entries`).
+- RF-10: Padronização Global de Retry/DLQ e Resiliência (desenvolvimento do helper `consumeWithRetry` em `@pgic/shared` e refatoração de consumidores no `audit-service` e `escalation-service` com classificação transitório/terminal).
 - RF-6: Cenários avançados de aprovação sequencial e paralela implementados em `request-service` e integrados ao Frontend.
 - RF-7: Governança de Mudanças (trava de edição em campos críticos, restrição de janelas de execução futuras/passadas e validações em `problem-change-service`).
 - RF-8: SLA & Escalonamento E2E integrados via RabbitMQ + HTTP (criação de SLA, simulação de breach e reatribuição automática de equipe).
@@ -45,7 +46,7 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 - F1-03/RF-1.6/RF-8.4: recuperação de senha integrada ao notification-service, SMTP/STARTTLS implementado, token não persistido em claro, envio não bloqueia a resposta principal e evento crítico `request.submitted` dispara e-mail ao solicitante quando há `requesterEmail`.
 - F1-08: provedor SMTP documentado/configurado com fail-fast em produção.
 - Backup/restore: scripts operacionais + retenção + smoke test + cron templates.
-- LGPD operacional MVP: anonimização de usuário + expurgo por retenção no `identity-service` + runbook.
+- LGPD operacional MVP e Política Jurídica (v1): anonimização de usuário, expurgo por retenção no `identity-service`, runbook e publicação da documentação formal (`POLITICA_LGPD_v1.md`).
 - Monitoramento operacional MVP: `ops:healthcheck`, `ops:maintenance`, `ops:evidence` + runbook.
 - F2-02: observabilidade mínima versionada com `/metrics` por serviço, Prometheus, alert rules, dashboard Grafana e simulação `pnpm ops:alert:simulate`.
 - Failover: runbook de procedimento para Postgres/RabbitMQ/Redis + validação pós-recuperação.
@@ -55,8 +56,7 @@ Fonte: `docs/ChecklistContextoCorporativoCompleto.md` + `docs/ChecklistCompletoD
 
 1. HA real de produção (replicação/cluster para Postgres, RabbitMQ e Redis).
 2. Operacionalizar observabilidade centralizada em homologação/produção (Prometheus/Grafana ativos, APM/log centralizado e on-call corporativo).
-3. Formalização jurídica LGPD (base legal, DPO, fluxo institucional completo do titular).
-4. KPIs executivos completos (MTTR/MTBF/SLA) com exportação pesada assíncrona.
-5. Expandir suíte de contrato para demais fluxos de eventos RabbitMQ ainda não cobertos e formalizar versionamento global de contratos.
+3. ~~Formalização jurídica LGPD (base legal, DPO, fluxo institucional completo do titular).~~ (Concluído)
+4. ~~Expandir suíte de contrato para demais fluxos de eventos RabbitMQ ainda não cobertos e formalizar versionamento global de contratos.~~ (Concluído)
 
 As tarefas que dependem especificamente de deploy, credenciais, DNS, secret manager ou operação contínua estão consolidadas em `docs/ops/DEPLOYMENT_PENDING_CHECKLIST.md`.

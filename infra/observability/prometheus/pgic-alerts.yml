@@ -11,26 +11,29 @@ groups:
           description: "Prometheus cannot scrape target {{ $labels.instance }} for 2 minutes."
 
       - alert: PgicHighHttp5xxRate
-        expr: sum by (service) (rate(pgic_http_requests_total{status_class="5xx"}[5m])) > 0.05
+        expr: |
+          sum by (service) (rate(pgic_http_requests_total{status_class="5xx"}[5m]))
+          /
+          sum by (service) (rate(pgic_http_requests_total[5m])) > 0.01
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High 5xx rate in {{ $labels.service }}"
-          description: "{{ $labels.service }} is returning more than 0.05 5xx responses per second over 5 minutes."
+          description: "{{ $labels.service }} is returning more than 1% 5xx responses relative to total traffic over 5 minutes."
 
       - alert: PgicHighHttpLatencyP95
         expr: |
           histogram_quantile(
             0.95,
             sum by (service, le) (rate(pgic_http_request_duration_seconds_bucket[5m]))
-          ) > 1
-        for: 10m
+          ) > 0.3
+        for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High p95 latency in {{ $labels.service }}"
-          description: "{{ $labels.service }} p95 HTTP latency is above 1s for 10 minutes."
+          description: "{{ $labels.service }} p95 HTTP latency is above 300ms for 5 minutes."
 
       - alert: PgicRabbitMqQueueBacklog
         expr: rabbitmq_queue_messages_ready > 1000

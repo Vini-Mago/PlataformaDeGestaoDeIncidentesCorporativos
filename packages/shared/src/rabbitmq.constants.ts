@@ -102,3 +102,17 @@ export const QUEUE_INCIDENT_INTEGRATION_INGEST = "incident.integration_ingest";
 /** SLA evaluation — incident-service publishes; sla-service consumes. */
 export const QUEUE_INCIDENT_CREATED_SLA = "sla.incident_created";
 export const QUEUE_INCIDENT_STATUS_CHANGED_SLA = "sla.incident_status_changed";
+
+/** Reporting events */
+export const EXCHANGE_REPORTING_EVENTS = "reporting.events";
+export const ROUTING_KEY_REPORTING_EXPORTED = "reporting_exported";
+export const REPORTING_EXPORTED_EVENT = "reporting.exported";
+
+/** Notification events */
+export const EXCHANGE_NOTIFICATION_EVENTS = "notification.events";
+export const ROUTING_KEY_NOTIFICATION_EMAIL_SENT = "notification_email_sent";
+export const NOTIFICATION_EMAIL_SENT_EVENT = "notification.email_sent";
+
+/** Integration Outbound events */
+export const ROUTING_KEY_OUTBOUND_DISPATCH = "outbound_dispatch";
+export const INTEGRATION_OUTBOUND_DISPATCH_EVENT = "integration.outbound_dispatch";
