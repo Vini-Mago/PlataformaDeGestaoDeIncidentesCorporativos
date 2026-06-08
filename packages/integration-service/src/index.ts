@@ -39,6 +39,7 @@ async function bootstrap() {
     webhookSecret: process.env.INTEGRATION_WEBHOOK_SECRET,
     webhookAllowedIps,
     systemUserId,
+    incidentServiceUrl: process.env.INCIDENT_SERVICE_BASE_URL ?? "http://localhost:3204",
   });
 
   const baseUrl = process.env.INTEGRATION_SERVICE_URL ?? `http://localhost:${port}`;

@@ -20,7 +20,18 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 ---
 
-## 2. Recent Milestones & Code Changes (2026-05-28)
+## 2. Recent Milestones & Code Changes (2026-06-08)
+
+### RF-9: Integration Endpoints for External Systems (2026-06-08)
+*   **Integration Endpoints for External Systems (2026-06-08)**:
+    *   Added support for external systems to retrieve and update incidents using API keys.
+    *   Implemented `GET /api/webhooks/v1/incidents/:id` and `GET /api/webhooks/v1/incidents/external/:externalId` in `integration-service` to query incidents from `incident-service` using a signed JWT token.
+    *   Implemented `PATCH /api/webhooks/v1/incidents/:id` and `PATCH /api/webhooks/v1/incidents/external/:externalId` in `integration-service` to perform status transitions in `incident-service`.
+    *   Updated query capability in `incident-service` list endpoint to support filtering by `externalId` and `externalSource`.
+    *   Documented all new integration endpoints in `integration-service` OpenAPI specification for Swagger UI unifier aggregation.
+    *   Created comprehensive integration tests (`integration-incidents.spec.ts`) validating queries, resolutions, and updates (100% green).
+
+## 2.1 Earlier Milestones & Code Changes (2026-05-28)
 
 ### RF-1: Corporate AD/LDAP Authentication & JIT Provisioning
 *   **Corporate AD/LDAP Authentication & JIT Provisioning (2026-05-28)**:
@@ -106,6 +117,7 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 | **`RF-6` Advanced Approvals** | **Done (Backend & Frontend)** | Sequential and parallel approvals dynamically displayed; action buttons visible only to target step/role. |
 | **`RF-7` Change Governance** | **Fully Done & Tested** | Visual and functional locking implemented in the React frontend (`ChangeSection.tsx`). Core fields (title, description, risk, type) are disabled when not in Draft mode; scheduling fields (window start/end, rollback plan) are disabled when scheduling edit is not allowed. Verified with new frontend unit tests. |
 | **`RF-8` SLA & Escalation E2E** | **Fully Done & Tested** | Designed, implemented, and verified E2E integration test scenario (`sla-escalation.e2e.spec.ts`) spanning incident creation, SLA calculations, breach, and reassignment via HTTP. |
+| **`RF-9` Integration Routes** | **Fully Done & Tested** | Implemented GET and PATCH endpoints in integration-service to query and update incidents by internal and external ID, with Swagger documentation. |
 
 
 ---

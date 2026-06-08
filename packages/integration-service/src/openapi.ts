@@ -181,7 +181,118 @@ registry.registerPath({
     409: { description: "DLQ item already reprocessed", content: { "application/json": { schema: ErrorSchema } } },
   },
 });
+const IncidentResponseSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  status: z.string(),
+  criticality: z.string(),
+  serviceAffected: z.string().nullable(),
+  requesterId: z.string(),
+  assignedTeamId: z.string().nullable(),
+  assignedToId: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).openapi("IncidentResponse");
 
+const UpdateIncidentStatusBodySchema = z.object({
+  status: z.enum(["Open", "InAnalysis", "InProgress", "PendingCustomer", "Resolved", "Closed"]),
+  comment: z.string().optional(),
+}).openapi("UpdateIncidentStatusBody");
+
+registry.registerPath({
+  method: "get",
+  path: "/api/webhooks/v1/incidents/{id}",
+  summary: "Get incident by internal UUID (external systems)",
+  tags: ["External Systems Incidents"],
+  security: [{ apiKeyAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: "Incident details",
+      content: { "application/json": { schema: IncidentResponseSchema } },
+    },
+    401: { description: "Invalid API key", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Incident not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/webhooks/v1/incidents/external/{externalId}",
+  summary: "Get incident by external ID (external systems)",
+  tags: ["External Systems Incidents"],
+  security: [{ apiKeyAuth: [] }],
+  request: {
+    params: z.object({ externalId: z.string() }),
+    query: z.object({ source: z.string().optional() }),
+  },
+  responses: {
+    200: {
+      description: "Incident details",
+      content: { "application/json": { schema: IncidentResponseSchema } },
+    },
+    401: { description: "Invalid API key", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Incident not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/api/webhooks/v1/incidents/{id}",
+  summary: "Update incident status by internal UUID (external systems)",
+  tags: ["External Systems Incidents"],
+  security: [{ apiKeyAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: UpdateIncidentStatusBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated incident details",
+      content: { "application/json": { schema: IncidentResponseSchema } },
+    },
+    400: { description: "Invalid input or transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Invalid API key", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Incident not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/api/webhooks/v1/incidents/external/{externalId}",
+  summary: "Update incident status by external ID (external systems)",
+  tags: ["External Systems Incidents"],
+  security: [{ apiKeyAuth: [] }],
+  request: {
+    params: z.object({ externalId: z.string() }),
+    query: z.object({ source: z.string().optional() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: UpdateIncidentStatusBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated incident details",
+      content: { "application/json": { schema: IncidentResponseSchema } },
+    },
+    400: { description: "Invalid input or transition", content: { "application/json": { schema: ErrorSchema } } },
+    401: { description: "Invalid API key", content: { "application/json": { schema: ErrorSchema } } },
+    404: { description: "Incident not found", content: { "application/json": { schema: ErrorSchema } } },
+  },
+});
 export function createIntegrationOpenApi(serverUrl: string): object {
   const generator = new OpenApiGeneratorV3(registry.definitions);
   const doc = generator.generateDocument({

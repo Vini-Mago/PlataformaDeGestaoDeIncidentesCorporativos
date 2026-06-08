@@ -121,6 +121,8 @@ export class PrismaIncidentRepository implements IIncidentRepository {
         ...(filters.status && { status: filters.status }),
         ...(filters.assignedToId && { assignedToId: filters.assignedToId }),
         ...(filters.assignedTeamId && { assignedTeamId: filters.assignedTeamId }),
+        ...(filters.externalId && { externalId: filters.externalId }),
+        ...(filters.externalSource && { externalSource: filters.externalSource }),
       },
       orderBy: { createdAt: "desc" },
     });

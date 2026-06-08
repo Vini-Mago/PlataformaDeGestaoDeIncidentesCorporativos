@@ -17,11 +17,41 @@ export function createRoutes(
     legacyHeaders: false,
   });
 
+  const webhookAuth = createWebhookAuthMiddleware(webhookConfig);
+
   router.post(
     "/webhooks/v1/monitoring",
     webhookLimiter,
-    createWebhookAuthMiddleware(webhookConfig),
+    webhookAuth,
     controller.monitoringWebhook
+  );
+
+  router.get(
+    "/webhooks/v1/incidents/:id",
+    webhookLimiter,
+    webhookAuth,
+    controller.getIncident
+  );
+
+  router.get(
+    "/webhooks/v1/incidents/external/:externalId",
+    webhookLimiter,
+    webhookAuth,
+    controller.getIncidentByExternalId
+  );
+
+  router.patch(
+    "/webhooks/v1/incidents/:id",
+    webhookLimiter,
+    webhookAuth,
+    controller.updateIncident
+  );
+
+  router.patch(
+    "/webhooks/v1/incidents/external/:externalId",
+    webhookLimiter,
+    webhookAuth,
+    controller.updateIncidentByExternalId
   );
 
   router.post(

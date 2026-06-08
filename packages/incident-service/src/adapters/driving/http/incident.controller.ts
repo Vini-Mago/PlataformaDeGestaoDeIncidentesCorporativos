@@ -69,6 +69,8 @@ export class IncidentController {
     const status = parseStatusFilter(req.query.status);
     const assignedToId = req.query.assignedToId as string | undefined;
     const assignedTeamId = req.query.assignedTeamId as string | undefined;
+    const externalId = req.query.externalId as string | undefined;
+    const externalSource = req.query.externalSource as string | undefined;
 
     let requesterId = req.query.requesterId as string | undefined;
     if (!canReadAllIncidents(req)) {
@@ -80,6 +82,8 @@ export class IncidentController {
       status,
       assignedToId,
       assignedTeamId,
+      externalId,
+      externalSource,
     });
     res.json(list);
   });

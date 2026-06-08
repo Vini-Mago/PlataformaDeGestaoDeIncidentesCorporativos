@@ -33,6 +33,19 @@ describe("ListIncidentsUseCase", () => {
     });
   });
 
+  it("calls repository with externalRef filters", async () => {
+    const useCase = new ListIncidentsUseCase(incidentRepository);
+    await useCase.execute({
+      externalId: "ext-123",
+      externalSource: "monitoring",
+    });
+
+    expect(incidentRepository.list).toHaveBeenCalledWith({
+      externalId: "ext-123",
+      externalSource: "monitoring",
+    });
+  });
+
   it("throws InvalidStatusFilterError for invalid status", async () => {
     const useCase = new ListIncidentsUseCase(incidentRepository);
 

@@ -20,6 +20,8 @@ export interface IncidentListFilters {
   status?: string;
   assignedToId?: string;
   assignedTeamId?: string;
+  externalId?: string;
+  externalSource?: string;
 }
 
 export interface IncidentAttachment {

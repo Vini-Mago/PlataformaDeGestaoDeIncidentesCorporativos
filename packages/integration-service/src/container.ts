@@ -14,6 +14,8 @@ import { CreateOutboundDeliveryUseCase } from "./application/use-cases/create-ou
 import { ListIntegrationLogsUseCase } from "./application/use-cases/list-integration-logs.use-case";
 import { ListIntegrationDlqUseCase } from "./application/use-cases/list-integration-dlq.use-case";
 import { ReprocessIntegrationDlqUseCase } from "./application/use-cases/reprocess-integration-dlq.use-case";
+import { GetIntegrationIncidentUseCase } from "./application/use-cases/get-integration-incident.use-case";
+import { UpdateIntegrationIncidentUseCase } from "./application/use-cases/update-integration-incident.use-case";
 import { IntegrationController } from "./adapters/driving/http/integration.controller";
 import { createRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
@@ -26,6 +28,7 @@ export interface IntegrationContainerConfig {
   webhookSecret?: string;
   webhookAllowedIps?: string[];
   systemUserId: string;
+  incidentServiceUrl: string;
 }
 
 interface IntegrationCradle {
@@ -41,6 +44,8 @@ interface IntegrationCradle {
   listIntegrationLogsUseCase: ListIntegrationLogsUseCase;
   listIntegrationDlqUseCase: ListIntegrationDlqUseCase;
   reprocessIntegrationDlqUseCase: ReprocessIntegrationDlqUseCase;
+  getIntegrationIncidentUseCase: GetIntegrationIncidentUseCase;
+  updateIntegrationIncidentUseCase: UpdateIntegrationIncidentUseCase;
   integrationController: IntegrationController;
   tokenVerifier: JwtTokenVerifier;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
@@ -110,6 +115,24 @@ export function createContainer(config: IntegrationContainerConfig) {
         new ReprocessIntegrationDlqUseCase(cradle.integrationDlqRepository, cradle.outboxWriter)
     ).singleton(),
 
+    getIntegrationIncidentUseCase: asFunction(
+      (cradle: IntegrationCradle) =>
+        new GetIntegrationIncidentUseCase(
+          cradle.integrationLogRepository,
+          cradle.config.jwtSecret,
+          cradle.config.incidentServiceUrl
+        )
+    ).singleton(),
+
+    updateIntegrationIncidentUseCase: asFunction(
+      (cradle: IntegrationCradle) =>
+        new UpdateIntegrationIncidentUseCase(
+          cradle.integrationLogRepository,
+          cradle.config.jwtSecret,
+          cradle.config.incidentServiceUrl
+        )
+    ).singleton(),
+
     integrationController: asFunction(
       (cradle: IntegrationCradle) =>
         new IntegrationController(
@@ -118,6 +141,8 @@ export function createContainer(config: IntegrationContainerConfig) {
           cradle.listIntegrationLogsUseCase,
           cradle.listIntegrationDlqUseCase,
           cradle.reprocessIntegrationDlqUseCase,
+          cradle.getIntegrationIncidentUseCase,
+          cradle.updateIntegrationIncidentUseCase,
           cradle.config.systemUserId
         )
     ).singleton(),
