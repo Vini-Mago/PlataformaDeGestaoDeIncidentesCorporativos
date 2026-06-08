@@ -1,0 +1,155 @@
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+Error: Transform failed with 8 errors:
+/eval.ts:17:13: ERROR: Top-level await is currently not supported with the "cjs" output format
+/eval.ts:18:11: ERROR: Top-level await is currently not supported with the "cjs" output format
+/eval.ts:19:0: ERROR: Top-level await is currently not supported with the "cjs" output format
+/eval.ts:20:0: ERROR: Top-level await is currently not supported with the "cjs" output format
+/eval.ts:21:0: ERROR: Top-level await is currently not supported with the "cjs" output format
+...
+    at failureErrorWithLog (/home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+    at /home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23) {
+  errors: [
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 13,
+        file: '/eval.ts',
+        length: 5,
+        line: 17,
+        lineText: 'const conn = await amqp.connect(url);',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 11,
+        file: '/eval.ts',
+        length: 5,
+        line: 18,
+        lineText: 'const ch = await conn.createChannel();',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 0,
+        file: '/eval.ts',
+        length: 5,
+        line: 19,
+        lineText: "await ch.assertExchange(EXCHANGE_USER_EVENTS, 'topic', { durable: true });",
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 0,
+        file: '/eval.ts',
+        length: 5,
+        line: 20,
+        lineText: 'await ch.assertQueue(QUEUE_USER_CREATED_REQUEST, { durable: true });',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 0,
+        file: '/eval.ts',
+        length: 5,
+        line: 21,
+        lineText: 'await ch.bindQueue(QUEUE_USER_CREATED_REQUEST, EXCHANGE_USER_EVENTS, ROUTING_KEY_USER_CREATED);',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 12,
+        file: '/eval.ts',
+        length: 5,
+        line: 27,
+        lineText: 'const msg = await ch.get(QUEUE_USER_CREATED_REQUEST, { noAck: true });',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 0,
+        file: '/eval.ts',
+        length: 5,
+        line: 35,
+        lineText: 'await ch.close();',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    },
+    {
+      detail: undefined,
+      id: '',
+      location: {
+        column: 0,
+        file: '/eval.ts',
+        length: 5,
+        line: 36,
+        lineText: 'await conn.close();',
+        namespace: '',
+        suggestion: ''
+      },
+      notes: [],
+      pluginName: '',
+      text: 'Top-level await is currently not supported with the "cjs" output format'
+    }
+  ],
+  warnings: []
+}
+
+Node.js v22.22.3

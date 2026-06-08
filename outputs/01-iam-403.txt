@@ -1,0 +1,2 @@
+ ✓ src/__tests__/integration/users.integration.spec.ts (14 tests | 14 skipped) 144ms
+ Test Files  1 passed (1)

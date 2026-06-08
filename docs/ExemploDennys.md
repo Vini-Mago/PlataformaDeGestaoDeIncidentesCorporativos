@@ -32,4 +32,4 @@ O Desafio de Integração/Corporativo:
 O projeto se caracteriza como corporativo por sua arquitetura em microserviços, uso de banco relacional e não relacional, comunicação exclusiva via API RESTful entre front-end e back-end, e processamento assíncrono com RabbitMQ. O desafio principal é garantir a consistência dos dados do Core (modelo interpretado e versionado) enquanto os Módulos processam tarefas pesadas em fila (interpretação, quantitativos, clash, orçamento) e expõem APIs seguras para o dashboard de KPIs e para sistemas externos — ERPs, BI e ferramentas de estoque e contratos — consumirem quantitativos, orçamentos e indicadores em tempo (quase) real, com interoperabilidade bem direcionada.
 
 
-Aluno: Audri Rian
+Aluno: Vinicius Souza de Moraes

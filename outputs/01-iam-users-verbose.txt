@@ -1,0 +1,15 @@
+ ✓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 401 when Authorization header is missing
+ ✓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 401 when token is invalid
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 403 when user is not admin
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 201 when admin creates a user
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 409 when admin creates user with existing email
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 400 when body is empty
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > POST /api/users > returns 400 when email is invalid
+ ✓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 401 when Authorization header is missing
+ ✓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 401 when token is invalid
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 400 when id is not a valid UUID
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 404 when user does not exist
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 200 with user when requesting own id
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 403 when user requests another user id
+ ↓ src/__tests__/integration/users.integration.spec.ts > Users API integration > GET /api/users/:id > returns 200 with user when admin requests any user id
+      Tests  4 passed | 10 skipped (14)

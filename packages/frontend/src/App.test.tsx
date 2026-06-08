@@ -13,8 +13,8 @@ type MockRoute = {
 
 const user = {
   id: "user-1",
-  name: "Audri Admin",
-  email: "audri@example.com",
+  name: "Vinicius Souza de Moraes",
+  email: "vinicius@example.com",
   role: "admin",
 };
 
@@ -111,12 +111,12 @@ describe("auth pages", () => {
 
     renderAt("/login");
     await screen.findByRole("heading", { name: "Entrar" });
-    await userEvent.type(screen.getByLabelText("E-mail ou login"), "audri@example.com");
+    await userEvent.type(screen.getByLabelText("E-mail ou login"), "vinicius@example.com");
     await userEvent.type(screen.getByLabelText("Senha"), "Password123");
     await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     expect(await screen.findByRole("heading", { name: "Visão operacional" })).toBeInTheDocument();
-    expect(screen.getByText("Audri Admin")).toBeInTheDocument();
+    expect(screen.getByText("Vinicius Souza de Moraes")).toBeInTheDocument();
   });
 
   it("registers with password and opens the dashboard", async () => {
@@ -128,8 +128,8 @@ describe("auth pages", () => {
 
     renderAt("/register");
     await screen.findByRole("heading", { name: "Criar acesso" });
-    await userEvent.type(screen.getByLabelText("Nome completo"), "Audri Admin");
-    await userEvent.type(screen.getByLabelText("E-mail"), "audri@example.com");
+    await userEvent.type(screen.getByLabelText("Nome completo"), "Vinicius Souza de Moraes");
+    await userEvent.type(screen.getByLabelText("E-mail"), "vinicius@example.com");
     await userEvent.type(screen.getByLabelText("Senha"), "Password123");
     await userEvent.click(screen.getByRole("button", { name: "Registrar e entrar" }));
 

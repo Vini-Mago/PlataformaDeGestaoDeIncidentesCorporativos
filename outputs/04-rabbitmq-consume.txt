@@ -1,0 +1,28 @@
+
+> audit-service@1.0.0 test:integration /home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/packages/audit-service
+> vitest run --config vitest.integration.config.ts "--" "src/__tests__/integration/rabbitmq-audit-events.consumer.integration.spec.ts"
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/packages/audit-service
+
+ ❯ src/__tests__/integration/audit-service.integration.spec.ts (0 test)
+ ❯ src/__tests__/integration/rabbitmq-audit-events.consumer.integration.spec.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/integration/audit-service.integration.spec.ts [ src/__tests__/integration/audit-service.integration.spec.ts ]
+ FAIL  src/__tests__/integration/rabbitmq-audit-events.consumer.integration.spec.ts [ src/__tests__/integration/rabbitmq-audit-events.consumer.integration.spec.ts ]
+Error: Failed to load url amqplib (resolved id: amqplib) in /home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/packages/audit-service/src/adapters/driving/messaging/rabbitmq-audit-events.consumer.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.4.21_@types+node@22.19.13/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51969:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  09:30:12
+   Duration  2.36s (transform 736ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 184ms)
+
+/home/audri/Github/Faculdade/PlataformaDeGestaoDeIncidentesCorporativos/packages/audit-service:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  audit-service@1.0.0 test:integration: `vitest run --config vitest.integration.config.ts "--" "src/__tests__/integration/rabbitmq-audit-events.consumer.integration.spec.ts"`
+Exit status 1

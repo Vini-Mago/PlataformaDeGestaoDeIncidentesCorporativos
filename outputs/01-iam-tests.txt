@@ -1,0 +1,24 @@
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 201 with user and accessToken when payload is valid
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 409 when email already exists
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 400 for invalid email
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 400 when password is too short
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 400 when body is empty
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/register > returns 400 when email and name are missing
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/login > returns 200 with user and accessToken for valid credentials
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/login > returns 401 for wrong password
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/login > returns 401 for unknown email
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/login > returns 400 when body is empty
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > POST /api/auth/login > returns 400 when email or password is missing
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/me > returns 200 with current user when Authorization header is valid
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/me > returns 401 when Authorization header is missing
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/me > returns 401 when token is invalid
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/me > returns 404 when user was deleted after token was issued
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/google > returns 503 when Google OAuth is not configured
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /api/auth/github > returns 503 when GitHub OAuth is not configured
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > GET /health > returns 200 with service name
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > Password auth disabled > returns 403 on register when password auth is disabled
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > Password auth disabled > returns 403 on login when password auth is disabled
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > Password auth disabled > returns 403 on forgot-password when password auth is disabled
+ ✓ src/__tests__/integration/auth.integration.spec.ts > Auth API integration > Password auth disabled > returns 403 on reset-password when password auth is disabled
+ Test Files  1 passed (1)
+      Tests  22 passed (22)

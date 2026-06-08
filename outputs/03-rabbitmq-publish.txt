@@ -1,0 +1,4 @@
+ ✓ src/__tests__/integration/outbox.integration.spec.ts > Outbox integration > creates outbox row in same transaction as user on register
+ ✓ src/__tests__/integration/outbox.integration.spec.ts > Outbox integration > relay publishes and marks outbox row when eventPublisher is provided
+ Test Files  1 passed (1)
+      Tests  2 passed (2)

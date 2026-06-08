@@ -1,0 +1,5 @@
+NAME            IMAGE                          COMMAND                  SERVICE    CREATED         STATUS                   PORTS
+pgic-nginx      nginx:alpine                   "/docker-entrypoint.…"   nginx      3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:58080->80/tcp, [::]:58080->80/tcp
+pgic-postgres   postgres:16-alpine             "docker-entrypoint.s…"   postgres   3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+pgic-rabbitmq   rabbitmq:3-management-alpine   "docker-entrypoint.s…"   rabbitmq   3 minutes ago   Up 3 minutes (healthy)   4369/tcp, 5671/tcp, 15671/tcp, 15691-15692/tcp, 25672/tcp, 0.0.0.0:55672->5672/tcp, [::]:55672->5672/tcp, 0.0.0.0:55673->15672/tcp, [::]:55673->15672/tcp
+pgic-redis      redis:7-alpine                 "docker-entrypoint.s…"   redis      3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:56379->6379/tcp, [::]:56379->6379/tcp
