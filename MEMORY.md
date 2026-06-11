@@ -22,6 +22,12 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 ## 2. Recent Milestones & Code Changes (2026-06-11)
 
+### Database Reset & Seeding Automation (2026-06-11)
+*   **Make Targets for DB Operations**:
+    *   Created root script `scripts/db-reset.ts` using `npx prisma migrate reset --force` and `npx tsx ensure-database.ts` sequentially for all 10 databases in the workspace.
+    *   Added `db:reset` and `db:seed` commands to root `package.json`.
+    *   Created `db-seed` and `db-reset` targets in the root `makefile` to run migrations and seeds respectively.
+
 ### UI RBAC Restructuring & API Enforcement (2026-06-11)
 *   **Navigation & Route RBAC Enforcement (2026-06-11)**:
     *   Defined metadata (`allowedRoles`) for navigation items, hiding unauthorized options on the frontend dynamically inside `AppShell` component based on `user?.role`.

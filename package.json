@@ -50,6 +50,8 @@
     "ops:evidence": "bash scripts/ops/collect-operational-evidence.sh",
     "db:migrate:deploy": "pnpm --filter identity-service run prisma:migrate:deploy && pnpm --filter request-service run prisma:migrate:deploy && pnpm --filter incident-service run prisma:migrate:deploy && pnpm --filter problem-change-service run prisma:migrate:deploy && pnpm --filter sla-service run prisma:migrate:deploy && pnpm --filter escalation-service run prisma:migrate:deploy && pnpm --filter notification-service run prisma:migrate:deploy && pnpm --filter audit-service run prisma:migrate:deploy && pnpm --filter reporting-service run prisma:migrate:deploy && pnpm --filter integration-service run prisma:migrate:deploy",
     "db:prisma:generate": "pnpm --filter identity-service run prisma:generate && pnpm --filter request-service run prisma:generate && pnpm --filter incident-service run prisma:generate && pnpm --filter problem-change-service run prisma:generate && pnpm --filter sla-service run prisma:generate && pnpm --filter escalation-service run prisma:generate && pnpm --filter notification-service run prisma:generate && pnpm --filter audit-service run prisma:generate && pnpm --filter reporting-service run prisma:generate && pnpm --filter integration-service run prisma:generate",
+    "db:seed": "pnpm --filter identity-service run seed:dev",
+    "db:reset": "tsx scripts/db-reset.ts",
     "ops:alert:simulate": "bash scripts/ops/simulate-observability-alert.sh"
   },
   "engines": {
