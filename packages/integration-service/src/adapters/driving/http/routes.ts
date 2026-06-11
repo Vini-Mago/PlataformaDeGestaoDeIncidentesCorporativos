@@ -1,5 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { requireJwtPermission } from "@pgic/shared";
 import type { IntegrationController } from "./integration.controller";
 import { createWebhookAuthMiddleware } from "./webhook-auth.middleware";
 
@@ -63,18 +64,21 @@ export function createRoutes(
   router.get(
     "/integration-logs",
     authMiddleware,
+    requireJwtPermission("settings", "read", "all"),
     controller.listLogs
   );
 
   router.get(
     "/integration-dlq",
     authMiddleware,
+    requireJwtPermission("settings", "read", "all"),
     controller.listDlq
   );
 
   router.post(
     "/integration-dlq/:id/reprocess",
     authMiddleware,
+    requireJwtPermission("settings", "manage", "all"),
     controller.reprocessDlq
   );
 

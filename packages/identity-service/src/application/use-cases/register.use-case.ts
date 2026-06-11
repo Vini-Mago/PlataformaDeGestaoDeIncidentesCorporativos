@@ -54,8 +54,11 @@ export class RegisterUseCase {
       throw new UserAlreadyExistsError("User with this login already exists");
     }
 
+    const users = await this.userRepository.findAll();
+    const role = users.length === 0 ? "admin" : "user";
+
     const id = randomUUID();
-    const user = User.create(id, email, dto.name, "user", {
+    const user = User.create(id, email, dto.name, role, {
       login,
       phone: dto.phone,
       department: dto.department,
@@ -86,7 +89,7 @@ export class RegisterUseCase {
     const accessToken = this.tokenService.sign({
       sub: user.id,
       email: user.email.value,
-      role: "user",
+      role: user.role,
     });
 
     return {

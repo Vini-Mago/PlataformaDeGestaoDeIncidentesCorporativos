@@ -17,14 +17,20 @@ import {
   type IntegrationLog,
 } from "./api/integration";
 
-const navItems = [
+interface NavItem {
+  to: string;
+  label: string;
+  allowedRoles?: string[];
+}
+
+const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/incidents", label: "Incidentes" },
   { to: "/requests", label: "Requisições" },
-  { to: "/problems", label: "Problemas" },
-  { to: "/changes", label: "Mudanças" },
-  { to: "/users", label: "Usuários" },
-  { to: "/system", label: "Sistema" },
+  { to: "/problems", label: "Problemas", allowedRoles: ["admin", "gestor", "analista", "noc"] },
+  { to: "/changes", label: "Mudanças", allowedRoles: ["admin", "gestor", "analista", "noc"] },
+  { to: "/users", label: "Usuários", allowedRoles: ["admin"] },
+  { to: "/system", label: "Sistema", allowedRoles: ["admin"] },
 ];
 
 const healthTargets = [
@@ -176,6 +182,11 @@ function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
+  const visibleNavItems = useMemo(() => {
+    const role = user?.role ?? "user";
+    return navItems.filter((item) => !item.allowedRoles || item.allowedRoles.includes(role));
+  }, [user]);
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -187,7 +198,7 @@ function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="nav-list">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === "/dashboard"}>
               {item.label}
             </NavLink>
@@ -636,8 +647,8 @@ function ModulePage({ title, eyebrow, children }: { title: string; eyebrow: stri
   );
 }
 
-function ProtectedLayout({ children }: { children: ReactNode }) {
-  const { status, isAuthenticated } = useAuth();
+function ProtectedLayout({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
+  const { status, isAuthenticated, user } = useAuth();
 
   if (status === "loading") {
     return (
@@ -652,8 +663,53 @@ function ProtectedLayout({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
+  if (allowedRoles && user && !allowedRoles.includes(user.role ?? "user")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <AppShell>{children}</AppShell>;
 }
+
+interface RouteConfig {
+  path: string;
+  element: ReactNode;
+  allowedRoles?: string[];
+}
+
+const routesConfig: RouteConfig[] = [
+  {
+    path: "/dashboard",
+    element: <DashboardHome />,
+  },
+  {
+    path: "/incidents",
+    element: <ModulePage title="Gestão de incidentes" eyebrow="RF-5"><IncidentSection /></ModulePage>,
+  },
+  {
+    path: "/requests",
+    element: <ModulePage title="Catálogo e requisições" eyebrow="RF-6"><ServiceRequestSection /></ModulePage>,
+  },
+  {
+    path: "/problems",
+    element: <ModulePage title="Problemas recorrentes" eyebrow="RF-7"><ProblemSection /></ModulePage>,
+    allowedRoles: ["admin", "gestor", "analista", "noc"],
+  },
+  {
+    path: "/changes",
+    element: <ModulePage title="Change management" eyebrow="RF-7.3"><ChangeSection /></ModulePage>,
+    allowedRoles: ["admin", "gestor", "analista", "noc"],
+  },
+  {
+    path: "/users",
+    element: <ModulePage title="Gestão de Acessos" eyebrow="Admin"><UserManagementSection /></ModulePage>,
+    allowedRoles: ["admin"],
+  },
+  {
+    path: "/system",
+    element: <SystemPage />,
+    allowedRoles: ["admin"],
+  },
+];
 
 function AppRoutes() {
   return (
@@ -661,13 +717,17 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AuthCard mode="login" />} />
       <Route path="/register" element={<AuthCard mode="register" />} />
-      <Route path="/dashboard" element={<ProtectedLayout><DashboardHome /></ProtectedLayout>} />
-      <Route path="/incidents" element={<ProtectedLayout><ModulePage title="Gestão de incidentes" eyebrow="RF-5"><IncidentSection /></ModulePage></ProtectedLayout>} />
-      <Route path="/requests" element={<ProtectedLayout><ModulePage title="Catálogo e requisições" eyebrow="RF-6"><ServiceRequestSection /></ModulePage></ProtectedLayout>} />
-      <Route path="/problems" element={<ProtectedLayout><ModulePage title="Problemas recorrentes" eyebrow="RF-7"><ProblemSection /></ModulePage></ProtectedLayout>} />
-      <Route path="/changes" element={<ProtectedLayout><ModulePage title="Change management" eyebrow="RF-7.3"><ChangeSection /></ModulePage></ProtectedLayout>} />
-      <Route path="/users" element={<ProtectedLayout><ModulePage title="Gestão de Acessos" eyebrow="Admin"><UserManagementSection /></ModulePage></ProtectedLayout>} />
-      <Route path="/system" element={<ProtectedLayout><SystemPage /></ProtectedLayout>} />
+      {routesConfig.map((route) => (
+        <Route
+          key={route.path}
+          path={route.path}
+          element={
+            <ProtectedLayout allowedRoles={route.allowedRoles}>
+              {route.element}
+            </ProtectedLayout>
+          }
+        />
+      ))}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

@@ -20,6 +20,8 @@ describe("RegisterUseCase", () => {
       save: vi.fn(),
       findById: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(null),
+      findByLogin: vi.fn().mockResolvedValue(null),
+      findAll: vi.fn().mockResolvedValue([]),
     };
     registrationPersistence = {
       saveUserAndCredential: vi.fn().mockResolvedValue(undefined),
@@ -152,5 +154,40 @@ describe("RegisterUseCase", () => {
       })
     ).rejects.toThrow("Invalid email");
     expect(registrationPersistence.saveUserAndCredential).not.toHaveBeenCalled();
+  });
+
+  it("deve atribuir role admin se for o primeiro usuario do sistema", async () => {
+    vi.mocked(userRepository.findAll).mockResolvedValue([]);
+    const useCase = new RegisterUseCase(
+      userRepository,
+      registrationPersistence,
+      passwordHasher,
+      tokenService,
+      userCreatedNotifier
+    );
+    const result = await useCase.execute({
+      email: "primeiro@example.com",
+      name: "Primeiro User",
+      password: "password123",
+    });
+    expect(result.user.role).toBe("admin");
+  });
+
+  it("deve atribuir role user se nao for o primeiro usuario do sistema", async () => {
+    const existingUser = User.reconstitute("exist-id", "primeiro@example.com", "Primeiro", new Date(), "admin");
+    vi.mocked(userRepository.findAll).mockResolvedValue([existingUser]);
+    const useCase = new RegisterUseCase(
+      userRepository,
+      registrationPersistence,
+      passwordHasher,
+      tokenService,
+      userCreatedNotifier
+    );
+    const result = await useCase.execute({
+      email: "segundo@example.com",
+      name: "Segundo User",
+      password: "password123",
+    });
+    expect(result.user.role).toBe("user");
   });
 });

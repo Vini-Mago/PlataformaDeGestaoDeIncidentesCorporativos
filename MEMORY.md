@@ -20,7 +20,16 @@ PGIC is structured as a pnpm-based monorepo consisting of 11 distinct packages:
 
 ---
 
-## 2. Recent Milestones & Code Changes (2026-06-08)
+## 2. Recent Milestones & Code Changes (2026-06-11)
+
+### UI RBAC Restructuring & API Enforcement (2026-06-11)
+*   **Navigation & Route RBAC Enforcement (2026-06-11)**:
+    *   Defined metadata (`allowedRoles`) for navigation items, hiding unauthorized options on the frontend dynamically inside `AppShell` component based on `user?.role`.
+    *   Restricted route navigation inside `ProtectedLayout` to prevent manual URL manipulation for unauthorized routes (`/problems`, `/changes`, `/users`, `/system`), redirecting to `/dashboard`.
+    *   Enforced settings permissions in the backend for `integration-service` (`/integration-logs`, `/integration-dlq` and DLQ reprocessing) using `@pgic/shared`'s `requireJwtPermission`.
+    *   Fixed broken/outdated UI tests (requests buttons, modal transitions) and added exhaustive unit tests validating menu visibility for all user roles (`admin`, `gestor`, `analista`, `noc`, `user`).
+    *   Refactored `AppRoutes` in `App.tsx` into a clean, DRY, configuration-driven pattern using a `routesConfig` mapping of paths, elements, and allowed roles.
+    *   Updated `RegisterUseCase` and `LoginUseCase` (for AD/LDAP JIT provisioning) in `identity-service` to dynamically assign the `"admin"` role to the first registered/provisioned user in the system (when the users repository is empty), bootstrapped automatically, while subsequent users receive the default `"user"` role.
 
 ### RF-9: Integration Endpoints for External Systems (2026-06-08)
 *   **Integration Endpoints for External Systems (2026-06-08)**:

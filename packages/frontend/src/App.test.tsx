@@ -251,7 +251,9 @@ describe("dashboard and module pages", () => {
     renderAt("/incidents");
 
     expect(await screen.findByRole("heading", { name: "Gestão de incidentes" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Abrir incidente" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Novo incidente" }));
+    expect(screen.getByRole("heading", { name: "Abertura de Incidente" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "×" }));
     expect(screen.getAllByText("Servidor caiu").length).toBeGreaterThan(0);
     expect(screen.getByText("Falha recorrente")).toBeInTheDocument();
     expect(screen.getByText("Anexar")).toBeInTheDocument();
@@ -266,7 +268,7 @@ describe("dashboard and module pages", () => {
     renderAt("/requests");
 
     expect(await screen.findByRole("heading", { name: "Catálogo e requisições" })).toBeInTheDocument();
-    expect(screen.getByText("Novo pedido de serviço")).toBeInTheDocument();
+    expect(screen.getByText("Nova Requisição")).toBeInTheDocument();
   });
 
   it("opens the problems page", async () => {
@@ -350,8 +352,9 @@ describe("dashboard and module pages", () => {
     expect(screen.getAllByText("Deploy API Draft").length).toBeGreaterThan(0);
 
     // Select the Draft change
-    const select = screen.getByLabelText("Mudança");
-    await userEvent.selectOptions(select, "ch-draft");
+    const draftRow = screen.getByText("Deploy API Draft").closest("tr");
+    expect(draftRow).not.toBeNull();
+    await userEvent.click(within(draftRow!).getByRole("button", { name: "Gerir Mudança" }));
 
     // For Draft: core fields must be enabled (the fieldset containing them must NOT be disabled)
     // and scheduling fields must be enabled
@@ -360,7 +363,13 @@ describe("dashboard and module pages", () => {
     expect(screen.getByLabelText("Início da janela (local)")).not.toBeDisabled();
 
     // Select the InProgress change
-    await userEvent.selectOptions(select, "ch-inprogress");
+    const closeBtn = screen.queryByRole("button", { name: "×" });
+    if (closeBtn) {
+      await userEvent.click(closeBtn);
+    }
+    const inProgressRow = screen.getByText("Deploy API InProgress").closest("tr");
+    expect(inProgressRow).not.toBeNull();
+    await userEvent.click(within(inProgressRow!).getByRole("button", { name: "Gerir Mudança" }));
 
     // For InProgress: core fields must be disabled, scheduling fields must be disabled
     // wait for detail to update
@@ -391,5 +400,68 @@ describe("system page", () => {
     await waitFor(() => {
       expect(calls).toContainEqual({ url: "/integration/integration-dlq/d1/reprocess", method: "POST" });
     });
+  });
+});
+
+describe("navigation menu permissions (RBAC)", () => {
+  const makeUserWithRole = (role: string) => ({
+    id: "user-test",
+    name: "Test User",
+    email: `${role}@example.com`,
+    role,
+  });
+
+  it("displays all menu options for admin", async () => {
+    installFetchMock([
+      { match: "/auth/me", body: makeUserWithRole("admin") },
+      { match: "/incidents/incidents", body: [] },
+      { match: "/request/service-requests", body: [] },
+    ]);
+    renderAt("/dashboard");
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
+
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Incidentes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Requisições" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Problemas" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Mudanças" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Usuários" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sistema" })).toBeInTheDocument();
+  });
+
+  it("hides Usuários and Sistema for gestor", async () => {
+    installFetchMock([
+      { match: "/auth/me", body: makeUserWithRole("gestor") },
+      { match: "/incidents/incidents", body: [] },
+      { match: "/request/service-requests", body: [] },
+    ]);
+    renderAt("/dashboard");
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
+
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Incidentes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Requisições" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Problemas" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Mudanças" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Usuários" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sistema" })).not.toBeInTheDocument();
+  });
+
+  it("hides Problemas, Mudanças, Usuários, and Sistema for end user", async () => {
+    installFetchMock([
+      { match: "/auth/me", body: makeUserWithRole("user") },
+      { match: "/incidents/incidents", body: [] },
+      { match: "/request/service-requests", body: [] },
+    ]);
+    renderAt("/dashboard");
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
+
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Incidentes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Requisições" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Problemas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mudanças" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Usuários" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sistema" })).not.toBeInTheDocument();
   });
 });

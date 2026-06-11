@@ -22,6 +22,7 @@ describe("LoginUseCase", () => {
       findById: vi.fn(),
       findByEmail: vi.fn(),
       findByLogin: vi.fn(),
+      findAll: vi.fn().mockResolvedValue([]),
       findByIdentifier: vi.fn().mockImplementation((val: string) => {
         if (val.includes("@")) {
           return userRepository.findByEmail(val);
@@ -102,6 +103,8 @@ describe("LoginUseCase", () => {
 
   it("deve provisionar JIT o usuário e autenticar com sucesso quando existe no LDAP mas não localmente", async () => {
     vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+    const existingUser = User.reconstitute("exist-id", "primeiro@example.com", "Primeiro", new Date(), "admin");
+    vi.mocked(userRepository.findAll).mockResolvedValue([existingUser]);
     vi.mocked(ldapService.authenticate).mockResolvedValue({
       email: "john.doe@corp.internal",
       login: "jdoe",
@@ -171,5 +174,48 @@ describe("LoginUseCase", () => {
     expect(result.user.email).toBe("john.doe@corp.internal");
     expect(result.accessToken).toBe("fake-jwt-token");
     expect(ldapService.authenticate).toHaveBeenCalledWith("john.doe@corp.internal", "LdapPassword123");
+  });
+
+  it("deve JIT provisionar como admin se for o primeiro usuario do sistema", async () => {
+    vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+    vi.mocked(userRepository.findAll).mockResolvedValue([]);
+    vi.mocked(ldapService.authenticate).mockResolvedValue({
+      email: "first.ldap@corp.internal",
+      login: "firstldap",
+      name: "First LDAP",
+    });
+
+    const useCase = new LoginUseCase(
+      userRepository,
+      authCredentialRepository,
+      passwordHasher,
+      tokenService,
+      ldapService
+    );
+
+    const result = await useCase.execute({ email: "first.ldap@corp.internal", password: "password123" });
+    expect(result.user.role).toBe("admin");
+  });
+
+  it("deve JIT provisionar como user se nao for o primeiro usuario do sistema", async () => {
+    vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+    const existingUser = User.reconstitute("exist-id", "primeiro@example.com", "Primeiro", new Date(), "admin");
+    vi.mocked(userRepository.findAll).mockResolvedValue([existingUser]);
+    vi.mocked(ldapService.authenticate).mockResolvedValue({
+      email: "second.ldap@corp.internal",
+      login: "secondldap",
+      name: "Second LDAP",
+    });
+
+    const useCase = new LoginUseCase(
+      userRepository,
+      authCredentialRepository,
+      passwordHasher,
+      tokenService,
+      ldapService
+    );
+
+    const result = await useCase.execute({ email: "second.ldap@corp.internal", password: "password123" });
+    expect(result.user.role).toBe("user");
   });
 });

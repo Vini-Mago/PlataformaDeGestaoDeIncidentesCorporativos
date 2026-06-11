@@ -50,9 +50,11 @@ export class LoginUseCase {
       if (this.ldapService) {
         const ldapUser = await this.ldapService.authenticate(identifier, dto.password);
         if (ldapUser) {
+          const users = await this.userRepository.findAll();
+          const role = users.length === 0 ? "admin" : "user";
           const id = randomUUID();
           const emailObj = Email.create(ldapUser.email);
-          const userEntity = User.create(id, emailObj, ldapUser.name, "user", {
+          const userEntity = User.create(id, emailObj, ldapUser.name, role, {
             login: ldapUser.login,
           });
 
