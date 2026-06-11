@@ -13,6 +13,8 @@ function Show-Help {
   Write-Host "  frontend  pnpm dev:frontend"
   Write-Host "  bff       pnpm dev:bff"
   Write-Host "  ngrok     carrega .env e inicia ngrok"
+  Write-Host "  db-reset  reseta o banco de dados e roda as migrações"
+  Write-Host "  db-seed   roda as seeds do banco de dados"
   Write-Host "  help      mostra esta ajuda"
 }
 
@@ -70,6 +72,14 @@ switch ($Target.ToLowerInvariant()) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     ngrok http 5173 --domain $env:NGROK_DOMAIN --config ./infra/ngrok.yml
+    exit $LASTEXITCODE
+  }
+  "db-seed" {
+    pnpm db:seed
+    exit $LASTEXITCODE
+  }
+  "db-reset" {
+    pnpm db:reset
     exit $LASTEXITCODE
   }
   "help" {
